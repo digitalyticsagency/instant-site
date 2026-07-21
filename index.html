@@ -190,6 +190,11 @@ header .spacer{flex:1}
 .hbtn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex:none}
 .hbtn-primary{background:var(--accent-fill);border-color:var(--accent-fill);color:var(--on-accent)}
 .hbtn-primary:hover:not(:disabled){background:var(--accent-fill-hover);border-color:var(--accent-fill-hover)}
+.hbtn-warn{background:var(--warn-bg);border-color:color-mix(in srgb,var(--warn) 40%,transparent);color:var(--warn)}
+.hbtn-warn:hover{background:var(--warn-bg);border-color:var(--warn)}
+/* Draws the eye to the key field after it is scrolled into view. */
+@keyframes flashRing{0%{box-shadow:0 0 0 0 var(--ring)}30%{box-shadow:0 0 0 6px var(--ring)}100%{box-shadow:0 0 0 0 var(--ring)}}
+.flash{animation:flashRing 1.1s var(--ease) 2}
 .icon-btn{
   width:32px;height:32px;border-radius:var(--r-ctl);display:grid;place-items:center;flex:none;
   border:1px solid transparent;background:transparent;transition:all .2s var(--ease);
@@ -402,6 +407,10 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
     <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg>
   </button>
   <div class="spacer"></div>
+  <button class="hbtn hbtn-warn hidden" id="btnAddKey" title="Add your Anthropic API key">
+    <svg viewBox="0 0 24 24"><path d="M21 2l-2 2m-7.6 7.6a5 5 0 1 1-7.1 7.1 5 5 0 0 1 7.1-7.1zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3"/></svg>
+    <span>Add API key</span>
+  </button>
   <button class="icon-btn" id="btnTheme" title="Appearance" aria-label="Toggle light or dark appearance"></button>
   <button class="hbtn" id="btnCopy" disabled>
     <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2.5"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
@@ -432,7 +441,18 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
     <div id="errSlot"></div>
     <div id="keyNotice" class="notice notice-warn hidden" style="margin-bottom:10px">
       <svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
-      <div><strong>Add your API key to generate</strong>Open <b>Settings</b> below and paste an Anthropic key. Nothing is sent anywhere except api.anthropic.com.</div>
+      <div style="flex:1">
+        <strong>Add your API key to generate</strong>
+        Instant Site talks to Claude from your browser using your own key. Nothing is sent anywhere except api.anthropic.com.
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:9px">
+          <button class="mini" id="keyNoticeOpen" type="button">Add API key</button>
+          <a class="mini" href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener" style="text-decoration:none">Get a key ↗</a>
+        </div>
+      </div>
+    </div>
+    <div id="storageWarn" class="notice notice-bad hidden" style="margin-bottom:10px">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/></svg>
+      <div><strong>This browser is blocking local storage</strong>Your key can't be saved, so it won't survive a refresh. This usually means Private Browsing or a site-data block. Generation still works this session.</div>
     </div>
 
     <details class="sec" open>
@@ -691,7 +711,23 @@ const $=id=>document.getElementById(id);
 /* ==========================================================================
    3. STORAGE
    ========================================================================== */
-const getKey=()=>(localStorage.getItem(LS_KEY)||'').trim();
+/* Safari Private Browsing and "block site data" settings make localStorage
+   throw on write. Previously that threw straight out of the input handler and
+   the key silently never saved — one of the ways "I can't add my key" happens.
+   `memKey` is the authoritative in-session value (seeded from storage at boot)
+   so the app keeps working even when nothing can be persisted; reading storage
+   first would hide the in-memory key, since a blocked browser returns null. */
+let memKey='', storageOK=true;
+try{ memKey=(localStorage.getItem(LS_KEY)||'').trim(); }catch{ storageOK=false; }
+const getKey=()=>memKey.trim();
+function setKey(k){
+  memKey=k;
+  try{
+    if(k) localStorage.setItem(LS_KEY,k); else localStorage.removeItem(LS_KEY);
+    storageOK=true;
+  }catch(e){ storageOK=false; console.warn('localStorage unavailable:',e); }
+  const w=$('storageWarn'); if(w) w.classList.toggle('hidden',storageOK);
+}
 function loadHistory(){ try{ const r=JSON.parse(localStorage.getItem(LS_HIST)||'[]'); return Array.isArray(r)?r:[]; }catch{ return []; } }
 function saveHistory(l){ try{ localStorage.setItem(LS_HIST,JSON.stringify(l.slice(0,HIST_CAP))); }catch(e){ console.warn('History save failed (storage full?)',e); } }
 function pushHistory(state){
@@ -1379,6 +1415,7 @@ function refreshStatus(){
   $('tagKey').textContent=hasKey?'key set':'no key';
   $('tagKey').className='tag '+(hasKey?'ok':'need');
   $('keyNotice').classList.toggle('hidden',hasKey);
+  $('btnAddKey').classList.toggle('hidden',hasKey);   // always-reachable entry point
   $('btnCopy').disabled=!siteState; $('btnDownload').disabled=!siteState;
   document.querySelectorAll('.regen').forEach(r=>r.disabled=!siteState);
 }
@@ -1601,12 +1638,25 @@ document.querySelectorAll('#appearanceSeg button').forEach(b=>{
   b.onclick=()=>{ prefs.appearance=b.dataset.a; savePrefs(); applyAppearance(); };
 });
 
+/* Opens Settings, scrolls the key field into view and focuses it. The notice
+   used to just say "open Settings below" with nothing clickable — this is the
+   affordance that was missing. */
+function openKeySettings(){
+  if(window.innerWidth<=900) mobileTab('brief');
+  if(window.innerWidth<=1240) $('app').classList.remove('showrail');
+  const sec=$('secSettings'), inp=$('apiKey');
+  sec.open=true;
+  requestAnimationFrame(()=>{
+    sec.scrollIntoView({block:'center',behavior:'smooth'});
+    inp.focus({preventScroll:true}); inp.select();
+    inp.classList.remove('flash'); void inp.offsetWidth; inp.classList.add('flash');
+  });
+}
+$('keyNoticeOpen').onclick=openKeySettings;
+$('btnAddKey').onclick=openKeySettings;
+
 // Settings — saved as you type, no modal, no save button.
-$('apiKey').addEventListener('input',()=>{
-  const k=$('apiKey').value.trim();
-  if(k) localStorage.setItem(LS_KEY,k); else localStorage.removeItem(LS_KEY);
-  refreshStatus();
-});
+$('apiKey').addEventListener('input',()=>{ setKey($('apiKey').value.trim()); refreshStatus(); });
 $('btnReveal').onclick=()=>{ const f=$('apiKey'); f.type=f.type==='password'?'text':'password'; $('btnReveal').textContent=f.type==='password'?'Show':'Hide'; };
 $('fontSwitch').onclick=()=>{
   prefs.systemFonts=!prefs.systemFonts; savePrefs();
@@ -1701,6 +1751,9 @@ if(wl.logo){ $('wlLogoPrev').src=wl.logo; $('wlLogoPrev').classList.remove('hidd
 $('descCount').textContent=$('desc').value.length;
 syncOtherField();
 renderHistory(); renderRegenBar(); renderThemeGrid(); renderThemeStrip();
+// No key yet? Open Settings so the field is visible immediately rather than
+// hidden inside a collapsed section the user has to discover.
+if(!getKey()) $('secSettings').open=true;
 pane('paneEmpty'); refreshStatus(); verifyThemes(); verifyAppTokens();
 if(window.innerWidth<=900) mobileTab('brief');
 if(window.innerWidth<=1240) $('btnRail').classList.remove('on'); else $('btnRail').classList.add('on');
