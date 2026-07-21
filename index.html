@@ -1646,11 +1646,19 @@ function openKeySettings(){
   if(window.innerWidth<=1240) $('app').classList.remove('showrail');
   const sec=$('secSettings'), inp=$('apiKey');
   sec.open=true;
-  requestAnimationFrame(()=>{
-    sec.scrollIntoView({block:'center',behavior:'smooth'});
-    inp.focus({preventScroll:true}); inp.select();
+  /* Run synchronously, then once more after the <details> reflow. Deliberately
+     NOT inside requestAnimationFrame: rAF is throttled when the document isn't
+     focused, and the whole reveal silently no-ops. Instant scroll (no 'smooth')
+     so the position is deterministic, and focus() without preventScroll acts as
+     a second scroll backstop — the panel scrolls on desktop but the WINDOW
+     scrolls in the <=900px layout, and this handles both. */
+  const reveal=()=>{
+    try{ sec.scrollIntoView({block:'center'}); }catch{ sec.scrollIntoView(); }
+    inp.focus(); inp.select();
     inp.classList.remove('flash'); void inp.offsetWidth; inp.classList.add('flash');
-  });
+  };
+  reveal();
+  setTimeout(reveal,60);
 }
 $('keyNoticeOpen').onclick=openKeySettings;
 $('btnAddKey').onclick=openKeySettings;
