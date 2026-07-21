@@ -46,9 +46,22 @@ Measured, not estimated:
 
 All CSS is inlined, icons are inline SVG, and below-fold sections use `content-visibility`. At ~20 KB the page is a single round trip — real-world load time is dominated by your host's TTFB, not the page itself.
 
+## Interface
+
+Apple design language, light and dark. Typography is the real SF Pro stack via `-apple-system`, so on a Mac or iPhone it renders in genuine San Francisco — and the app chrome loads **no webfont at all**. Colour is Apple's system palette: system blue as the single accent, `#f5f5f7` / `#000` grounds, hairline separators, pill buttons, translucent blurred chrome.
+
+Appearance follows your OS by default and can be pinned Light or Dark from the header toggle or the segmented control under Settings.
+
+The 8 website themes are a **separate** palette system — a buyer's plumbing site shouldn't look like macOS — so switching app appearance never changes the site you're generating.
+
 ## Accessibility
 
-Every theme is checked at boot by `verifyThemes()` against WCAG AA 4.5:1 — not just palette-vs-background, but **button labels against their own fills** and **CTA text over both gradient stops**. Those pair checks caught two real failures during development (white text on a light amber accent at 1.86:1, and a CTA gradient end at 3.95:1). The guard logs loudly to the console if a future theme edit regresses.
+Two independent guards run at boot and log loudly to the console on regression:
+
+- **`verifyThemes()`** — the 8 output themes, against WCAG AA 4.5:1. Not just palette-vs-background but **button labels against their own fills** and **CTA text over both gradient stops**. These pair checks caught two real failures during development (white text on a light amber accent at 1.86:1, and a CTA gradient end at 3.95:1).
+- **`verifyAppTokens()`** — the app's own chrome, in both appearances, against every ground it paints on (`bg`, `surface`, `surface-2`). This caught four failures in the first Apple palette, including the fact that Apple's `#0A84FF` reads beautifully as text on black (5.76:1) but carries a white button label at only 3.65:1 — which is why `--accent` (text) and `--accent-fill` (button background) are **separate tokens** in dark mode.
+
+Verified by measuring computed styles on 21 rendered element pairs per appearance: all ≥ 4.5:1.
 
 ---
 
