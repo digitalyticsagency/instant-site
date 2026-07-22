@@ -566,6 +566,33 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
       </div>
     </details>
 
+    <details class="sec" id="secLinks">
+      <summary>Buttons &amp; links <span class="tag" id="tagLinks">auto</span></summary>
+      <div class="body">
+        <div class="tiny">Leave blank to point at your phone, booking link or email automatically. Fill one in to send a button anywhere — a quote form, a Facebook page, a Google review link.</div>
+        <div class="field">
+          <label for="lnkLabel">Main button text</label>
+          <input type="text" id="lnkLabel" placeholder="Get a free quote" maxlength="40">
+        </div>
+        <div class="field">
+          <label for="lnkPrimary">Main button link
+            <span class="help" data-tip="Used by the nav button, the hero button and the closing call-to-action. Accepts a full https:// address, a tel: number, a mailto: address, or #contact to scroll down the page.">?</span></label>
+          <input type="text" id="lnkPrimary" placeholder="auto" maxlength="300">
+          <div class="tiny" id="lnkPrimaryNow"></div>
+        </div>
+        <div class="field">
+          <label for="lnkSecondLabel">Second button text</label>
+          <input type="text" id="lnkSecondLabel" placeholder="auto" maxlength="40">
+        </div>
+        <div class="field">
+          <label for="lnkSecondary">Second button link</label>
+          <input type="text" id="lnkSecondary" placeholder="auto" maxlength="300">
+          <div class="tiny" id="lnkSecondNow"></div>
+        </div>
+        <button class="mini" id="lnkReset" type="button" style="justify-self:start">Reset to automatic</button>
+      </div>
+    </details>
+
     <details class="sec" id="secSeo">
       <summary>SEO &amp; sharing <span class="tag" id="tagSeo">optional</span></summary>
       <div class="body">
@@ -1527,9 +1554,18 @@ function buildSite(state,editable){
   const slot=(name,cta)=>editable?` data-media="${name}" data-cta="${esc(cta)}" title="${esc(cta)}"`:'';
   const star='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.9 6.2 6.6.9-4.8 4.6 1.2 6.6L12 17.2 6.1 20.3l1.2-6.6L2.5 9.1l6.6-.9z"/></svg>';
   const tick='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg>';
-  const primaryHref=c.book?esc(c.book):c.phone?telHref(c.phone):c.email?'mailto:'+esc(c.email):'#contact';
-  const secondHref=c.phone&&c.book?telHref(c.phone):c.email?'mailto:'+esc(c.email):'';
-  const secondLabel=c.phone&&c.book?`Call ${esc(c.phone)}`:c.email?'Email us':'';
+  /* Button destinations. An explicit override in meta.links always wins;
+     otherwise fall back to the sensible chain (booking link > phone > email).
+     Without the override there was no way to point a button anywhere else —
+     e.g. a quote form on another site, or a Facebook page. */
+  const lk=m.links||{};
+  const autoPrimary = c.book?esc(c.book) : c.phone?telHref(c.phone) : c.email?'mailto:'+esc(c.email) : '#contact';
+  const autoSecond  = (c.phone&&c.book)?telHref(c.phone) : c.email?'mailto:'+esc(c.email) : '';
+  const primaryHref = lk.primary ? esc(lk.primary) : autoPrimary;
+  const secondHref  = lk.secondary!=null&&lk.secondary!=='' ? esc(lk.secondary) : autoSecond;
+  const secondLabel = lk.secondaryLabel ? esc(lk.secondaryLabel)
+                    : (c.phone&&c.book) ? `Call ${esc(c.phone)}`
+                    : c.email ? 'Email us' : '';
 
   let servicesHTML;
   if(t.services==='list'){
@@ -2002,13 +2038,14 @@ async function generate(brief){
     parsed.meta={businessName:brief.name,location:brief.location,standout:brief.standout,
       type:brief.type,typeOther:brief.typeOther,tone:brief.tone,locale:brief.locale,desc:brief.desc,theme:brief.theme,
       contact:{phone:brief.phone,email:brief.email,area:brief.area,hours:brief.hours,book:brief.book},
-      seo:{canonical:'',ogImage:'',socials:''}};
+      seo:{canonical:'',ogImage:'',socials:''},
+      links:{primary:'',secondary:'',secondaryLabel:''}};
     parsed.media=blankMedia();
     siteState=parsed;
     currentId='is_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
     lastShareURL=''; $('shareUrl').value=''; $('shareMeta').textContent='';
-    stopLoading(); renderPreview(); renderThemeStrip(); renderChecks(); renderTips(); renderMediaPanel(); loadSeoFields(); pushHistory(siteState);
-    $('secMedia').open=true;
+    stopLoading(); renderPreview(); renderThemeStrip(); renderChecks(); renderTips(); renderMediaPanel(); loadSeoFields(); loadLinkFields(); pushHistory(siteState);
+    $('secMedia').open=true; $('secLinks').open=true;
     selectTab('preview'); showWork();
     if(window.innerWidth<=900) mobileTab('preview');
   }catch(err){ stopLoading(); showError(err); }
@@ -2199,7 +2236,8 @@ function renderHistory(){
     siteState=migrate(e.siteState); currentId=e.id;
     prefs.theme=siteState.meta.theme; savePrefs();
     lastShareURL=''; $('shareUrl').value=''; $('shareMeta').textContent='';
-    renderPreview(); renderThemeGrid(); renderThemeStrip(); renderChecks(); renderTips(); renderMediaPanel(); loadSeoFields(); renderHistory();
+    loadBriefFromSite();   // panel must describe the site you just opened
+    renderPreview(); renderThemeGrid(); renderThemeStrip(); renderChecks(); renderTips(); renderMediaPanel(); loadSeoFields(); loadLinkFields(); renderHistory();
     selectTab('preview'); showWork(); refreshStatus();
     if(window.innerWidth<=1240) $('app').classList.remove('showrail');
     if(window.innerWidth<=900) mobileTab('preview');
@@ -2219,6 +2257,7 @@ function migrate(s){
     if(!('credit' in s.media[k])) s.media[k].credit=null;
   });
   s.meta.seo=s.meta.seo||{};
+  s.meta.links=s.meta.links||{primary:'',secondary:'',secondaryLabel:''};
   return s;
 }
 
@@ -2260,14 +2299,53 @@ $('bizType').onchange=()=>{
   if(t&&THEMES[t]) setTheme(t);
   saveBrief(); refreshStatus();
 };
+/* Fields that are RENDERED on the page (as opposed to fields that are only
+   input to the model). Once a site exists these must edit it live — before,
+   they silently only affected the next generation, which meant a generated
+   site's phone, email, hours and booking link could never be changed. */
+const LIVE_FIELDS={
+  bizName:['businessName'], location:['location'], standout:['standout'],
+  cPhone:['contact','phone'], cEmail:['contact','email'],
+  cArea:['contact','area'], cHours:['contact','hours'], cBook:['contact','book']
+};
+function syncFieldToSite(f){
+  const path=LIVE_FIELDS[f]; if(!path||!siteState) return false;
+  let node=siteState.meta;
+  for(let i=0;i<path.length-1;i++){ node[path[i]]=node[path[i]]||{}; node=node[path[i]]; }
+  node[path[path.length-1]]=$(f).value.trim();
+  return true;
+}
+let liveTimer=null;
 BRIEF_FIELDS.forEach(f=>{
   const el=$(f); if(!el||f==='bizType') return;
   el.addEventListener('input',()=>{
     if(f==='desc') $('descCount').textContent=el.value.length;
     clearTimeout(briefTimer); briefTimer=setTimeout(saveBrief,400);
+    if(syncFieldToSite(f)){
+      $('saveState').textContent='Saving…'; $('saveState').className='savestate';
+      clearTimeout(liveTimer);
+      liveTimer=setTimeout(()=>{
+        renderPreview(); renderChecks(); renderTips(); renderLinks(); pushHistory(siteState); lastShareURL='';
+      },450);
+    }
     refreshStatus();
   });
 });
+// Load the panel FROM the site being edited, so the fields always describe
+// what is on screen rather than whatever was last typed.
+function loadBriefFromSite(){
+  if(!siteState) return;
+  const m=siteState.meta,c=m.contact||{};
+  $('bizName').value=m.businessName||''; $('location').value=m.location||''; $('standout').value=m.standout||'';
+  $('desc').value=m.desc||''; $('descCount').textContent=$('desc').value.length;
+  if(m.type&&PACKS[m.type]) $('bizType').value=m.type;
+  $('bizTypeOther').value=m.typeOther||''; syncOtherField();
+  $('cPhone').value=c.phone||''; $('cEmail').value=c.email||'';
+  $('cArea').value=c.area||''; $('cHours').value=c.hours||''; $('cBook').value=c.book||'';
+  if(m.tone) selChip('toneChips',m.tone);
+  if(m.locale) selChip('localeChips',m.locale);
+  refreshStatus();
+}
 $('btnGen').onclick=()=>generate(readBrief());
 $('btnDemo').onclick=()=>{
   $('bizName').value='Harbourline Electrical';
@@ -2422,6 +2500,65 @@ function renderMediaPanel(){
   }));
 }
 $('mediaFile').onchange=e=>{ const f=e.target.files[0]; if(f) applyImage(f); };
+
+/* ---- buttons & links --------------------------------------------------- */
+// Mirrors what buildSite() resolves, so the panel can show the live destination.
+function resolvedHrefs(){
+  if(!siteState) return {primary:'',secondary:''};
+  const c=siteState.meta.contact||{}, lk=siteState.meta.links||{};
+  const autoP=c.book?c.book:c.phone?telHref(c.phone):c.email?'mailto:'+c.email:'#contact';
+  const autoS=(c.phone&&c.book)?telHref(c.phone):c.email?'mailto:'+c.email:'';
+  return {primary:lk.primary||autoP, secondary:(lk.secondary!=null&&lk.secondary!=='')?lk.secondary:autoS,
+          primaryAuto:!lk.primary, secondaryAuto:!lk.secondary};
+}
+/* SPLIT DELIBERATELY. renderLinks() may run on any keystroke elsewhere in the
+   panel, so it must never write to the <input>s — doing so wiped a link the
+   user was mid-way through typing, and the debounced save then stored the
+   blank. Only loadLinkFields() touches input values, and only when a
+   different site is loaded. */
+function renderLinks(){
+  if(!$('lnkPrimary')) return;
+  if(!siteState){ $('tagLinks').textContent='auto'; $('tagLinks').className='tag';
+    $('lnkPrimaryNow').textContent=''; $('lnkSecondNow').textContent=''; return; }
+  const lk=siteState.meta.links||{}, r=resolvedHrefs();
+  $('lnkPrimaryNow').textContent=r.primary?`Currently → ${r.primary}${r.primaryAuto?' (automatic)':''}`:'No destination set.';
+  $('lnkSecondNow').textContent=r.secondary?`Currently → ${r.secondary}${r.secondaryAuto?' (automatic)':''}`:'Second button hidden (no destination).';
+  const custom=[lk.primary,lk.secondary,lk.secondaryLabel].filter(Boolean).length;
+  $('tagLinks').textContent=custom?`${custom} custom`:'auto';
+  $('tagLinks').className='tag'+(custom?' ok':'');
+}
+function loadLinkFields(){
+  if(!$('lnkPrimary')||!siteState) return;
+  const lk=siteState.meta.links||{};
+  $('lnkLabel').value=siteState.hero.cta_text||'';
+  $('lnkPrimary').value=lk.primary||'';
+  $('lnkSecondary').value=lk.secondary||'';
+  $('lnkSecondLabel').value=lk.secondaryLabel||'';
+  renderLinks();
+}
+function commitLinks(){
+  if(!siteState) return;
+  siteState.meta.links=siteState.meta.links||{};
+  siteState.meta.links.primary=$('lnkPrimary').value.trim();
+  siteState.meta.links.secondary=$('lnkSecondary').value.trim();
+  siteState.meta.links.secondaryLabel=$('lnkSecondLabel').value.trim();
+  const lab=$('lnkLabel').value.trim();
+  if(lab) siteState.hero.cta_text=lab;
+  renderPreview(); renderChecks(); renderTips(); renderLinks(); pushHistory(siteState); lastShareURL='';
+}
+['lnkPrimary','lnkSecondary','lnkLabel','lnkSecondLabel'].forEach(id=>{
+  $(id).addEventListener('input',()=>{
+    if(!siteState) return;
+    $('saveState').textContent='Saving…'; $('saveState').className='savestate';
+    clearTimeout($(id)._t); $(id)._t=setTimeout(commitLinks,500);
+  });
+});
+$('lnkReset').onclick=()=>{
+  if(!siteState) return;
+  siteState.meta.links={primary:'',secondary:'',secondaryLabel:''};
+  loadLinkFields();   // reset DOES clear the inputs, so load rather than render
+  renderPreview(); renderChecks(); pushHistory(siteState); lastShareURL='';
+};
 
 /* ---- stock photo search ----------------------------------------------- */
 let stockSlot='hero', stockResults=[];
