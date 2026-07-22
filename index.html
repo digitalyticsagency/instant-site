@@ -383,7 +383,10 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
 .pri.p3{background:var(--fill);color:var(--txt-3)}
 
 /* media slots */
-.mslot{display:flex;gap:10px;align-items:center;padding:10px;border:1px solid var(--stroke);border-radius:12px;margin-bottom:8px;background:var(--bg)}
+/* flex-wrap is load-bearing: the credit line is flex-basis:100% and without
+   wrapping it becomes a fourth column, crushing the buttons. Some Openverse
+   titles run to 300+ characters, so the credit is also clamped. */
+.mslot{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px;border:1px solid var(--stroke);border-radius:12px;margin-bottom:8px;background:var(--bg)}
 .mthumb{width:54px;height:40px;border-radius:8px;flex:none;background:var(--fill);display:grid;place-items:center;overflow:hidden;border:1px solid var(--stroke)}
 .mthumb img{width:100%;height:100%;object-fit:cover}
 .mthumb svg{width:17px;height:17px;stroke:var(--txt-3);fill:none;stroke-width:1.8}
@@ -394,6 +397,32 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
 .mbtns{display:flex;gap:5px;flex:none}
 .mbtns button{padding:5px 10px;font-size:11.5px;border-radius:99px;border:1px solid var(--stroke);background:var(--surface)}
 .mbtns button:hover{background:var(--fill)}
+
+/* stock photos */
+.stockbox{margin-top:12px;padding:12px;border:1px solid var(--stroke);border-radius:13px;background:var(--bg)}
+.stockgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:9px;max-height:280px;overflow-y:auto}
+.stockgrid:empty{display:none}
+.stockitem{position:relative;aspect-ratio:4/3;border-radius:9px;overflow:hidden;border:1px solid var(--stroke);padding:0;background:var(--fill);transition:all .16s var(--ease)}
+.stockitem:hover{border-color:var(--accent);transform:translateY(-1px);box-shadow:var(--shadow)}
+.stockitem img{width:100%;height:100%;object-fit:cover;display:block}
+.stockitem .lic{position:absolute;left:3px;bottom:3px;background:rgba(0,0,0,.72);color:#fff;font-size:8.5px;font-weight:600;padding:2px 5px;border-radius:4px;letter-spacing:.02em}
+.stockitem .dim{position:absolute;right:3px;top:3px;background:rgba(0,0,0,.62);color:#fff;font-size:8px;font-weight:600;padding:2px 4px;border-radius:4px}
+.mbtns button[data-stock].on{border-color:var(--accent);color:var(--accent);background:var(--sel)}
+.creditline{flex-basis:100%;width:100%;min-width:0;font-size:10px;color:var(--txt-3);margin-top:2px;line-height:1.45;
+  overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.minfo{min-width:0}
+.mname,.mhint{overflow-wrap:anywhere}
+
+/* tooltips */
+.help{display:inline-grid;place-items:center;width:14px;height:14px;border-radius:50%;background:var(--fill-2);
+  color:var(--txt-3);font-size:9.5px;font-weight:700;cursor:help;position:relative;flex:none;user-select:none}
+.help:hover,.help:focus-visible{background:var(--accent);color:var(--on-accent)}
+.help::after{content:attr(data-tip);position:absolute;left:50%;bottom:calc(100% + 8px);transform:translateX(-50%);
+  width:250px;padding:9px 11px;border-radius:10px;background:var(--txt);color:var(--bg);font-size:11.5px;font-weight:400;
+  line-height:1.5;letter-spacing:-.005em;text-align:left;opacity:0;pointer-events:none;transition:opacity .16s var(--ease);
+  z-index:60;box-shadow:var(--shadow-lg)}
+.help:hover::after,.help:focus-visible::after{opacity:1}
+.sec .body .field:nth-last-child(-n+2) .help::after{bottom:auto;top:calc(100% + 8px)}
 
 /* share */
 .sharebox{padding:15px;border:1px solid var(--stroke);border-radius:14px;background:var(--surface);margin-bottom:12px}
@@ -504,9 +533,11 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
         </div>
         <div class="field hidden" id="otherWrap"><label for="bizTypeOther">Describe the type</label>
           <input type="text" id="bizTypeOther" placeholder="Mobile dog grooming" maxlength="80"></div>
-        <div class="field"><label for="standout">Standout feature <span class="opt">optional</span></label>
+        <div class="field"><label for="standout">Standout feature <span class="opt">optional</span>
+          <span class="help" data-tip="One concrete differentiator — '24/7 callout', 'fixed-price quotes', 'master electrician'. It becomes the badge above the headline and a trust point under the buttons. Vague claims like 'quality service' are worse than nothing.">?</span></label>
           <input type="text" id="standout" placeholder="24/7 emergency callout" maxlength="100"></div>
-        <div class="field"><label for="desc">What they do <span class="opt">2–3 sentences</span></label>
+        <div class="field"><label for="desc">What they do <span class="opt">2–3 sentences</span>
+          <span class="help" data-tip="The single biggest lever on output quality. Name the actual jobs, the suburbs, and how long they have been going. Specifics give Claude something real to write from; generic input produces generic copy.">?</span></label>
           <textarea id="desc" maxlength="600" placeholder="Family-run electrical contractor serving residential and light commercial clients…"></textarea>
           <div class="counter"><span id="descCount">0</span> / 600</div></div>
         <div class="two">
@@ -522,12 +553,38 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
       <div class="body">
         <div class="tiny">Fill these in and the export needs almost no editing — they wire into the nav, hero, contact section, footer and LocalBusiness schema automatically.</div>
         <div class="two">
-          <div class="field"><label for="cPhone">Phone</label><input type="text" id="cPhone" placeholder="021 555 0123" maxlength="30"></div>
+          <div class="field"><label for="cPhone">Phone
+            <span class="help" data-tip="Becomes a tap-to-call link in the nav, hero, contact section, footer and the sticky mobile call bar — and goes into the LocalBusiness schema. For local service work this is usually the highest-converting element on the page.">?</span></label>
+            <input type="text" id="cPhone" placeholder="021 555 0123" maxlength="30"></div>
           <div class="field"><label for="cEmail">Email</label><input type="text" id="cEmail" placeholder="hello@example.co.nz" maxlength="80"></div>
         </div>
-        <div class="field"><label for="cArea">Service area</label><input type="text" id="cArea" placeholder="Tauranga, Mount Maunganui, Papamoa" maxlength="120"></div>
+        <div class="field"><label for="cArea">Service area
+          <span class="help" data-tip="List the suburbs and towns you actually cover. It fills the schema's areaServed field and puts those place names in the page text, which is what 'electrician near me' searches match against.">?</span></label>
+          <input type="text" id="cArea" placeholder="Tauranga, Mount Maunganui, Papamoa" maxlength="120"></div>
         <div class="field"><label for="cHours">Opening hours</label><input type="text" id="cHours" placeholder="Mon–Fri 7am–5pm · Emergency 24/7" maxlength="90"></div>
         <div class="field"><label for="cBook">Booking link <span class="opt">optional</span></label><input type="text" id="cBook" placeholder="https://calendly.com/…" maxlength="200"></div>
+      </div>
+    </details>
+
+    <details class="sec" id="secSeo">
+      <summary>SEO &amp; sharing <span class="tag" id="tagSeo">optional</span></summary>
+      <div class="body">
+        <div class="tiny">These fill in the meta tags and structured data search engines read. All optional — leave blank and the page still works.</div>
+        <div class="field">
+          <label for="seoCanonical">Live URL <span class="opt">once hosted</span>
+            <span class="help" data-tip="The final address of this page. Sets the canonical tag, og:url and the LocalBusiness url — which is how Google knows two copies of a page are the same one, so link credit is not split.">?</span></label>
+          <input type="text" id="seoCanonical" placeholder="https://harbourline.co.nz" maxlength="200">
+        </div>
+        <div class="field">
+          <label for="seoOgImage">Social preview image URL
+            <span class="help" data-tip="The picture shown when the link is pasted into Facebook, LinkedIn or a text message. It must be a hosted URL — crawlers cannot read images embedded in the page, so an uploaded photo will not work here.">?</span></label>
+          <input type="text" id="seoOgImage" placeholder="https://harbourline.co.nz/preview.jpg" maxlength="250">
+        </div>
+        <div class="field">
+          <label for="seoSocials">Social profiles <span class="opt">one per line</span>
+            <span class="help" data-tip="Facebook, Instagram, LinkedIn or a Google Business Profile. These become schema.org sameAs links, which helps search engines connect the site to the business's other listings.">?</span></label>
+          <textarea id="seoSocials" placeholder="https://facebook.com/…&#10;https://instagram.com/…" maxlength="500" style="min-height:58px"></textarea>
+        </div>
       </div>
     </details>
 
@@ -537,6 +594,20 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
         <div class="tiny">You can also click the hero, About panel or logo directly in the preview. Images are stored inside the page, so the exported file still works with no server.</div>
         <div id="mediaPanel"></div>
         <div id="mediaStatus" class="tiny"></div>
+
+        <div class="stockbox">
+          <div class="row" style="margin-bottom:8px">
+            <b style="font-size:13px">No photos of your own?</b>
+            <span class="tiny" id="stockTarget"></span>
+          </div>
+          <div class="tiny" style="margin-bottom:8px">Search free, commercially-usable photos from <a href="https://openverse.org" target="_blank" rel="noopener">Openverse</a>. Credit is captured automatically and printed in the exported footer, which most of these licences require. Stock photos top out at 1024px — good enough for a hero, though your own photos will be sharper.</div>
+          <div style="display:flex;gap:6px">
+            <input type="text" id="stockQ" placeholder="e.g. electrician, van, workshop" maxlength="60" style="flex:1">
+            <button class="mini" id="stockGo" type="button">Search</button>
+          </div>
+          <div id="stockStatus" class="tiny" style="margin-top:7px"></div>
+          <div id="stockResults" class="stockgrid"></div>
+        </div>
       </div>
     </details>
 
@@ -564,6 +635,10 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
           <div class="tabs" id="appearanceSeg">
             <button data-a="auto">Auto</button><button data-a="light">Light</button><button data-a="dark">Dark</button>
           </div>
+        </div>
+        <div class="row">
+          <div class="lbl"><b>Motion</b>Scroll-reveal animations and a hero parallax, in pure CSS — the export stays at zero JavaScript. Off for anyone with reduced-motion set.</div>
+          <div class="switch" id="motionSwitch" role="switch" tabindex="0"></div>
         </div>
         <div class="row">
           <div class="lbl"><b>System fonts only</b>Drops Google Fonts from exports — zero external requests.</div>
@@ -829,7 +904,7 @@ const LOAD_LINES=['Drafting your hero section…','Writing service descriptions�
    ========================================================================== */
 let siteState=null, currentId=null, loadTimer=null, lastBrief=null, persistTimer=null, briefTimer=null;
 let wl={on:false,name:'',logo:''};
-let prefs={systemFonts:false,theme:DEFAULT_THEME,appearance:'auto'};
+let prefs={systemFonts:false,motion:true,theme:DEFAULT_THEME,appearance:'auto'};
 const $=id=>document.getElementById(id);
 
 /* ==========================================================================
@@ -889,6 +964,7 @@ function loadPrefs(){
   try{
     const o=JSON.parse(localStorage.getItem(LS_PREF)||'{}');
     prefs={systemFonts:!!o.systemFonts,
+           motion:o.motion!==false,          // motion on by default
            theme:THEMES[o.theme]?o.theme:DEFAULT_THEME,
            appearance:['auto','light','dark'].includes(o.appearance)?o.appearance:'auto'};
   }catch{}
@@ -1113,12 +1189,72 @@ const telHref=p=>'tel:'+String(p).replace(/[^\d+]/g,'');
    siteState so the export stays a single self-contained file — the whole
    promise of this tool is one file you can host anywhere.
    ========================================================================== */
+/* `minW` is the smallest source width worth using in each slot. The stock
+   index contains plenty of 240px thumbnails; stretched across a hero they
+   look broken, so they are filtered out of results rather than offered.
+   Measured against the live index: Openverse serves at most 1024px wide
+   (Flickr's "_b" size), so a hero threshold above 1000 matches nothing.
+   Your own uploads are unaffected and can be far larger. */
 const MEDIA_SLOTS={
-  hero: {label:'Hero background', max:1800, quality:.80, hint:'A wide shot of a job, your van, or the team at work.'},
-  about:{label:'About photo',     max:1400, quality:.82, hint:'A real photo of the team beats any stock image.'},
-  logo: {label:'Logo',            max:512,  quality:.92, hint:'Square or wide, transparent PNG works best.'}
+  hero: {label:'Hero background', max:1800, quality:.80, minW:1000, targetKB:170, hint:'A wide shot of a job, your van, or the team at work.'},
+  about:{label:'About photo',     max:1400, quality:.82, minW:640,  targetKB:120, hint:'A real photo of the team beats any stock image.'},
+  logo: {label:'Logo',            max:512,  quality:.92, minW:200,  targetKB:45,  hint:'Square or wide, transparent PNG works best.'}
 };
-const blankMedia=()=>({hero:{src:'',alt:''},about:{src:'',alt:''},logo:{src:'',alt:''}});
+const blankMedia=()=>({hero:{src:'',alt:'',credit:null},about:{src:'',alt:'',credit:null},logo:{src:'',alt:'',credit:null}});
+
+/* ==========================================================================
+   STOCK PHOTOS — Openverse (openverse.org), the WordPress-run index of
+   openly-licensed media.
+   Chosen because it is the only decent option that needs NO API key: this app
+   has no backend to hide a key in, and asking the user for a second key on
+   top of their Anthropic one would be a rotten trade. Verified: the API sends
+   `access-control-allow-origin: *`, supports `license_type=commercial`, and
+   returns a ready-made attribution string.
+
+   LICENSING — read before changing any of this. Results are Creative Commons,
+   not public domain. `license_type=commercial` permits commercial use, but
+   CC BY and CC BY-SA REQUIRE visible attribution. So every stock image carries
+   its credit through siteState and is rendered in the exported footer. Do not
+   "tidy away" that credit line — it is the condition of use, and these sites
+   get sold to real businesses.
+
+   Anonymous limits are 20/min and 200/day per IP, so failures are expected
+   and handled rather than swallowed.
+   ========================================================================== */
+const OV_API='https://api.openverse.org/v1/images/';
+// Route pixels through Openverse's own proxy: guarantees CORS even when the
+// upstream host (Flickr, a museum, etc.) would not allow a canvas read.
+const ovFullSize=id=>`${OV_API}${id}/thumb/?full_size=true`;
+const LICENSE_LABEL={by:'CC BY',"by-sa":'CC BY-SA',"by-nc":'CC BY-NC',"by-nd":'CC BY-ND',cc0:'CC0',pdm:'Public Domain',sampling:'Sampling'};
+
+// 20 is the hard ceiling for anonymous requests — asking for more returns 401,
+// not 400, which is easy to misread as an auth problem.
+const OV_PAGE_SIZE=20;
+async function stockSearch(query,page){
+  const url=`${OV_API}?q=${encodeURIComponent(query)}&license_type=commercial&page_size=${OV_PAGE_SIZE}&page=${page||1}&mature=false`;
+  let res;
+  try{ res=await fetch(url,{headers:{Accept:'application/json'}}); }
+  catch(e){ throw new Error('Could not reach the photo library — check your connection.'); }
+  if(res.status===429) throw new Error('Photo search is rate limited (20/min, 200/day per IP). Wait a minute and try again.');
+  if(!res.ok){
+    // Surface the API's own explanation — it is far more useful than the code.
+    let detail=''; try{ detail=(await res.json()).detail||''; }catch{}
+    throw new Error(`Photo search failed (HTTP ${res.status})${detail?': '+detail:'.'}`);
+  }
+  const data=await res.json();
+  return (data.results||[]).filter(r=>r.id&&r.thumbnail).map(r=>({
+    id:r.id, thumb:r.thumbnail, title:r.title||'Untitled',
+    creator:r.creator||'Unknown', creatorUrl:r.creator_url||'',
+    license:(r.license||'').toLowerCase(), licenseVersion:r.license_version||'',
+    sourceUrl:r.foreign_landing_url||'', attribution:r.attribution||'',
+    w:r.width||0, h:r.height||0
+  }));
+}
+/* Some catalogued titles run to several hundred characters. Trim for display —
+   the creator and licence, which are the parts the licence actually requires,
+   are always kept in full, and the credit links back to the source record. */
+const trimTitle=t=>{ t=String(t||'').trim(); return t.length>70?t.slice(0,67).replace(/[\s,;:–-]+$/,'')+'…':t; };
+const creditLabel=c=>!c?'':`${trimTitle(c.title)} by ${c.creator}${c.license?` (${LICENSE_LABEL[c.license]||c.license.toUpperCase()}${c.licenseVersion?' '+c.licenseVersion:''})`:''}`;
 
 /* Downscale and re-encode before storing. A 4 MB phone photo would otherwise
    blow past the localStorage quota and bloat the export; this keeps a hero
@@ -1143,7 +1279,16 @@ function processImage(file,slot){
         ctx.drawImage(img,0,0,w,h);
         const keepPng=file.type==='image/png'&&slot==='logo';
         try{
-          resolve({src:c.toDataURL(keepPng?'image/png':'image/jpeg',cfg.quality),w,h});
+          if(keepPng){ resolve({src:c.toDataURL('image/png'),w,h}); return; }
+          /* Step quality down until the encoded image fits its byte budget.
+             A fixed quality is unpredictable: a busy photo at q0.80 came out
+             at 300 KB and pushed a 24 KB export to 627 KB, which defeats the
+             whole "one fast file" promise. Budgeting by size instead keeps
+             every export in the same ballpark regardless of subject matter. */
+          const budget=cfg.targetKB*1024;
+          let q=cfg.quality, src=c.toDataURL('image/jpeg',q);
+          while(src.length>budget&&q>0.42){ q-=0.08; src=c.toDataURL('image/jpeg',q); }
+          resolve({src,w,h,q:+q.toFixed(2)});
         }catch(e){ reject(new Error('Could not process that image.')); }
       };
       img.src=fr.result;
@@ -1151,7 +1296,20 @@ function processImage(file,slot){
     fr.readAsDataURL(file);
   });
 }
-const mediaOf=(s,slot)=>((s&&s.media&&s.media[slot])||{src:'',alt:''});
+const mediaOf=(s,slot)=>((s&&s.media&&s.media[slot])||{src:'',alt:'',credit:null});
+
+/* Same downscale path as an upload, but sourced from a URL. Uses fetch→blob
+   rather than <img crossorigin> so a CORS failure surfaces as a real message
+   instead of a silently tainted canvas. */
+async function processRemoteImage(url,slot){
+  let res;
+  try{ res=await fetch(url,{mode:'cors'}); }
+  catch(e){ throw new Error('That photo could not be loaded (the source blocked the request). Try another.'); }
+  if(!res.ok) throw new Error(`That photo could not be loaded (HTTP ${res.status}).`);
+  const blob=await res.blob();
+  if(!/^image\//.test(blob.type)) throw new Error('That link did not return an image.');
+  return processImage(new File([blob],'stock.jpg',{type:blob.type}),slot);
+}
 
 /* ==========================================================================
    9. SITE BUILDER — one skeleton, eight themes, preview + export
@@ -1306,7 +1464,49 @@ ${t.callBar?`.callbar{display:none}
   .final .inner{padding:42px 20px}
   .b{width:100%;text-align:center}
 }
-@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}`;
+@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+${prefs.motion?`
+/* ---- Motion, CSS-only -------------------------------------------------
+   Scroll-driven animations (animation-timeline) keep the export at ZERO
+   JavaScript — the whole point of this tool. ~83% of browsers support it;
+   the rest simply see static content, because everything is wrapped in
+   @supports and nothing starts hidden outside that block. Honoured
+   prefers-reduced-motion is non-negotiable for a public business site. */
+@media(prefers-reduced-motion:no-preference){
+  @supports (animation-timeline: view()){
+    @keyframes riseIn{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+    @keyframes growLine{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+    .head,.card,.rows .row,.num .item,.q,.faq details,.about > .w > div,.fig,.final .inner{
+      animation:riseIn linear both;
+      animation-timeline:view();
+      animation-range:entry 8% cover 26%;
+    }
+    /* Stagger cards so a grid reads as a sequence, not a slab. */
+    .grid > *:nth-child(2),.rows .row:nth-child(2),.num .item:nth-child(2){animation-range:entry 11% cover 30%}
+    .grid > *:nth-child(3),.rows .row:nth-child(3),.num .item:nth-child(3){animation-range:entry 14% cover 34%}
+    .grid > *:nth-child(4),.rows .row:nth-child(4),.num .item:nth-child(4){animation-range:entry 17% cover 38%}
+    .grid > *:nth-child(5),.rows .row:nth-child(5),.num .item:nth-child(5){animation-range:entry 20% cover 42%}
+    .num .item{animation-name:riseIn}
+    .num .item::before{content:'';position:absolute;inset:-2px 0 auto 0;height:2px;background:${t.primary};
+      transform-origin:left;animation:growLine linear both;animation-timeline:view();animation-range:entry 10% cover 30%}
+    .num .item{position:relative}
+    /* Hero parallax: background drifts slower than the page as you scroll. */
+    .hero.photo{animation:heroPan linear both;animation-timeline:view();animation-range:entry 0% exit 100%}
+    @keyframes heroPan{from{background-position:center 42%}to{background-position:center 58%}}
+    .trust span{animation:fadeIn linear both;animation-timeline:view();animation-range:entry 12% cover 26%}
+  }
+  /* Runs everywhere, no scroll timeline needed — pure entrance polish. */
+  @keyframes heroIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+  .hero h1{animation:heroIn .7s cubic-bezier(.22,1,.36,1) both}
+  .hero .sub{animation:heroIn .7s cubic-bezier(.22,1,.36,1) .08s both}
+  .hero .cta-row{animation:heroIn .7s cubic-bezier(.22,1,.36,1) .16s both}
+  .hero .eyebrow{animation:heroIn .6s cubic-bezier(.22,1,.36,1) both}
+  .b{transition:transform .18s cubic-bezier(.22,1,.36,1),box-shadow .18s,filter .18s}
+  .b:active{transform:translateY(0) scale(.98)}
+  .ico{transition:transform .3s cubic-bezier(.22,1,.36,1)}
+  .card:hover .ico,.rows .row:hover .ico{transform:scale(1.08) rotate(-4deg)}
+}`:''}`;
 }
 
 function resolveTheme(id){
@@ -1401,24 +1601,62 @@ function buildSite(state,editable){
     ?`<header class="hero split${heroPhoto}"${heroStyle}${heroSlot}><div class="w"><div>${heroInner}</div>${heroCard}</div></header>`
     :`<header class="hero ${t.hero==='banner'?'banner':'center'}${heroPhoto}"${heroStyle}${heroSlot}><div class="w">${heroInner}</div></header>`;
 
-  const ld={'@context':'https://schema.org','@type':'LocalBusiness',name:m.businessName,description:s.seo_meta_description,
-    areaServed:c.area||m.location||undefined,telephone:c.phone||undefined,email:c.email||undefined,openingHours:c.hours||undefined};
+  /* CC BY / BY-SA require visible attribution wherever the work is used. This
+     line is a licence condition on the exported site — removing it would put
+     the business that buys this page in breach. */
+  const credited=Object.values(s.media||{}).filter(x=>x&&x.src&&x.credit);
+  const photoCredits=credited.length?`<span class="credits"> · Photos: ${credited.map(x=>{
+    const c=x.credit, lab=esc(creditLabel(c));
+    return c.sourceUrl?`<a href="${esc(c.sourceUrl)}" target="_blank" rel="noopener nofollow">${lab}</a>`:lab;
+  }).join(' · ')}</span>`:'';
+
+  const seo=m.seo||{};
+  const socials=(seo.socials||'').split(/[\s,]+/).filter(u=>/^https?:\/\//.test(u));
+  const canonical=(seo.canonical||'').trim();
+  const ogImage=(seo.ogImage||'').trim();
+
+  /* LocalBusiness with the service catalogue attached. Deliberately NO
+     aggregateRating: the testimonials are written examples, and emitting
+     review markup for invented reviews is both a Google penalty and, in most
+     markets, illegal. */
+  const ld={'@context':'https://schema.org','@type':'LocalBusiness',
+    name:m.businessName, description:s.seo_meta_description,
+    areaServed:c.area||m.location||undefined,
+    telephone:c.phone||undefined, email:c.email||undefined,
+    openingHours:c.hours||undefined,
+    url:canonical||undefined, image:ogImage||undefined,
+    sameAs:socials.length?socials:undefined,
+    address:m.location?{'@type':'PostalAddress',addressLocality:m.location}:undefined,
+    hasOfferCatalog:{'@type':'OfferCatalog',name:'Services',
+      itemListElement:s.services.map(sv=>({'@type':'Offer',
+        itemOffered:{'@type':'Service',name:sv.title,description:sv.description}}))}};
   Object.keys(ld).forEach(k=>ld[k]===undefined&&delete ld[k]);
   const faqLd=faqs.length?{'@context':'https://schema.org','@type':'FAQPage',
     mainEntity:faqs.map(f=>({'@type':'Question',name:f.question,acceptedAnswer:{'@type':'Answer',text:f.answer}}))}:null;
   const year=new Date().getFullYear();
+  const lang=m.locale==='nz'?'en-NZ':'en-US';
 
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="${lang}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(m.businessName)}${m.location?' — '+esc(m.location):''}</title>
 <meta name="description" content="${esc(s.seo_meta_description)}">
 <meta name="theme-color" content="${t.primary}">
-<meta property="og:title" content="${esc(m.businessName)}">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="format-detection" content="telephone=yes">
+${canonical?`<link rel="canonical" href="${esc(canonical)}">`:'<!-- Add a canonical URL in the SEO panel once this page is hosted. -->'}
+<meta property="og:title" content="${esc(m.businessName)}${m.location?' — '+esc(m.location):''}">
 <meta property="og:description" content="${esc(s.seo_meta_description)}">
 <meta property="og:type" content="website">
+<meta property="og:locale" content="${lang.replace('-','_')}">
+${canonical?`<meta property="og:url" content="${esc(canonical)}">`:''}
+${ogImage?`<meta property="og:image" content="${esc(ogImage)}">
+<meta name="twitter:card" content="summary_large_image">`:'<meta name="twitter:card" content="summary">'}
+<meta name="twitter:title" content="${esc(m.businessName)}">
+<meta name="twitter:description" content="${esc(s.seo_meta_description)}">
+${heroImg.src&&!heroImg.src.startsWith('data:')?`<link rel="preload" as="image" href="${esc(heroImg.src)}" fetchpriority="high">`:''}
 ${t.googleHref?`<link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="${t.googleHref}">`:'<!-- System fonts only: this page makes zero external requests. -->'}
@@ -1489,7 +1727,7 @@ ${faqHTML}
     ${c.hours?`<div><h4>Hours</h4><div>${esc(c.hours)}</div></div>`:''}
     ${c.area?`<div><h4>Service area</h4><div>${esc(c.area)}</div></div>`:''}
   </div>
-  <div class="w copy">&copy; ${year} ${esc(m.businessName)}. All rights reserved.</div>
+  <div class="w copy">&copy; ${year} ${esc(m.businessName)}. All rights reserved.${photoCredits}</div>
 </footer>
 ${t.callBar&&(c.phone||c.email)?`<div class="callbar">
   ${c.phone?`<a href="${telHref(c.phone)}">Call now</a>`:''}
@@ -1563,7 +1801,7 @@ async function applyImage(file){
 }
 function clearImage(slot){
   if(!siteState||!siteState.media) return;
-  siteState.media[slot]={src:'',alt:''};
+  siteState.media[slot]={src:'',alt:'',credit:null};
   renderPreview(); renderMediaPanel(); renderChecks(); renderTips(); pushHistory(siteState);
   setMediaStatus(`${MEDIA_SLOTS[slot].label} removed.`);
 }
@@ -1613,11 +1851,16 @@ function renderChecks(){
   const kb=new Blob([html]).size/1024;
   const reqs=t.googleHref?3:0;
   const scripts=(html.match(/<script(?![^>]*ld\+json)/g)||[]).length;
-  items.push({ok:kb<120,title:'Page weight &amp; speed',body:
-    `Export is <b>${kb.toFixed(1)} KB</b> with all CSS inlined, <b>${scripts}</b> executable scripts and <b>${reqs}</b> external requests`+
+  const imgKB=Object.values(siteState.media||{}).reduce((n,x)=>n+((x&&x.src)?x.src.length/1024:0),0);
+  // Slow-3G is ~50 KB/s effective; state the real arithmetic rather than a slogan.
+  const slow3g=kb/50;
+  items.push({ok:kb<250,title:'Page weight &amp; speed',body:
+    `Export is <b>${kb.toFixed(0)} KB</b>`+(imgKB>20?` (<b>${imgKB.toFixed(0)} KB</b> of that is photos)`:'')+
+    ` with all CSS inlined, <b>${scripts}</b> executable scripts and <b>${reqs}</b> external requests`+
     (reqs?` (Google Fonts — preconnected with <code>display=swap</code>, so it never blocks first paint; flip <b>System fonts only</b> for zero).`
         :` — nothing to fetch, renders offline.`)+
-    ` One round trip: sub-second on broadband, well inside 5s on slow 3G.`});
+    (kb<250?` Sub-second on broadband and roughly ${slow3g.toFixed(1)}s on slow 3G.`
+           :` That is roughly <b>${slow3g.toFixed(0)}s on slow 3G</b>. Photos are already compressed to a budget — to go lighter, remove one or host the images separately rather than embedding them.`)});
   items.push({ok:faqCount()>0,title:'Structured data',body:
     `LocalBusiness JSON-LD embedded${faqCount()?`, plus FAQPage schema for ${faqCount()} questions — eligible for FAQ rich results.`:'. No FAQs this generation; regenerate the FAQ section to add FAQPage schema.'}`});
   const warns=items.filter(i=>!i.ok).length;
@@ -1758,12 +2001,13 @@ async function generate(brief){
     const parsed=parseAndValidate(raw);
     parsed.meta={businessName:brief.name,location:brief.location,standout:brief.standout,
       type:brief.type,typeOther:brief.typeOther,tone:brief.tone,locale:brief.locale,desc:brief.desc,theme:brief.theme,
-      contact:{phone:brief.phone,email:brief.email,area:brief.area,hours:brief.hours,book:brief.book}};
+      contact:{phone:brief.phone,email:brief.email,area:brief.area,hours:brief.hours,book:brief.book},
+      seo:{canonical:'',ogImage:'',socials:''}};
     parsed.media=blankMedia();
     siteState=parsed;
     currentId='is_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
     lastShareURL=''; $('shareUrl').value=''; $('shareMeta').textContent='';
-    stopLoading(); renderPreview(); renderThemeStrip(); renderChecks(); renderTips(); renderMediaPanel(); pushHistory(siteState);
+    stopLoading(); renderPreview(); renderThemeStrip(); renderChecks(); renderTips(); renderMediaPanel(); loadSeoFields(); pushHistory(siteState);
     $('secMedia').open=true;
     selectTab('preview'); showWork();
     if(window.innerWidth<=900) mobileTab('preview');
@@ -1955,7 +2199,7 @@ function renderHistory(){
     siteState=migrate(e.siteState); currentId=e.id;
     prefs.theme=siteState.meta.theme; savePrefs();
     lastShareURL=''; $('shareUrl').value=''; $('shareMeta').textContent='';
-    renderPreview(); renderThemeGrid(); renderThemeStrip(); renderChecks(); renderTips(); renderMediaPanel(); renderHistory();
+    renderPreview(); renderThemeGrid(); renderThemeStrip(); renderChecks(); renderTips(); renderMediaPanel(); loadSeoFields(); renderHistory();
     selectTab('preview'); showWork(); refreshStatus();
     if(window.innerWidth<=1240) $('app').classList.remove('showrail');
     if(window.innerWidth<=900) mobileTab('preview');
@@ -1970,7 +2214,11 @@ function migrate(s){
   // `media` postdates earlier saves — backfill so old history still renders.
   const m=blankMedia();
   s.media=Object.assign(m,s.media||{});
-  Object.keys(m).forEach(k=>{ if(!s.media[k]||typeof s.media[k]!=='object') s.media[k]={src:'',alt:''}; });
+  Object.keys(m).forEach(k=>{
+    if(!s.media[k]||typeof s.media[k]!=='object') s.media[k]={src:'',alt:'',credit:null};
+    if(!('credit' in s.media[k])) s.media[k].credit=null;
+  });
+  s.meta.seo=s.meta.seo||{};
   return s;
 }
 
@@ -2088,6 +2336,34 @@ $('btnAddKey').onclick=openKeySettings;
 // Settings — saved as you type, no modal, no save button.
 $('apiKey').addEventListener('input',()=>{ setKey($('apiKey').value.trim()); refreshStatus(); });
 $('btnReveal').onclick=()=>{ const f=$('apiKey'); f.type=f.type==='password'?'text':'password'; $('btnReveal').textContent=f.type==='password'?'Show':'Hide'; };
+$('motionSwitch').onclick=()=>{
+  prefs.motion=!prefs.motion; savePrefs();
+  $('motionSwitch').classList.toggle('on',prefs.motion);
+  if(siteState){ renderPreview(); renderChecks(); }
+};
+$('motionSwitch').onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); $('motionSwitch').click(); } };
+// SEO fields live on meta so they travel with the site through history/share.
+['seoCanonical','seoOgImage','seoSocials'].forEach(id=>{
+  $(id).addEventListener('input',()=>{
+    if(!siteState) return;
+    siteState.meta.seo=siteState.meta.seo||{};
+    siteState.meta.seo[{seoCanonical:'canonical',seoOgImage:'ogImage',seoSocials:'socials'}[id]]=$(id).value.trim();
+    clearTimeout($(id)._t);
+    $(id)._t=setTimeout(()=>{ renderPreview(); renderChecks(); renderTips(); pushHistory(siteState); },600);
+    refreshSeoTag();
+  });
+});
+function refreshSeoTag(){
+  const seo=(siteState&&siteState.meta.seo)||{};
+  const n=['canonical','ogImage','socials'].filter(k=>seo[k]).length;
+  $('tagSeo').textContent=n?`${n}/3`:'optional';
+  $('tagSeo').className='tag'+(n===3?' ok':'');
+}
+function loadSeoFields(){
+  const seo=(siteState&&siteState.meta.seo)||{};
+  $('seoCanonical').value=seo.canonical||''; $('seoOgImage').value=seo.ogImage||''; $('seoSocials').value=seo.socials||'';
+  refreshSeoTag();
+}
 $('fontSwitch').onclick=()=>{
   prefs.systemFonts=!prefs.systemFonts; savePrefs();
   $('fontSwitch').classList.toggle('on',prefs.systemFonts);
@@ -2125,19 +2401,94 @@ function renderMediaPanel(){
         ${cur.src?`<input class="malt" type="text" data-alt="${k}" maxlength="140" placeholder="Describe this image (alt text)" value="${esc(cur.alt)}">`:''}
       </div>
       <div class="mbtns">
-        <button type="button" data-pick="${k}">${cur.src?'Replace':'Add'}</button>
+        <button type="button" data-pick="${k}">${cur.src?'Replace':'Upload'}</button>
+        <button type="button" data-stock="${k}" title="Search free stock photos for this slot">Find</button>
         ${cur.src?`<button type="button" data-clear="${k}">Remove</button>`:''}
       </div>
+      ${cur.credit?`<div class="creditline">© ${esc(creditLabel(cur.credit))}${cur.credit.sourceUrl?` · <a href="${esc(cur.credit.sourceUrl)}" target="_blank" rel="noopener">source</a>`:''}</div>`:''}
     </div>`;
   }).join('');
   host.querySelectorAll('[data-pick]').forEach(b=>b.onclick=()=>pickImage(b.dataset.pick));
   host.querySelectorAll('[data-clear]').forEach(b=>b.onclick=()=>clearImage(b.dataset.clear));
+  host.querySelectorAll('[data-stock]').forEach(b=>b.onclick=()=>{
+    setStockSlot(b.dataset.stock);
+    if(!$('stockQ').value) $('stockQ').value=suggestStockQuery();
+    $('stockQ').focus();
+  });
+  setStockSlot(stockSlot);
   host.querySelectorAll('[data-alt]').forEach(i=>i.addEventListener('input',()=>{
     siteState.media[i.dataset.alt].alt=i.value;
     clearTimeout(i._t); i._t=setTimeout(()=>{ renderPreview(); renderChecks(); pushHistory(siteState); },600);
   }));
 }
 $('mediaFile').onchange=e=>{ const f=e.target.files[0]; if(f) applyImage(f); };
+
+/* ---- stock photo search ----------------------------------------------- */
+let stockSlot='hero', stockResults=[];
+function setStockSlot(slot){
+  stockSlot=slot;
+  $('stockTarget').textContent=`→ ${MEDIA_SLOTS[slot].label}`;
+  document.querySelectorAll('#mediaPanel [data-stock]').forEach(b=>b.classList.toggle('on',b.dataset.stock===slot));
+}
+function suggestStockQuery(){
+  if(!siteState) return '';
+  const t=siteState.meta.type;
+  const map={tradie:'electrician tools',cleaning:'cleaning',realestate:'house exterior',drone:'aerial landscape',
+    coach:'coaching meeting',medical:'clinic',hospitality:'cafe interior',fitness:'gym',legal:'office desk',
+    auto:'car workshop',corporate:'office meeting'};
+  return map[t]||String(siteState.meta.typeOther||siteState.meta.businessName||'').split(/\s+/).slice(0,2).join(' ');
+}
+async function runStockSearch(){
+  const q=$('stockQ').value.trim();
+  if(!q){ $('stockStatus').textContent='Type what you are looking for first.'; return; }
+  const minW=MEDIA_SLOTS[stockSlot].minW;
+  $('stockStatus').textContent='Searching…'; $('stockStatus').className='tiny'; $('stockResults').innerHTML='';
+  try{
+    /* Walk a few pages: after filtering out anything too small for this slot a
+       single page often yields very little, and an empty grid reads as "no
+       results" when really it was "no results big enough". */
+    let usable=[],scanned=0;
+    for(let page=1;page<=3&&usable.length<12;page++){
+      const batch=await stockSearch(q,page);
+      if(!batch.length) break;
+      scanned+=batch.length;
+      usable=usable.concat(batch.filter(r=>r.w>=minW));
+    }
+    usable.sort((a,b)=>b.w-a.w);
+    stockResults=usable;
+    if(!usable.length){
+      $('stockStatus').textContent=`Found ${scanned} photos for "${q}" but none were at least ${minW}px wide — too small for the ${MEDIA_SLOTS[stockSlot].label.toLowerCase()}. Try a broader word.`;
+      return;
+    }
+    $('stockStatus').textContent=`${usable.length} usable of ${scanned} scanned — click one to set the ${MEDIA_SLOTS[stockSlot].label.toLowerCase()}.`;
+    $('stockResults').innerHTML=usable.map((r,i)=>
+      `<button type="button" class="stockitem" data-i="${i}" title="${esc(creditLabel(r))} — ${r.w}×${r.h}">
+         <img src="${esc(r.thumb)}" alt="${esc(r.title)}" loading="lazy">
+         <span class="lic">${esc(LICENSE_LABEL[r.license]||r.license.toUpperCase())}</span>
+         <span class="dim">${r.w}×${r.h}</span>
+       </button>`).join('');
+    $('stockResults').querySelectorAll('.stockitem').forEach(b=>b.onclick=()=>useStock(stockResults[+b.dataset.i]));
+  }catch(e){ $('stockStatus').textContent=e.message; $('stockStatus').className='tiny statusBad'; }
+}
+async function useStock(r){
+  if(!siteState){ setMediaStatus('Generate a site first.',true); return; }
+  setMediaStatus(`Fetching photo for ${MEDIA_SLOTS[stockSlot].label.toLowerCase()}…`);
+  try{
+    const {src,w,h}=await processRemoteImage(ovFullSize(r.id),stockSlot);
+    siteState.media=siteState.media||blankMedia();
+    siteState.media[stockSlot]={
+      src, alt:r.title||'',
+      credit:{title:r.title,creator:r.creator,creatorUrl:r.creatorUrl,license:r.license,
+              licenseVersion:r.licenseVersion,sourceUrl:r.sourceUrl,text:r.attribution}
+    };
+    renderPreview(); renderMediaPanel(); renderChecks(); renderTips();
+    const ok=pushHistory(siteState);
+    setMediaStatus(ok?`${MEDIA_SLOTS[stockSlot].label} set — ${w}×${h}, credited to ${r.creator}.`
+                     :`Photo added but storage is full — download the HTML to keep it.`,!ok);
+  }catch(e){ setMediaStatus(e.message||'Could not use that photo.',true); }
+}
+$('stockGo').onclick=runStockSearch;
+$('stockQ').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); runStockSearch(); } });
 
 /* ---- share ------------------------------------------------------------ */
 let shareIncludesImages=false, lastShareURL='';
@@ -2250,6 +2601,7 @@ applyAppearance(); applyBranding();
 function bootDashboard(){
 $('apiKey').value=getKey();
 $('fontSwitch').classList.toggle('on',prefs.systemFonts);
+$('motionSwitch').classList.toggle('on',prefs.motion);
 $('wlSwitch').classList.toggle('on',wl.on);
 $('wlFields').classList.toggle('hidden',!wl.on);
 $('wlName').value=wl.name;
