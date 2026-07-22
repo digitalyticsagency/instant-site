@@ -398,6 +398,26 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
 .mbtns button{padding:5px 10px;font-size:11.5px;border-radius:99px;border:1px solid var(--stroke);background:var(--surface)}
 .mbtns button:hover{background:var(--fill)}
 
+/* section manager */
+.secrow{display:flex;align-items:center;gap:9px;padding:8px 10px;border:1px solid var(--stroke);border-radius:11px;margin-bottom:6px;background:var(--bg)}
+.secrow.off{opacity:.5}
+.secmove{display:flex;flex-direction:column;gap:2px;flex:none}
+.secmove button{width:20px;height:16px;border-radius:4px;border:1px solid var(--stroke);background:var(--surface);font-size:9px;line-height:1;color:var(--txt-3)}
+.secmove button:hover:not(:disabled){background:var(--fill);color:var(--txt)}
+.secmove button:disabled{opacity:.3;cursor:not-allowed}
+.secinfo{flex:1;min-width:0}
+.secname{font-size:12.5px;font-weight:600}
+.secname em{font-style:normal;color:var(--txt-3);font-weight:400;font-size:11px}
+.secnote{font-size:10.5px;color:var(--txt-3);margin-top:1px}
+.switch.sm{width:34px;height:20px}
+.switch.sm::after{width:14px;height:14px}
+.switch.sm.on::after{transform:translateX(14px)}
+/* gallery strip */
+.galstrip{flex-basis:100%;display:flex;gap:5px;flex-wrap:wrap;margin-top:4px}
+.galstrip span{position:relative;width:44px;height:34px;border-radius:6px;overflow:hidden;border:1px solid var(--stroke)}
+.galstrip img{width:100%;height:100%;object-fit:cover;display:block}
+.galstrip button{position:absolute;top:1px;right:1px;width:14px;height:14px;border-radius:50%;background:rgba(0,0,0,.72);color:#fff;font-size:11px;line-height:1;display:grid;place-items:center;padding:0}
+
 /* stock photos */
 .stockbox{margin-top:12px;padding:12px;border:1px solid var(--stroke);border-radius:13px;background:var(--bg)}
 .stockgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:9px;max-height:280px;overflow-y:auto}
@@ -563,6 +583,14 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
           <input type="text" id="cArea" placeholder="Tauranga, Mount Maunganui, Papamoa" maxlength="120"></div>
         <div class="field"><label for="cHours">Opening hours</label><input type="text" id="cHours" placeholder="Mon–Fri 7am–5pm · Emergency 24/7" maxlength="90"></div>
         <div class="field"><label for="cBook">Booking link <span class="opt">optional</span></label><input type="text" id="cBook" placeholder="https://calendly.com/…" maxlength="200"></div>
+      </div>
+    </details>
+
+    <details class="sec" id="secSections">
+      <summary>Sections <span class="tag" id="tagSections">10</span></summary>
+      <div class="body">
+        <div class="tiny">Show, hide and reorder the page. Sections with no content are skipped automatically.</div>
+        <div id="sectionList"></div>
       </div>
     </details>
 
@@ -924,6 +952,22 @@ const ICON_PATHS={
 };
 const ICON_NAMES=Object.keys(ICON_PATHS);
 const FALLBACK_ICON='sparkles';
+
+/* Page sections, in default order. Reorderable and hideable per site. */
+const SECTION_ORDER=['hero','stats','services','process','about','gallery','reviews','faq','areas','contact'];
+const NAV_LABELS={services:'Services',process:'How it works',about:'About',gallery:'Work',reviews:'Reviews',faq:'FAQ',areas:'Areas',contact:'Contact'};
+const SECTION_META={
+  hero:{label:'Hero',always:true,note:'Headline, buttons and trust row'},
+  stats:{label:'Trust figures',note:'Short proof points band'},
+  services:{label:'Services',note:'What you do'},
+  process:{label:'How it works',note:'Numbered steps'},
+  about:{label:'About',note:'Story plus photo'},
+  gallery:{label:'Recent work',note:'Photo grid — add images below'},
+  reviews:{label:'Reviews',note:'Client quotes'},
+  faq:{label:'FAQ',note:'Objection handling plus schema'},
+  areas:{label:'Service areas',note:'Suburb list — helps local search'},
+  contact:{label:'Closing CTA',always:true,note:'Final call to action'}
+};
 const LOAD_LINES=['Drafting your hero section…','Writing service descriptions…','Answering the questions buyers ask…','Composing testimonials…','Tightening the copy…','Applying your theme…'];
 
 /* ==========================================================================
@@ -1051,6 +1095,9 @@ Required JSON shape:
   "about": string,
   "testimonials": [ { "quote": string, "author_placeholder": string } ],
   "faqs": [ { "question": string, "answer": string } ],
+  "stats": [ { "value": string, "label": string } ],
+  "process": [ { "title": string, "description": string } ],
+  "areas": [ string ],
   "contact_cta": string,
   "palette": { "primary": "#hex", "accent": "#hex", "background": "#hex" },
   "seo_meta_description": string
@@ -1062,6 +1109,9 @@ Rules:
 - "about": 2-3 sentences, first person plural, grounded in the details given.
 - "testimonials": EXACTLY 3. Quotes must read like real specific customers (a concrete job, timeframe or outcome), never generic praise. "author_placeholder" must literally be "[Replace with real client name]" for all three.
 - "faqs": 4 items. Real objections a buyer in this trade actually raises before booking (pricing basis, timing, guarantees, coverage, what's included). Answers 1-2 sentences, direct and honest. Never invent specific prices, licence numbers or years unless given.
+- "stats": 3 items. Short trust figures with a 1-3 word label, e.g. {"value":"Since 2009","label":"On the tools"}. ONLY use numbers you can derive from the description supplied. If no number is stated, use a non-numeric proof point ("Fully insured", "Licensed", "Same-day callouts") rather than inventing a figure. Never fabricate job counts, customer counts, years, or star ratings.
+- "process": 3 items. The actual steps of working with this business, from first contact to finished job. Titles 1-3 words, descriptions one short sentence.
+- "areas": 6 to 10 suburbs, towns or districts inside the stated service area or near the stated location. Real place names only — if you are not confident of local place names, return fewer, or an empty array. Never invent place names.
 - "hero.headline": under 70 characters, benefit-led, no colon-and-subtitle formatting.
 - "contact_cta": one short sentence pushing the visitor to make contact.
 - "palette": colours suiting this trade and tone. "background" must be light. "primary" and "accent" must each hit 4.5:1 against "background".
@@ -1169,7 +1219,12 @@ function parseAndValidate(raw){
     if(!isStr(t.quote)) bad(`Missing "testimonials[${i}].quote".`);
     t.author_placeholder='[Replace with real client name]';
   });
+  /* Optional sections are sanitised, never fatal. They postdate earlier saves,
+     and one malformed extra should not discard an otherwise good generation. */
   obj.faqs=Array.isArray(obj.faqs)?obj.faqs.filter(f=>f&&isStr(f.question)&&isStr(f.answer)).slice(0,6):[];
+  obj.stats=Array.isArray(obj.stats)?obj.stats.filter(x=>x&&isStr(x.value)&&isStr(x.label)).slice(0,4):[];
+  obj.process=Array.isArray(obj.process)?obj.process.filter(x=>x&&isStr(x.title)&&isStr(x.description)).slice(0,5):[];
+  obj.areas=Array.isArray(obj.areas)?obj.areas.filter(isStr).map(a=>a.trim()).slice(0,12):[];
   if(!isStr(obj.contact_cta)) bad('Missing or empty "contact_cta".');
   if(!obj.palette||typeof obj.palette!=='object') bad('Missing "palette" object.');
   ['primary','accent','background'].forEach(k=>{
@@ -1206,7 +1261,12 @@ function ctaOf(t){
   }
   return {end,on};
 }
-function iconSVG(n){ return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON_PATHS[n]||ICON_PATHS[FALLBACK_ICON]}</svg>`; }
+/* pathLength="100" normalises every path so one stroke-dashoffset keyframe
+   draws any icon on, regardless of its real geometry (the Vivus trick). */
+function iconSVG(n){
+  const d=(ICON_PATHS[n]||ICON_PATHS[FALLBACK_ICON]).replace(/<(path|circle|rect)\s/g,'<$1 pathLength="100" ');
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+}
 const telHref=p=>'tel:'+String(p).replace(/[^\d+]/g,'');
 
 /* ==========================================================================
@@ -1225,9 +1285,13 @@ const telHref=p=>'tel:'+String(p).replace(/[^\d+]/g,'');
 const MEDIA_SLOTS={
   hero: {label:'Hero background', max:1800, quality:.80, minW:1000, targetKB:170, hint:'A wide shot of a job, your van, or the team at work.'},
   about:{label:'About photo',     max:1400, quality:.82, minW:640,  targetKB:120, hint:'A real photo of the team beats any stock image.'},
-  logo: {label:'Logo',            max:512,  quality:.92, minW:200,  targetKB:45,  hint:'Square or wide, transparent PNG works best.'}
+  logo: {label:'Logo',            max:512,  quality:.92, minW:200,  targetKB:45,  hint:'Square or wide, transparent PNG works best.'},
+  // Gallery images share a tighter budget — six of them at hero size would
+  // put the export well past a megabyte.
+  gallery:{label:'Recent work photo', max:1100, quality:.78, minW:600, targetKB:85, hint:'Finished jobs, before and after.'}
 };
-const blankMedia=()=>({hero:{src:'',alt:'',credit:null},about:{src:'',alt:'',credit:null},logo:{src:'',alt:'',credit:null}});
+const GALLERY_MAX=6;
+const blankMedia=()=>({hero:{src:'',alt:'',credit:null},about:{src:'',alt:'',credit:null},logo:{src:'',alt:'',credit:null},gallery:[]});
 
 /* ==========================================================================
    STOCK PHOTOS — Openverse (openverse.org), the WordPress-run index of
@@ -1449,6 +1513,28 @@ section{padding:${d}px 0;content-visibility:auto;contain-intrinsic-size:auto 700
 .feat .q{border:0;background:transparent;padding:0;text-align:center;align-items:center}
 .feat blockquote{font-family:${t.displayFont},sans-serif;font-size:clamp(21px,2.6vw,29px);line-height:1.4;font-weight:${t.weight}}
 .feat .q+.q{border-top:1px solid ${t.line};padding-top:34px}
+/* stats band */
+.stats{background:${t.panel};border-top:1px solid ${t.line};border-bottom:1px solid ${t.line};padding:${Math.round(d*.55)}px 0}
+.stats .w{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:28px;text-align:center}
+.stat .v{font-family:${t.displayFont},sans-serif;font-weight:${t.weight};font-size:clamp(28px,4vw,40px);color:${t.primary};line-height:1.05;${t.caps?'text-transform:uppercase;':''}}
+.stat .l{font-size:15px;color:${t.ink2};margin-top:6px}
+/* process steps */
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:26px;counter-reset:stp}
+.step{position:relative;padding-top:52px;counter-increment:stp}
+.step::before{content:counter(stp);position:absolute;top:0;left:0;width:38px;height:38px;border-radius:50%;
+  display:grid;place-items:center;background:${t.primary};color:${onPrimary};
+  font-family:${t.displayFont},sans-serif;font-weight:${t.weight};font-size:17px}
+.step h3{font-size:20px;margin-bottom:7px}
+.step p{color:${t.ink2};font-size:16px}
+/* service areas */
+.areas{display:flex;flex-wrap:wrap;gap:9px;justify-content:center;max-width:820px;margin:0 auto}
+.areas span{padding:8px 16px;border-radius:99px;border:1px solid ${t.line};background:${t.panel};font-size:15px;color:${t.ink2}}
+.areas span svg{width:13px;height:13px;color:${t.accent};margin-right:5px;vertical-align:-2px}
+/* gallery */
+.gal{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+.gal figure{margin:0;border-radius:${t.radius};overflow:hidden;border:1px solid ${t.line};aspect-ratio:4/3;background:${t.panel}}
+.gal img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .5s cubic-bezier(.22,1,.36,1)}
+.gal figure:hover img{transform:scale(1.05)}
 .faq{max-width:800px;margin:0 auto}
 .faq details{border-bottom:1px solid ${t.line};padding:6px 0}
 .faq summary{cursor:pointer;padding:18px 34px 18px 0;font-family:${t.displayFont},sans-serif;font-weight:${t.weight};font-size:19px;position:relative;list-style:none}
@@ -1522,6 +1608,19 @@ ${prefs.motion?`
     .hero.photo{animation:heroPan linear both;animation-timeline:view();animation-range:entry 0% exit 100%}
     @keyframes heroPan{from{background-position:center 42%}to{background-position:center 58%}}
     .trust span{animation:fadeIn linear both;animation-timeline:view();animation-range:entry 12% cover 26%}
+    /* Vivus-style SVG line draw, without Vivus. Icons are stroked paths, so
+       animating stroke-dashoffset draws them on as they enter the viewport.
+       pathLength normalises every path to 100 units so one rule fits all. */
+    .ico svg path,.ico svg circle,.ico svg rect{
+      stroke-dasharray:100;animation:drawOn linear both;
+      animation-timeline:view();animation-range:entry 6% cover 24%;
+    }
+    @keyframes drawOn{from{stroke-dashoffset:100}to{stroke-dashoffset:0}}
+    .stat .v{animation:riseIn linear both;animation-timeline:view();animation-range:entry 6% cover 22%}
+    .step::before{animation:popIn linear both;animation-timeline:view();animation-range:entry 8% cover 26%}
+    @keyframes popIn{from{opacity:0;transform:scale(.5)}to{opacity:1;transform:none}}
+    .areas span{animation:fadeIn linear both;animation-timeline:view();animation-range:entry 8% cover 30%}
+    .gal figure{animation:riseIn linear both;animation-timeline:view();animation-range:entry 8% cover 28%}
   }
   /* Runs everywhere, no scroll timeline needed — pure entrance polish. */
   @keyframes heroIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
@@ -1609,6 +1708,76 @@ function buildSite(state,editable){
   </div>
 </section>`:'';
 
+  const stats=Array.isArray(s.stats)?s.stats:[];
+  const process=Array.isArray(s.process)?s.process:[];
+  const areas=Array.isArray(s.areas)?s.areas:[];
+  const gallery=(s.media&&Array.isArray(s.media.gallery))?s.media.gallery.filter(g=>g&&g.src):[];
+  const pin='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>';
+
+  const statsHTML=stats.length?`
+<section id="stats" class="stats"><div class="w">${stats.map((x,i)=>`
+  <div class="stat">${ed(`stats.${i}.value`,'div','v',x.value)}${ed(`stats.${i}.label`,'div','l',x.label)}</div>`).join('')}
+</div></section>`:'';
+
+  const processHTML=process.length?`
+<section id="process"><div class="w">
+  <div class="head mid"><h2>How it works</h2><p>No surprises — here is exactly what happens.</p></div>
+  <div class="steps">${process.map((x,i)=>`
+    <div class="step">${ed(`process.${i}.title`,'h3','',x.title)}${ed(`process.${i}.description`,'p','',x.description)}</div>`).join('')}
+  </div>
+</div></section>`:'';
+
+  const areasHTML=areas.length?`
+<section id="areas" class="alt"><div class="w">
+  <div class="head mid"><h2>Where we work</h2><p>${esc(m.businessName)} covers these areas${m.location?` around ${esc(m.location)}`:''}.</p></div>
+  <div class="areas">${areas.map((a,i)=>`<span${editable?` contenteditable="true" data-path="areas.${i}" spellcheck="false"`:''}>${pin}${esc(a)}</span>`).join('')}</div>
+</div></section>`:'';
+
+  const galleryHTML=gallery.length?`
+<section id="gallery"><div class="w">
+  <div class="head mid"><h2>Recent work</h2><p>A few jobs from around ${esc(m.location||'the area')}.</p></div>
+  <div class="gal">${gallery.map(g=>`<figure><img src="${g.src}" alt="${esc(g.alt||'Recent work by '+m.businessName)}" loading="lazy" decoding="async"></figure>`).join('')}</div>
+</div></section>`:'';
+
+  const servicesSection=`
+<section id="services"${t.services!=='list'?' class="alt"':''}>
+  <div class="w">
+    <div class="head mid"><h2>What we do</h2><p>Straightforward work, done properly, by people who live here too.</p></div>
+    ${servicesHTML}
+  </div>
+</section>`;
+
+  const aboutSection=`
+<section id="about" class="about"><div class="w">
+  <div>
+    <h2>About ${esc(m.businessName)}</h2>
+    ${ed('about','p','',s.about)}
+    ${c.hours?`<p style="margin-top:18px"><strong>Hours:</strong> ${esc(c.hours)}</p>`:''}
+  </div>
+  ${aboutImg.src
+    ? `<div class="fig"${slot('about','Replace photo')}><img src="${aboutImg.src}" alt="${esc(aboutImg.alt||m.businessName+' team at work')}" loading="lazy" decoding="async"></div>`
+    : `<!-- REMINDER: swap this placeholder for a real photo and write descriptive alt text. -->
+  <div class="fig" role="img" aria-label="Placeholder — replace with a photo of the team or recent work"${slot('about','Add a photo')}>${iconSVG('camera')}</div>`}
+</div></section>`;
+
+  const reviewsSection=`
+<section id="reviews"${t.services==='list'?' class="alt"':''}>
+  <div class="w">
+    <div class="head mid"><h2>What clients say</h2><p>Replace the placeholder names with real, permission-granted client names.</p></div>
+    ${quotesHTML}
+  </div>
+</section>`;
+
+  const contactSection=`
+<section id="contact" class="final"><div class="w"><div class="inner">
+  <h2>Ready when you are</h2>
+  ${ed('contact_cta','p','',s.contact_cta)}
+  <div class="cta-row" style="justify-content:center">
+    <a href="${primaryHref}" class="b">${c.phone&&!c.book?`Call ${esc(c.phone)}`:esc(s.hero.cta_text)}</a>
+    ${c.email?`<a href="mailto:${esc(c.email)}" class="b b2">Email us</a>`:''}
+  </div>
+</div></div></section>`;
+
   const trust=[m.standout||'Local, reliable, on time',c.area?`Serving ${c.area}`:`Serving ${m.location||'your area'}`,'Free, no-obligation quotes']
     .map(x=>`<span>${tick}${esc(x)}</span>`).join('');
 
@@ -1637,10 +1806,27 @@ function buildSite(state,editable){
     ?`<header class="hero split${heroPhoto}"${heroStyle}${heroSlot}><div class="w"><div>${heroInner}</div>${heroCard}</div></header>`
     :`<header class="hero ${t.hero==='banner'?'banner':'center'}${heroPhoto}"${heroStyle}${heroSlot}><div class="w">${heroInner}</div></header>`;
 
+  /* Sections are assembled from an ordered list so they can be reordered and
+     hidden without touching the builder. Anything empty renders as '' and
+     drops out on its own. Declared after heroHTML — referencing it earlier is
+     a temporal dead zone error. */
+  const SECTION_HTML={hero:heroHTML,stats:statsHTML,services:servicesSection,process:processHTML,
+    about:aboutSection,gallery:galleryHTML,reviews:reviewsSection,faq:faqHTML,areas:areasHTML,contact:contactSection};
+  const secCfg=m.sections||{};
+  const order=(Array.isArray(secCfg.order)&&secCfg.order.length?secCfg.order:SECTION_ORDER)
+    .filter(k=>SECTION_HTML[k]!==undefined);
+  SECTION_ORDER.forEach(k=>{ if(!order.includes(k)) order.push(k); });   // tolerate older saved orders
+  const hidden=new Set(secCfg.hidden||[]);
+  const sectionsHTML=order.filter(k=>!hidden.has(k)).map(k=>SECTION_HTML[k]).join('\n');
+  const navLinks=order.filter(k=>k!=='hero'&&!hidden.has(k)&&SECTION_HTML[k]&&NAV_LABELS[k])
+    .map(k=>`<a href="#${k}">${NAV_LABELS[k]}</a>`).slice(0,5).join('');
+
   /* CC BY / BY-SA require visible attribution wherever the work is used. This
      line is a licence condition on the exported site — removing it would put
      the business that buys this page in breach. */
-  const credited=Object.values(s.media||{}).filter(x=>x&&x.src&&x.credit);
+  // media.gallery is an ARRAY, unlike the single slots — flatten before filtering.
+  const credited=[...Object.values(s.media||{}).filter(x=>x&&!Array.isArray(x)),
+                  ...((s.media&&s.media.gallery)||[])].filter(x=>x&&x.src&&x.credit);
   const photoCredits=credited.length?`<span class="credits"> · Photos: ${credited.map(x=>{
     const c=x.credit, lab=esc(creditLabel(c));
     return c.sourceUrl?`<a href="${esc(c.sourceUrl)}" target="_blank" rel="noopener nofollow">${lab}</a>`:lab;
@@ -1705,54 +1891,14 @@ ${faqLd?`<script type="application/ld+json">${JSON.stringify(faqLd)}<\/script>`:
   ${logoImg.src
     ? `<div class="logo"${slot('logo','Replace logo')}><img class="logoimg" src="${logoImg.src}" alt="${esc(logoImg.alt||m.businessName)}"></div>`
     : `<div class="logo"${slot('logo','Add a logo')}>${esc(m.businessName)}</div>`}
-  <div class="nl">
-    <a href="#services">Services</a><a href="#about">About</a>
-    ${faqs.length?'<a href="#faq">FAQ</a>':''}<a href="#contact">Contact</a>
-  </div>
+  <div class="nl">${navLinks}</div>
   <div class="navcta">
     ${c.phone?`<a class="navtel" href="${telHref(c.phone)}">${esc(c.phone)}</a>`:''}
     <a href="${primaryHref}" class="b bs">${esc(s.hero.cta_text)}</a>
   </div>
 </div></nav>
 
-${heroHTML}
-
-<section id="services"${t.services!=='list'?' class="alt"':''}>
-  <div class="w">
-    <div class="head mid"><h2>What we do</h2><p>Straightforward work, done properly, by people who live here too.</p></div>
-    ${servicesHTML}
-  </div>
-</section>
-
-<section id="about" class="about"><div class="w">
-  <div>
-    <h2>About ${esc(m.businessName)}</h2>
-    ${ed('about','p','',s.about)}
-    ${c.hours?`<p style="margin-top:18px"><strong>Hours:</strong> ${esc(c.hours)}</p>`:''}
-  </div>
-  ${aboutImg.src
-    ? `<div class="fig"${slot('about','Replace photo')}><img src="${aboutImg.src}" alt="${esc(aboutImg.alt||m.businessName+' team at work')}" loading="lazy" decoding="async"></div>`
-    : `<!-- REMINDER: swap this placeholder for a real photo and write descriptive alt text. -->
-  <div class="fig" role="img" aria-label="Placeholder — replace with a photo of the team or recent work"${slot('about','Add a photo')}>${iconSVG('camera')}</div>`}
-</div></section>
-
-<section id="reviews"${t.services==='list'?' class="alt"':''}>
-  <div class="w">
-    <div class="head mid"><h2>What clients say</h2><p>Replace the placeholder names with real, permission-granted client names.</p></div>
-    ${quotesHTML}
-  </div>
-</section>
-
-${faqHTML}
-
-<section id="contact" class="final"><div class="w"><div class="inner">
-  <h2>Ready when you are</h2>
-  ${ed('contact_cta','p','',s.contact_cta)}
-  <div class="cta-row" style="justify-content:center">
-    <a href="${primaryHref}" class="b">${c.phone&&!c.book?`Call ${esc(c.phone)}`:esc(s.hero.cta_text)}</a>
-    ${c.email?`<a href="mailto:${esc(c.email)}" class="b b2">Email us</a>`:''}
-  </div>
-</div></div></section>
+${sectionsHTML}
 
 <footer class="foot">
   <div class="w">
@@ -1822,6 +1968,7 @@ function pickImage(slot){
 async function applyImage(file){
   const slot=pendingSlot; pendingSlot=null;
   if(!slot||!file||!siteState) return;
+  if(slot==='gallery'){ return applyGalleryImage(file); }
   setMediaStatus(`Processing ${MEDIA_SLOTS[slot].label.toLowerCase()}…`);
   try{
     const {src,w,h}=await processImage(file,slot);
@@ -1834,6 +1981,28 @@ async function applyImage(file){
       setMediaStatus(`${MEDIA_SLOTS[slot].label} updated — ${w}×${h}, ${Math.round(src.length/1024)} KB.`);
     }
   }catch(err){ setMediaStatus(err.message||'Could not add that image.',true); }
+}
+async function applyGalleryImage(file,credit){
+  siteState.media=siteState.media||blankMedia();
+  siteState.media.gallery=siteState.media.gallery||[];
+  if(siteState.media.gallery.length>=GALLERY_MAX){
+    setMediaStatus(`Gallery is full (${GALLERY_MAX} photos). Remove one first.`,true); return;
+  }
+  setMediaStatus('Processing photo…');
+  try{
+    const {src,w,h}=await processImage(file,'gallery');
+    siteState.media.gallery.push({src,alt:'',credit:credit||null});
+    renderPreview(); renderMediaPanel(); renderSections(); renderChecks(); renderTips();
+    const ok=pushHistory(siteState);
+    setMediaStatus(ok?`Added to Recent work — ${w}×${h}, ${Math.round(src.length/1024)} KB (${siteState.media.gallery.length}/${GALLERY_MAX}).`
+                     :'Photo added but storage is full — download the HTML to keep it.',!ok);
+  }catch(e){ setMediaStatus(e.message||'Could not add that image.',true); }
+}
+function removeGalleryImage(i){
+  if(!siteState||!siteState.media||!siteState.media.gallery) return;
+  siteState.media.gallery.splice(i,1);
+  renderPreview(); renderMediaPanel(); renderSections(); renderChecks(); pushHistory(siteState);
+  setMediaStatus('Photo removed.');
 }
 function clearImage(slot){
   if(!siteState||!siteState.media) return;
@@ -2039,12 +2208,13 @@ async function generate(brief){
       type:brief.type,typeOther:brief.typeOther,tone:brief.tone,locale:brief.locale,desc:brief.desc,theme:brief.theme,
       contact:{phone:brief.phone,email:brief.email,area:brief.area,hours:brief.hours,book:brief.book},
       seo:{canonical:'',ogImage:'',socials:''},
-      links:{primary:'',secondary:'',secondaryLabel:''}};
+      links:{primary:'',secondary:'',secondaryLabel:''},
+      sections:{order:SECTION_ORDER.slice(),hidden:[]}};
     parsed.media=blankMedia();
     siteState=parsed;
     currentId='is_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
     lastShareURL=''; $('shareUrl').value=''; $('shareMeta').textContent='';
-    stopLoading(); renderPreview(); renderThemeStrip(); renderChecks(); renderTips(); renderMediaPanel(); loadSeoFields(); loadLinkFields(); pushHistory(siteState);
+    stopLoading(); renderPreview(); renderThemeStrip(); renderChecks(); renderTips(); renderMediaPanel(); renderSections(); loadSeoFields(); loadLinkFields(); pushHistory(siteState);
     $('secMedia').open=true; $('secLinks').open=true;
     selectTab('preview'); showWork();
     if(window.innerWidth<=900) mobileTab('preview');
@@ -2237,7 +2407,7 @@ function renderHistory(){
     prefs.theme=siteState.meta.theme; savePrefs();
     lastShareURL=''; $('shareUrl').value=''; $('shareMeta').textContent='';
     loadBriefFromSite();   // panel must describe the site you just opened
-    renderPreview(); renderThemeGrid(); renderThemeStrip(); renderChecks(); renderTips(); renderMediaPanel(); loadSeoFields(); loadLinkFields(); renderHistory();
+    renderPreview(); renderThemeGrid(); renderThemeStrip(); renderChecks(); renderTips(); renderMediaPanel(); renderSections(); loadSeoFields(); loadLinkFields(); renderHistory();
     selectTab('preview'); showWork(); refreshStatus();
     if(window.innerWidth<=1240) $('app').classList.remove('showrail');
     if(window.innerWidth<=900) mobileTab('preview');
@@ -2256,8 +2426,14 @@ function migrate(s){
     if(!s.media[k]||typeof s.media[k]!=='object') s.media[k]={src:'',alt:'',credit:null};
     if(!('credit' in s.media[k])) s.media[k].credit=null;
   });
+  if(!Array.isArray(s.media.gallery)) s.media.gallery=[];
   s.meta.seo=s.meta.seo||{};
   s.meta.links=s.meta.links||{primary:'',secondary:'',secondaryLabel:''};
+  s.meta.sections=s.meta.sections||{order:SECTION_ORDER.slice(),hidden:[]};
+  if(!Array.isArray(s.meta.sections.order)||!s.meta.sections.order.length) s.meta.sections.order=SECTION_ORDER.slice();
+  SECTION_ORDER.forEach(k=>{ if(!s.meta.sections.order.includes(k)) s.meta.sections.order.push(k); });
+  if(!Array.isArray(s.meta.sections.hidden)) s.meta.sections.hidden=[];
+  ['stats','process','areas'].forEach(k=>{ if(!Array.isArray(s[k])) s[k]=[]; });
   return s;
 }
 
@@ -2486,6 +2662,20 @@ function renderMediaPanel(){
       ${cur.credit?`<div class="creditline">© ${esc(creditLabel(cur.credit))}${cur.credit.sourceUrl?` · <a href="${esc(cur.credit.sourceUrl)}" target="_blank" rel="noopener">source</a>`:''}</div>`:''}
     </div>`;
   }).join('');
+  // Gallery is a list, so it gets its own row rather than a single slot.
+  const gal=(md.gallery||[]);
+  host.insertAdjacentHTML('beforeend',`<div class="mslot">
+    <div class="mthumb">${gal.length?`<img src="${gal[0].src}" alt="">`:`<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M21 15l-5-5L5 21"/></svg>`}</div>
+    <div class="minfo"><div class="mname">Recent work</div>
+      <div class="mhint">${gal.length?`${gal.length} of ${GALLERY_MAX} photos`:'Job photos — the strongest proof you can show'}</div></div>
+    <div class="mbtns">
+      <button type="button" data-pick="gallery" ${gal.length>=GALLERY_MAX?'disabled':''}>Upload</button>
+      <button type="button" data-stock="gallery" ${gal.length>=GALLERY_MAX?'disabled':''}>Find</button>
+    </div>
+    ${gal.length?`<div class="galstrip">${gal.map((g,i)=>
+      `<span><img src="${g.src}" alt=""><button type="button" data-galdel="${i}" title="Remove">×</button></span>`).join('')}</div>`:''}
+  </div>`);
+  host.querySelectorAll('[data-galdel]').forEach(b=>b.onclick=()=>removeGalleryImage(+b.dataset.galdel));
   host.querySelectorAll('[data-pick]').forEach(b=>b.onclick=()=>pickImage(b.dataset.pick));
   host.querySelectorAll('[data-clear]').forEach(b=>b.onclick=()=>clearImage(b.dataset.clear));
   host.querySelectorAll('[data-stock]').forEach(b=>b.onclick=()=>{
@@ -2500,6 +2690,78 @@ function renderMediaPanel(){
   }));
 }
 $('mediaFile').onchange=e=>{ const f=e.target.files[0]; if(f) applyImage(f); };
+
+/* ---- section manager --------------------------------------------------- */
+function sectionCfg(){
+  if(!siteState) return {order:SECTION_ORDER.slice(),hidden:[]};
+  siteState.meta.sections=siteState.meta.sections||{};
+  const c=siteState.meta.sections;
+  if(!Array.isArray(c.order)||!c.order.length) c.order=SECTION_ORDER.slice();
+  SECTION_ORDER.forEach(k=>{ if(!c.order.includes(k)) c.order.push(k); });
+  c.order=c.order.filter(k=>SECTION_META[k]);
+  if(!Array.isArray(c.hidden)) c.hidden=[];
+  return c;
+}
+// Does a section have anything to render? Empty ones are shown as such rather
+// than silently missing, which is otherwise baffling.
+function sectionHasContent(k){
+  if(!siteState) return false;
+  const s=siteState;
+  switch(k){
+    case 'stats':   return (s.stats||[]).length>0;
+    case 'process': return (s.process||[]).length>0;
+    case 'areas':   return (s.areas||[]).length>0;
+    case 'faq':     return (s.faqs||[]).length>0;
+    case 'gallery': return ((s.media&&s.media.gallery)||[]).length>0;
+    default: return true;
+  }
+}
+function renderSections(){
+  const host=$('sectionList'); if(!host) return;
+  if(!siteState){ host.innerHTML=`<div class="tiny">Generate a site first.</div>`; $('tagSections').textContent='—'; return; }
+  const c=sectionCfg(), hidden=new Set(c.hidden);
+  const shown=c.order.filter(k=>!hidden.has(k)&&sectionHasContent(k)).length;
+  $('tagSections').textContent=`${shown} on`;
+  host.innerHTML=c.order.map((k,i)=>{
+    const meta=SECTION_META[k], off=hidden.has(k), empty=!sectionHasContent(k);
+    return `<div class="secrow${off?' off':''}">
+      <div class="secmove">
+        <button type="button" data-up="${k}" ${i===0?'disabled':''} title="Move up">↑</button>
+        <button type="button" data-down="${k}" ${i===c.order.length-1?'disabled':''} title="Move down">↓</button>
+      </div>
+      <div class="secinfo"><div class="secname">${meta.label}${empty?' <em>· empty</em>':''}</div><div class="secnote">${meta.note}</div></div>
+      ${meta.always?`<span class="tiny" style="flex:none">always</span>`
+                   :`<div class="switch sm${off?'':' on'}" data-toggle="${k}" role="switch" tabindex="0"></div>`}
+    </div>`;
+  }).join('');
+  host.querySelectorAll('[data-toggle]').forEach(el=>{
+    const go=()=>{
+      const k=el.dataset.toggle, i=c.hidden.indexOf(k);
+      if(i>=0) c.hidden.splice(i,1); else c.hidden.push(k);
+      applySections();
+    };
+    el.onclick=go;
+    el.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); go(); } };
+  });
+  host.querySelectorAll('[data-up]').forEach(b=>b.onclick=()=>moveSection(b.dataset.up,-1));
+  host.querySelectorAll('[data-down]').forEach(b=>b.onclick=()=>moveSection(b.dataset.down,1));
+}
+function moveSection(k,dir){
+  const c=sectionCfg(), i=c.order.indexOf(k);
+  if(i<0) return;
+  /* Step past sections that render nothing. Swapping with an empty neighbour
+     looks like the button is broken — the page is identical afterwards. */
+  let j=i+dir;
+  while(j>=0&&j<c.order.length&&!sectionHasContent(c.order[j])) j+=dir;
+  if(j<0||j>=c.order.length) j=i+dir;                      // nothing visible past it; do the plain swap
+  if(j<0||j>=c.order.length) return;
+  const moved=c.order.splice(i,1)[0];
+  c.order.splice(j,0,moved);
+  applySections();
+}
+function applySections(){
+  renderPreview(); renderSections(); renderChecks(); renderTips(); pushHistory(siteState); lastShareURL='';
+}
 
 /* ---- buttons & links --------------------------------------------------- */
 // Mirrors what buildSite() resolves, so the panel can show the live destination.
@@ -2610,6 +2872,17 @@ async function runStockSearch(){
 async function useStock(r){
   if(!siteState){ setMediaStatus('Generate a site first.',true); return; }
   setMediaStatus(`Fetching photo for ${MEDIA_SLOTS[stockSlot].label.toLowerCase()}…`);
+  const credit={title:r.title,creator:r.creator,creatorUrl:r.creatorUrl,license:r.license,
+                licenseVersion:r.licenseVersion,sourceUrl:r.sourceUrl,text:r.attribution};
+  if(stockSlot==='gallery'){
+    try{
+      const res=await fetch(ovFullSize(r.id),{mode:'cors'});
+      if(!res.ok) throw new Error('That photo could not be loaded.');
+      const blob=await res.blob();
+      await applyGalleryImage(new File([blob],'stock.jpg',{type:blob.type}),credit);
+    }catch(e){ setMediaStatus(e.message||'Could not use that photo.',true); }
+    return;
+  }
   try{
     const {src,w,h}=await processRemoteImage(ovFullSize(r.id),stockSlot);
     siteState.media=siteState.media||blankMedia();
