@@ -364,6 +364,43 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
 #errSlot{margin-bottom:10px}
 #regenErr{width:100%}
 
+/* edit hint */
+.edithint{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--stroke);background:var(--sel);font-size:12.5px;color:var(--txt-2);flex:none}
+.edithint svg{width:15px;height:15px;flex:none;stroke:var(--accent);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.edithint b{color:var(--txt)}
+.edithint span{flex:1;min-width:0}
+.savestate{font-size:11.5px;color:var(--txt-3);white-space:nowrap}
+.savestate.ok::before{content:'✓ ';color:var(--good)}
+.savestate.bad{color:var(--bad)}
+.statusBad{color:var(--bad)!important}
+
+/* tips */
+.doneline{font-size:12.5px;color:var(--txt-3);padding:10px 13px;border-radius:11px;background:var(--good-bg);margin-bottom:13px;line-height:1.55}
+.doneline b{color:var(--good)}
+.pri{font-size:10.5px;font-weight:600;padding:3px 8px;border-radius:99px;flex:none;margin-top:2px;white-space:nowrap}
+.pri.p1{background:var(--warn-bg);color:var(--warn)}
+.pri.p2{background:var(--sel);color:var(--accent)}
+.pri.p3{background:var(--fill);color:var(--txt-3)}
+
+/* media slots */
+.mslot{display:flex;gap:10px;align-items:center;padding:10px;border:1px solid var(--stroke);border-radius:12px;margin-bottom:8px;background:var(--bg)}
+.mthumb{width:54px;height:40px;border-radius:8px;flex:none;background:var(--fill);display:grid;place-items:center;overflow:hidden;border:1px solid var(--stroke)}
+.mthumb img{width:100%;height:100%;object-fit:cover}
+.mthumb svg{width:17px;height:17px;stroke:var(--txt-3);fill:none;stroke-width:1.8}
+.minfo{flex:1;min-width:0}
+.mname{font-size:12.5px;font-weight:600}
+.mhint{font-size:10.5px;color:var(--txt-3);line-height:1.4;margin-top:1px}
+.malt{width:100%;margin-top:7px;font-size:12px;padding:6px 9px}
+.mbtns{display:flex;gap:5px;flex:none}
+.mbtns button{padding:5px 10px;font-size:11.5px;border-radius:99px;border:1px solid var(--stroke);background:var(--surface)}
+.mbtns button:hover{background:var(--fill)}
+
+/* share */
+.sharebox{padding:15px;border:1px solid var(--stroke);border-radius:14px;background:var(--surface);margin-bottom:12px}
+.sharebox textarea{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;line-height:1.5;word-break:break-all;resize:vertical}
+.shareWarn{color:var(--warn)}
+.shareBad{color:var(--bad)}
+
 .foot{padding:10px 14px;border-top:1px solid var(--stroke);font-size:11.5px;color:var(--txt-3);flex:none;display:flex;gap:10px;flex-wrap:wrap;align-items:center;background:var(--surface-2)}
 .hidden{display:none !important}
 .mtabs{display:none}
@@ -494,8 +531,17 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
       </div>
     </details>
 
+    <details class="sec" id="secMedia">
+      <summary>Images <span class="tag" id="tagMedia">0/3</span></summary>
+      <div class="body">
+        <div class="tiny">You can also click the hero, About panel or logo directly in the preview. Images are stored inside the page, so the exported file still works with no server.</div>
+        <div id="mediaPanel"></div>
+        <div id="mediaStatus" class="tiny"></div>
+      </div>
+    </details>
+
     <details class="sec" open>
-      <summary>Theme <span class="tag" id="tagTheme">8</span></summary>
+      <summary>Theme <span class="tag" id="tagTheme">14</span></summary>
       <div class="body">
         <div class="tiny">Switching theme after generating is instant and costs no API call.</div>
         <div class="themes" id="themeGrid"></div>
@@ -540,6 +586,7 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
         </div>
       </div>
     </details>
+    <input type="file" id="mediaFile" accept="image/*" class="hidden">
 
     <div class="gobar">
       <button class="go" id="btnGen">
@@ -554,13 +601,21 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
     <div class="wbar">
       <div class="tabs">
         <button id="tabPreview" class="on">Preview</button>
+        <button id="tabTips">Tips<span class="n" id="tipsN"></span></button>
         <button id="tabChecks">Pre-flight<span class="n" id="checkN"></span></button>
+        <button id="tabShare">Share</button>
       </div>
       <div class="spacer"></div>
+      <span class="savestate" id="saveState"></span>
       <div class="tabs">
         <button id="segDesktop" class="on">Desktop</button>
         <button id="segMobile">Mobile</button>
       </div>
+    </div>
+    <div class="edithint" id="editHint">
+      <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+      <span><b>This preview is live.</b> Click any text to edit it. Click the hero, the About panel or the logo to add a photo. Changes save automatically.</span>
+      <button class="mini" id="hintDismiss" type="button">Got it</button>
     </div>
 
     <div class="tstrip" id="themeStrip"></div>
@@ -594,6 +649,39 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
       </div>
 
       <div class="pane hide" id="paneChecks"><div class="checks" id="checkPanel"></div></div>
+      <div class="pane hide" id="paneTips"><div class="checks" id="tipsPanel"></div></div>
+
+      <div class="pane hide" id="paneShare">
+        <div class="checks">
+          <h3>Share with a prospect</h3>
+          <div class="hint">Creates a link that rebuilds this exact page in their browser. There is no server — the whole site travels inside the link, so nothing is uploaded and the link never expires.</div>
+
+          <div class="sharebox">
+            <div class="row" style="margin-bottom:12px">
+              <div class="lbl"><b>Include photos in the link</b>Photos make the link dramatically longer. Off is safe to paste anywhere.</div>
+              <div class="switch" id="shareImgSwitch" role="switch" tabindex="0"></div>
+            </div>
+            <label for="shareUrl">Shareable link</label>
+            <textarea id="shareUrl" readonly rows="3" spellcheck="false" placeholder="Generate a link…"></textarea>
+            <div id="shareMeta" class="tiny" style="margin-top:8px"></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+              <button class="mini" id="btnMakeShare" type="button">Create link</button>
+              <button class="mini" id="btnCopyShare" type="button">Copy link</button>
+              <button class="mini" id="btnOpenShare" type="button">Open preview</button>
+            </div>
+          </div>
+
+          <div class="sharebox">
+            <b style="font-size:13.5px">Want a real URL instead?</b>
+            <div class="tiny" style="margin-top:6px;line-height:1.7">
+              The link above is perfect for "have a look at this" — but for a site the client actually owns, use <b>Download</b> and host the file.
+              Drag the <code>.html</code> onto <a href="https://app.netlify.com/drop" target="_blank" rel="noopener">Netlify Drop</a> or
+              <a href="https://pages.cloudflare.com" target="_blank" rel="noopener">Cloudflare Pages</a> for a free live URL in about a minute, then point the client's domain at it.
+              The export is a single self-contained file, so any static host works.
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="foot">
@@ -623,6 +711,12 @@ const PACKS={
   realestate:{label:'Real Estate',theme:'property',promptHint:'Emphasize local market knowledge, professionalism, and a CTA toward a free appraisal or consult.'},
   drone:{label:'Drone / Photography',theme:'studio',promptHint:'Emphasize technical quality, safety/compliance (e.g. CAA Part 101 for NZ), and a portfolio-forward CTA.'},
   cleaning:{label:'Cleaning / Trades-adjacent',theme:'fresh',promptHint:'Emphasize reliability, insurance/bonding, and easy booking.'},
+  medical:{label:'Health / Clinic',theme:'medical',promptHint:'Emphasize qualifications, gentle reassuring tone, appointment availability and what happens at a first visit. Never make clinical claims or promise outcomes.'},
+  hospitality:{label:'Café / Restaurant / Venue',theme:'hospitality',promptHint:'Emphasize atmosphere, provenance of food and drink, opening hours and how to book a table or enquire about functions.'},
+  fitness:{label:'Gym / Personal Trainer',theme:'fitness',promptHint:'Emphasize transformation, accountability and community. CTA toward a free trial session or intro consult.'},
+  legal:{label:'Legal / Accounting',theme:'legal',promptHint:'Emphasize discretion, credentials and clear fee conversations. CTA toward an initial consultation. Never give specific legal or financial advice.'},
+  auto:{label:'Automotive / Mechanical',theme:'auto',promptHint:'Emphasize diagnostics done properly, turnaround time, warranty on workmanship and no-surprise quoting.'},
+  corporate:{label:'Finance / Insurance / B2B',theme:'corporate',promptHint:'Emphasize track record, process and risk reduction. Professional, measured tone with a CTA toward a scoping call.'},
   other:{label:'Other',theme:'pro',promptHint:''}
 };
 
@@ -669,7 +763,37 @@ const THEMES={
     ink:'#141019',ink2:'#544c60',bg:'#ffffff',panel:'#f8f4fb',line:'#e7dff0',primary:'#6d28d9',accent:'#b91c5c',
     display:"'Manrope'",body:"'Manrope'",google:'Manrope:wght@500;700;800',
     sysDisplay:"system-ui,-apple-system,Segoe UI",sysBody:"system-ui,-apple-system,Segoe UI",
-    radius:'14px',hero:'center',services:'cards',quotes:'cards',caps:false,weight:800,callBar:true,dark:false,density:74}
+    radius:'14px',hero:'center',services:'cards',quotes:'cards',caps:false,weight:800,callBar:true,dark:false,density:74},
+  corporate:{label:'Corporate Trust',for:'Finance, insurance, B2B services',
+    ink:'#151a21',ink2:'#525b68',bg:'#ffffff',panel:'#f5f7fa',line:'#e1e6ed',primary:'#153e75',accent:'#8a5a00',
+    display:"'Libre Franklin'",body:"'Libre Franklin'",google:'Libre+Franklin:wght@400;500;600;700',
+    sysDisplay:"system-ui,-apple-system,Segoe UI",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'5px',hero:'split',services:'cards',quotes:'cards',caps:false,weight:600,callBar:false,dark:false,density:86},
+  medical:{label:'Care & Clinic',for:'Dental, physio, vet, allied health',
+    ink:'#14201f',ink2:'#475958',bg:'#f7fbfb',panel:'#ffffff',line:'#d8e6e5',primary:'#0e6a68',accent:'#0b5cad',
+    display:"'Poppins'",body:"'Poppins'",google:'Poppins:wght@400;500;600;700',
+    sysDisplay:"system-ui,-apple-system,Segoe UI",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'16px',hero:'center',services:'cards',quotes:'cards',caps:false,weight:600,callBar:true,dark:false,density:82},
+  hospitality:{label:'Hospitality Warm',for:'Cafés, restaurants, venues, catering',
+    ink:'#241a15',ink2:'#5c4a40',bg:'#fdf8f3',panel:'#f6ece1',line:'#e8d9c8',primary:'#8c2f2f',accent:'#6b5324',
+    display:"'Cormorant Garamond'",body:"'Lato'",google:'Cormorant+Garamond:wght@600;700&family=Lato:wght@400;700',
+    sysDisplay:"Georgia,'Times New Roman',serif",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'4px',hero:'banner',services:'numbered',quotes:'featured',caps:false,weight:700,callBar:true,dark:false,density:90},
+  fitness:{label:'Fitness Energy',for:'Gyms, personal trainers, studios',
+    ink:'#f3f6f8',ink2:'#9aa6b1',bg:'#0e1116',panel:'#171c23',line:'#28303a',primary:'#5ee08a',accent:'#ff8a3d',
+    display:"'Oswald'",body:"'Inter'",google:'Oswald:wght@500;700&family=Inter:wght@400;500;600',
+    sysDisplay:"'Helvetica Neue',Arial",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'8px',hero:'banner',services:'list',quotes:'cards',caps:true,weight:700,callBar:true,dark:true,density:80},
+  legal:{label:'Legal Classic',for:'Law firms, accountants, advisors',
+    ink:'#1a1d24',ink2:'#525863',bg:'#fcfbf9',panel:'#f3f1ec',line:'#e2ded6',primary:'#1b2a4a',accent:'#7a5c1e',
+    display:"'Libre Baskerville'",body:"'Source Sans 3'",google:'Libre+Baskerville:wght@400;700&family=Source+Sans+3:wght@400;500;600',
+    sysDisplay:"Georgia,'Times New Roman',serif",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'2px',hero:'split',services:'numbered',quotes:'featured',caps:true,weight:700,callBar:false,dark:false,density:92},
+  auto:{label:'Auto & Industrial',for:'Mechanics, panel beaters, plant hire',
+    ink:'#eef1f4',ink2:'#9aa3ad',bg:'#14181d',panel:'#1d2229',line:'#2e353e',primary:'#4ea3ff',accent:'#ff7a29',
+    display:"'Barlow Condensed'",body:"'Barlow'",google:'Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600',
+    sysDisplay:"'Helvetica Neue',Arial",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'4px',hero:'banner',services:'list',quotes:'cards',caps:true,weight:700,callBar:true,dark:true,density:78}
 };
 const THEME_IDS=Object.keys(THEMES);
 const DEFAULT_THEME='trades';
@@ -729,14 +853,35 @@ function setKey(k){
   const w=$('storageWarn'); if(w) w.classList.toggle('hidden',storageOK);
 }
 function loadHistory(){ try{ const r=JSON.parse(localStorage.getItem(LS_HIST)||'[]'); return Array.isArray(r)?r:[]; }catch{ return []; } }
-function saveHistory(l){ try{ localStorage.setItem(LS_HIST,JSON.stringify(l.slice(0,HIST_CAP))); }catch(e){ console.warn('History save failed (storage full?)',e); } }
+/* Base64 images push a single site into the hundreds of KB, and localStorage
+   is ~5 MB total. Drop the oldest entries and retry rather than throwing away
+   the user's current work; report failure so the caller can say so out loud. */
+function saveHistory(l){
+  let list=l.slice(0,HIST_CAP);
+  for(let attempt=0;attempt<HIST_CAP;attempt++){
+    try{ localStorage.setItem(LS_HIST,JSON.stringify(list)); return true; }
+    catch(e){
+      if(list.length<=1){ console.warn('History save failed — single entry exceeds quota',e); return false; }
+      list=list.slice(0,list.length-1);   // shed the oldest and try again
+    }
+  }
+  return false;
+}
 function pushHistory(state){
   const list=loadHistory();
   const e={id:currentId,businessName:state.meta.businessName||'Untitled site',timestamp:Date.now(),theme:state.meta.theme,siteState:state};
   const i=list.findIndex(x=>x.id===currentId);
   if(i>=0) list[i]=e; else list.unshift(e);
   list.sort((a,b)=>b.timestamp-a.timestamp);
-  saveHistory(list); renderHistory();
+  const ok=saveHistory(list);
+  renderHistory(); markSaved(ok);
+  return ok;
+}
+// Visible autosave state — "did my edit stick?" should never be a guess.
+function markSaved(ok){
+  const el=$('saveState'); if(!el) return;
+  el.textContent=ok?'All changes saved':'Not saved — storage full';
+  el.className='savestate'+(ok?' ok':' bad');
 }
 function loadWL(){ try{ const o=JSON.parse(localStorage.getItem(LS_WL)||'{}'); wl={on:!!o.on,name:o.name||'',logo:o.logo||''}; }catch{} }
 function saveWL(){ localStorage.setItem(LS_WL,JSON.stringify(wl)); }
@@ -962,6 +1107,53 @@ function iconSVG(n){ return `<svg viewBox="0 0 24 24" fill="none" stroke="curren
 const telHref=p=>'tel:'+String(p).replace(/[^\d+]/g,'');
 
 /* ==========================================================================
+   IMAGES
+   Three slots that actually matter for a local service page: a hero
+   background, an "about" photo, and a nav logo. Stored as data URLs inside
+   siteState so the export stays a single self-contained file — the whole
+   promise of this tool is one file you can host anywhere.
+   ========================================================================== */
+const MEDIA_SLOTS={
+  hero: {label:'Hero background', max:1800, quality:.80, hint:'A wide shot of a job, your van, or the team at work.'},
+  about:{label:'About photo',     max:1400, quality:.82, hint:'A real photo of the team beats any stock image.'},
+  logo: {label:'Logo',            max:512,  quality:.92, hint:'Square or wide, transparent PNG works best.'}
+};
+const blankMedia=()=>({hero:{src:'',alt:''},about:{src:'',alt:''},logo:{src:'',alt:''}});
+
+/* Downscale and re-encode before storing. A 4 MB phone photo would otherwise
+   blow past the localStorage quota and bloat the export; this keeps a hero
+   under ~250 KB while still looking sharp on a retina screen. PNGs with
+   transparency (logos) are preserved as PNG, everything else becomes JPEG. */
+function processImage(file,slot){
+  return new Promise((resolve,reject)=>{
+    const cfg=MEDIA_SLOTS[slot]||MEDIA_SLOTS.about;
+    if(!/^image\//.test(file.type)) return reject(new Error('That file is not an image.'));
+    if(file.size>12*1024*1024) return reject(new Error('Image is over 12 MB — please pick a smaller one.'));
+    const fr=new FileReader();
+    fr.onerror=()=>reject(new Error('Could not read that file.'));
+    fr.onload=()=>{
+      const img=new Image();
+      img.onerror=()=>reject(new Error('That image could not be decoded.'));
+      img.onload=()=>{
+        const scale=Math.min(1,cfg.max/Math.max(img.width,img.height));
+        const w=Math.max(1,Math.round(img.width*scale)), h=Math.max(1,Math.round(img.height*scale));
+        const c=document.createElement('canvas'); c.width=w; c.height=h;
+        const ctx=c.getContext('2d');
+        ctx.imageSmoothingQuality='high';
+        ctx.drawImage(img,0,0,w,h);
+        const keepPng=file.type==='image/png'&&slot==='logo';
+        try{
+          resolve({src:c.toDataURL(keepPng?'image/png':'image/jpeg',cfg.quality),w,h});
+        }catch(e){ reject(new Error('Could not process that image.')); }
+      };
+      img.src=fr.result;
+    };
+    fr.readAsDataURL(file);
+  });
+}
+const mediaOf=(s,slot)=>((s&&s.media&&s.media[slot])||{src:'',alt:''});
+
+/* ==========================================================================
    9. SITE BUILDER — one skeleton, eight themes, preview + export
    ========================================================================== */
 function siteCSS(t,editable){
@@ -977,7 +1169,14 @@ a{color:inherit}
 .w{max-width:1120px;margin:0 auto;padding:0 24px}
 ${editable?`[contenteditable]{outline:none}
 [contenteditable]:hover{background:${rgba(t.primary,.07)};border-radius:4px;box-shadow:0 0 0 4px ${rgba(t.primary,.07)}}
-[contenteditable]:focus{background:${rgba(t.primary,.13)};border-radius:4px;box-shadow:0 0 0 4px ${rgba(t.primary,.13)}}`:''}
+[contenteditable]:focus{background:${rgba(t.primary,.13)};border-radius:4px;box-shadow:0 0 0 4px ${rgba(t.primary,.13)}}
+[data-media]{cursor:pointer;position:relative}
+[data-media]::after{content:attr(data-cta);position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  background:rgba(0,0,0,.78);color:#fff;font-family:system-ui,sans-serif;font-size:13px;font-weight:600;
+  padding:9px 15px;border-radius:99px;white-space:nowrap;opacity:0;transition:opacity .18s;pointer-events:none;z-index:5}
+[data-media]:hover::after{opacity:1}
+[data-media]:hover{outline:3px solid ${t.primary};outline-offset:2px}
+.logo[data-media]:hover::after,.nav [data-media]:hover::after{font-size:11px;padding:6px 10px}`:''}
 .nav{position:sticky;top:0;z-index:30;background:${t.bg};border-bottom:1px solid ${t.line}}
 .nav .w{display:flex;align-items:center;justify-content:space-between;gap:18px;padding-top:15px;padding-bottom:15px}
 .logo{font-family:${t.displayFont},sans-serif;font-weight:${t.weight};font-size:20px;color:${t.primary};${t.caps?'text-transform:uppercase;letter-spacing:.04em;':''}}
@@ -1043,8 +1242,19 @@ section{padding:${d}px 0;content-visibility:auto;contain-intrinsic-size:auto 700
 .about .w{display:grid;grid-template-columns:1.05fr .95fr;gap:56px;align-items:center;max-width:1020px}
 .about h2{font-size:clamp(28px,3.5vw,38px);margin-bottom:16px}
 .about p{color:${t.ink2};font-size:18px}
-.fig{aspect-ratio:4/3;border-radius:${t.radius};background:linear-gradient(135deg,${t.primary},${t.accent});display:grid;place-items:center;color:${onPrimary}}
+.fig{aspect-ratio:4/3;border-radius:${t.radius};background:linear-gradient(135deg,${t.primary},${t.accent});display:grid;place-items:center;color:${onPrimary};overflow:hidden}
 .fig svg{width:58px;height:58px;opacity:.85}
+.fig img{width:100%;height:100%;object-fit:cover;display:block}
+.logoimg{height:38px;width:auto;max-width:210px;object-fit:contain;display:block}
+/* Hero photo: a scrim keeps headline contrast honest over an unknown image. */
+.hero.photo::before{background:linear-gradient(${t.dark||t.hero==='banner'?'180deg,rgba(0,0,0,.58),rgba(0,0,0,.72)':'180deg,rgba(0,0,0,.50),rgba(0,0,0,.66)'})}
+.hero.photo{background-size:cover;background-position:center;color:#fff}
+.hero.photo h1,.hero.photo .sub,.hero.photo .trust{color:#fff}
+.hero.photo .eyebrow{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.34);color:#fff}
+.hero.photo .b2{color:#fff;border-color:rgba(255,255,255,.6)}
+.hero.photo .trust svg{color:#fff}
+.hero.photo .hcard{background:rgba(255,255,255,.96);color:${t.ink}}
+.hero.photo .hcard dt{color:${t.ink}}.hero.photo .hcard dd{color:${t.ink2}}.hero.photo .hcard h3{color:${t.ink}}
 .q{padding:30px 28px;border-radius:${t.radius};background:${t.bg};border:1px solid ${t.line};display:flex;flex-direction:column;gap:16px}
 .stars{display:flex;gap:3px;color:${t.accent}}
 .stars svg{width:18px;height:18px;fill:currentColor}
@@ -1112,6 +1322,9 @@ function resolveTheme(id){
 function buildSite(state,editable){
   const s=state,m=s.meta,t=resolveTheme(m.theme),c=m.contact||{};
   const ed=(path,tag,cls,txt)=>`<${tag}${cls?` class="${cls}"`:''}${editable?` contenteditable="true" data-path="${path}" spellcheck="false"`:''}>${esc(txt)}</${tag}>`;
+  const heroImg=mediaOf(s,'hero'), aboutImg=mediaOf(s,'about'), logoImg=mediaOf(s,'logo');
+  // In editable mode every slot is a click target; in export they are plain markup.
+  const slot=(name,cta)=>editable?` data-media="${name}" data-cta="${esc(cta)}" title="${esc(cta)}"`:'';
   const star='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.9 6.2 6.6.9-4.8 4.6 1.2 6.6L12 17.2 6.1 20.3l1.2-6.6L2.5 9.1l6.6-.9z"/></svg>';
   const tick='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg>';
   const primaryHref=c.book?esc(c.book):c.phone?telHref(c.phone):c.email?'mailto:'+esc(c.email):'#contact';
@@ -1181,9 +1394,12 @@ function buildSite(state,editable){
       ${c.area?`<dt>Area</dt><dd>${esc(c.area)}</dd>`:''}
     </dl><a href="${primaryHref}" class="b">${esc(s.hero.cta_text)}</a></aside>`:'';
 
+  const heroPhoto=heroImg.src?` photo`:'';
+  const heroStyle=heroImg.src?` style="background-image:url(${heroImg.src})"`:'';
+  const heroSlot=slot('hero',heroImg.src?'Replace background':'Add a background photo');
   const heroHTML=(t.hero==='split'&&heroCard)
-    ?`<header class="hero split"><div class="w"><div>${heroInner}</div>${heroCard}</div></header>`
-    :`<header class="hero ${t.hero==='banner'?'banner':'center'}"><div class="w">${heroInner}</div></header>`;
+    ?`<header class="hero split${heroPhoto}"${heroStyle}${heroSlot}><div class="w"><div>${heroInner}</div>${heroCard}</div></header>`
+    :`<header class="hero ${t.hero==='banner'?'banner':'center'}${heroPhoto}"${heroStyle}${heroSlot}><div class="w">${heroInner}</div></header>`;
 
   const ld={'@context':'https://schema.org','@type':'LocalBusiness',name:m.businessName,description:s.seo_meta_description,
     areaServed:c.area||m.location||undefined,telephone:c.phone||undefined,email:c.email||undefined,openingHours:c.hours||undefined};
@@ -1212,7 +1428,9 @@ ${faqLd?`<script type="application/ld+json">${JSON.stringify(faqLd)}<\/script>`:
 </head>
 <body>
 <nav class="nav"><div class="w">
-  <div class="logo">${esc(m.businessName)}</div>
+  ${logoImg.src
+    ? `<div class="logo"${slot('logo','Replace logo')}><img class="logoimg" src="${logoImg.src}" alt="${esc(logoImg.alt||m.businessName)}"></div>`
+    : `<div class="logo"${slot('logo','Add a logo')}>${esc(m.businessName)}</div>`}
   <div class="nl">
     <a href="#services">Services</a><a href="#about">About</a>
     ${faqs.length?'<a href="#faq">FAQ</a>':''}<a href="#contact">Contact</a>
@@ -1238,8 +1456,10 @@ ${heroHTML}
     ${ed('about','p','',s.about)}
     ${c.hours?`<p style="margin-top:18px"><strong>Hours:</strong> ${esc(c.hours)}</p>`:''}
   </div>
-  <!-- REMINDER: swap this placeholder for a real photo and write descriptive alt text. -->
-  <div class="fig" role="img" aria-label="Placeholder — replace with a photo of the team or recent work">${iconSVG('camera')}</div>
+  ${aboutImg.src
+    ? `<div class="fig"${slot('about','Replace photo')}><img src="${aboutImg.src}" alt="${esc(aboutImg.alt||m.businessName+' team at work')}" loading="lazy" decoding="async"></div>`
+    : `<!-- REMINDER: swap this placeholder for a real photo and write descriptive alt text. -->
+  <div class="fig" role="img" aria-label="Placeholder — replace with a photo of the team or recent work"${slot('about','Add a photo')}>${iconSVG('camera')}</div>`}
 </div></section>
 
 <section id="reviews"${t.services==='list'?' class="alt"':''}>
@@ -1305,11 +1525,58 @@ function renderPreview(){
         doc.execCommand('insertText',false,txt);
       });
     });
+    // Image slots. The hero slot wraps editable text, so ignore clicks that
+    // land on a contenteditable node or a link — otherwise typing in the
+    // headline would open a file picker.
+    doc.querySelectorAll('[data-media]').forEach(el=>{
+      el.addEventListener('click',e=>{
+        if(e.target.closest('[contenteditable]')||e.target.closest('a')) return;
+        e.preventDefault(); e.stopPropagation();
+        pickImage(el.dataset.media);
+      });
+    });
   };
+}
+
+/* ---- image picking ---------------------------------------------------- */
+let pendingSlot=null;
+function pickImage(slot){
+  if(!siteState) return;
+  pendingSlot=slot;
+  const f=$('mediaFile'); f.value=''; f.click();
+}
+async function applyImage(file){
+  const slot=pendingSlot; pendingSlot=null;
+  if(!slot||!file||!siteState) return;
+  setMediaStatus(`Processing ${MEDIA_SLOTS[slot].label.toLowerCase()}…`);
+  try{
+    const {src,w,h}=await processImage(file,slot);
+    siteState.media=siteState.media||blankMedia();
+    siteState.media[slot]={src,alt:siteState.media[slot]&&siteState.media[slot].alt||''};
+    renderPreview(); renderMediaPanel(); renderChecks(); renderTips();
+    if(!pushHistory(siteState)){
+      setMediaStatus(`Image added (${Math.round(src.length/1024)} KB) — but this site is now too large to save in history.`,true);
+    }else{
+      setMediaStatus(`${MEDIA_SLOTS[slot].label} updated — ${w}×${h}, ${Math.round(src.length/1024)} KB.`);
+    }
+  }catch(err){ setMediaStatus(err.message||'Could not add that image.',true); }
+}
+function clearImage(slot){
+  if(!siteState||!siteState.media) return;
+  siteState.media[slot]={src:'',alt:''};
+  renderPreview(); renderMediaPanel(); renderChecks(); renderTips(); pushHistory(siteState);
+  setMediaStatus(`${MEDIA_SLOTS[slot].label} removed.`);
+}
+function setMediaStatus(msg,bad){
+  const el=$('mediaStatus'); if(!el) return;
+  el.textContent=msg||''; el.className='tiny'+(bad?' statusBad':'');
+  clearTimeout(setMediaStatus._t);
+  if(msg) setMediaStatus._t=setTimeout(()=>{ el.textContent=''; },6000);
 }
 function schedulePersist(){
   clearTimeout(persistTimer);
-  persistTimer=setTimeout(()=>{ pushHistory(siteState); renderChecks(); },700);
+  $('saveState').textContent='Saving…'; $('saveState').className='savestate';
+  persistTimer=setTimeout(()=>{ pushHistory(siteState); renderChecks(); renderTips(); lastShareURL=''; },700);
 }
 
 /* ==========================================================================
@@ -1360,15 +1627,77 @@ function renderChecks(){
 }
 
 /* ==========================================================================
+   TIPS — conversion coaching derived from the actual siteState, not generic
+   advice. Ordered: things costing enquiries first, polish second.
+   ========================================================================== */
+const WEAK_CTA=/^(learn more|click here|submit|read more|find out more|more info|contact|send)$/i;
+function renderTips(){
+  const el=$('tipsPanel'); if(!el) return;
+  if(!siteState){ el.innerHTML=''; $('tipsN').textContent=''; return; }
+  const s=siteState,m=s.meta,c=m.contact||{},md=s.media||blankMedia();
+  const tips=[];
+  const add=(pri,title,body)=>tips.push({pri,title,body});
+
+  if(!c.phone) add(1,'Add a phone number',
+    'For local service work the phone is the enquiry channel. With a number set, it appears in the nav, the hero card, the contact section, the footer and the sticky mobile call bar as a tap-to-call link — and gets embedded in your LocalBusiness schema.');
+  if(!md.hero.src) add(1,'Add a hero background photo',
+    'The single highest-impact image on the page. A real shot of your van, a finished job or the team reads as credible in a way a colour gradient never will. Click the hero in the preview to add one.');
+  const stillPlaceholder=s.testimonials.filter(t=>/\[Replace with real client name\]/i.test(t.author_placeholder)).length;
+  if(stillPlaceholder) add(1,`Replace ${stillPlaceholder} placeholder review name${stillPlaceholder>1?'s':''}`,
+    'The quotes are written as realistic examples, not real reviews. Publishing invented testimonials with fake names is a consumer-law problem in most markets — swap in real client names you have permission to use, or delete the section.');
+  if(WEAK_CTA.test((s.hero.cta_text||'').trim())) add(1,'Sharpen the call to action',
+    `"${esc(s.hero.cta_text)}" is vague. Specific, low-commitment wording converts better — "Get a free quote", "Book a callback", "Check my availability".`);
+
+  if(!md.about.src) add(2,'Add a photo to the About section',
+    'A face or a job in progress builds more trust than any copy. Click the About panel in the preview.');
+  if(!c.area) add(2,'Set your service area',
+    'Naming the suburbs and towns you cover helps you appear in "near me" searches and stops you fielding calls from outside your range.');
+  if(!c.hours) add(2,'Add opening hours',
+    'Hours show in the About section, the footer and the schema. "Emergency 24/7" in particular is a strong differentiator worth stating.');
+  if(!(s.faqs||[]).length) add(2,'Add an FAQ',
+    'FAQs pre-answer the objections that stop people calling — price basis, timing, guarantees. They also add FAQPage schema, which can win extra space in Google results. Use the FAQ regenerate button.');
+  if(!md.logo.src) add(2,'Add your logo',
+    'Replaces the text wordmark in the nav. Even a simple one lifts perceived legitimacy.');
+
+  const hl=(s.hero.headline||'').length;
+  if(hl>70) add(2,'Shorten the headline',`It is ${hl} characters. Under 70 keeps it on one or two lines on a phone, which is where most of your traffic will read it.`);
+  if(!c.book) add(3,'Consider a booking link',
+    'A Calendly or similar link turns the main button into self-service booking, which captures enquiries outside working hours.');
+  if(!m.standout) add(3,'Name one standout feature',
+    'One concrete differentiator — "24/7 callout", "master electrician", "fixed-price quotes" — appears as a badge above the headline and in the trust row.');
+  if(s.services.length<4) add(3,'Consider a fourth service',
+    `You have ${s.services.length}. Four to five gives the grid better balance and catches more long-tail searches.`);
+
+  const done=[];
+  if(c.phone&&c.email&&c.area&&c.hours) done.push('full contact details wired through the page and schema');
+  if(md.hero.src||md.about.src) done.push('real photography');
+  if((s.faqs||[]).length) done.push(`${s.faqs.length} FAQs with FAQPage schema`);
+  if(!stillPlaceholder) done.push('real review names');
+
+  tips.sort((a,b)=>a.pri-b.pri);
+  const urgent=tips.filter(t=>t.pri===1).length;
+  $('tipsN').textContent=tips.length?` ${tips.length}`:' ✓';
+  el.innerHTML=`<h3>Suggestions</h3>
+    <div class="hint">${tips.length?`${tips.length} things would make this page convert better${urgent?` — ${urgent} worth doing before you send it`:''}.`:'Nothing outstanding. This page is ready to send.'}</div>
+    ${done.length?`<div class="doneline"><b>Already strong:</b> ${done.join(' · ')}.</div>`:''}
+    <ul>${tips.map(t=>`<li><span class="pri p${t.pri}">${t.pri===1?'Do first':t.pri===2?'Worth doing':'Optional'}</span>
+      <div><b>${t.title}</b><br><span>${t.body}</span></div></li>`).join('')}</ul>`;
+}
+
+/* ==========================================================================
    12. PANES
    ========================================================================== */
+const PANES=['paneEmpty','paneLoad','paneFrame','paneChecks','paneTips','paneShare'];
+const TABS={preview:['tabPreview','paneFrame'],tips:['tabTips','paneTips'],checks:['tabChecks','paneChecks'],share:['tabShare','paneShare']};
+let activeTab='preview';
 function pane(which){
-  ['paneEmpty','paneLoad','paneFrame','paneChecks'].forEach(p=>$(p).classList.add('hide'));
+  PANES.forEach(p=>$(p).classList.add('hide'));
   $(which).classList.remove('hide');
 }
 function showWork(){
-  if(!siteState){ pane('paneEmpty'); return; }
-  pane($('tabChecks').classList.contains('on')?'paneChecks':'paneFrame');
+  if(!siteState){ pane('paneEmpty'); $('editHint').classList.add('hidden'); return; }
+  pane(TABS[activeTab][1]);
+  $('editHint').classList.toggle('hidden',activeTab!=='preview'||hintDismissed);
 }
 function startLoading(){
   pane('paneLoad'); let i=0;
@@ -1430,9 +1759,12 @@ async function generate(brief){
     parsed.meta={businessName:brief.name,location:brief.location,standout:brief.standout,
       type:brief.type,typeOther:brief.typeOther,tone:brief.tone,locale:brief.locale,desc:brief.desc,theme:brief.theme,
       contact:{phone:brief.phone,email:brief.email,area:brief.area,hours:brief.hours,book:brief.book}};
+    parsed.media=blankMedia();
     siteState=parsed;
     currentId='is_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
-    stopLoading(); renderPreview(); renderThemeStrip(); renderChecks(); pushHistory(siteState);
+    lastShareURL=''; $('shareUrl').value=''; $('shareMeta').textContent='';
+    stopLoading(); renderPreview(); renderThemeStrip(); renderChecks(); renderTips(); renderMediaPanel(); pushHistory(siteState);
+    $('secMedia').open=true;
     selectTab('preview'); showWork();
     if(window.innerWidth<=900) mobileTab('preview');
   }catch(err){ stopLoading(); showError(err); }
@@ -1494,6 +1826,91 @@ function renderThemeGrid(){
 }
 
 /* ==========================================================================
+   SHARE LINKS
+   There is no backend, so a shareable link has to carry the site with it.
+   The whole siteState is gzipped (CompressionStream is Baseline-available)
+   and base64url-encoded into the URL fragment. Fragments are never sent to
+   a server, so nothing is uploaded anywhere — the prospect's browser
+   reconstructs the page locally from the link itself.
+
+   Trade-off worth knowing: base64 photos do not compress (they are already
+   JPEG), so including images makes the link very long. Text-only links are
+   ~1-2 KB and safe to paste anywhere; image links can run to hundreds of KB,
+   which browsers handle but some chat apps truncate. The UI reports the real
+   length and warns, rather than silently producing a broken link.
+   ========================================================================== */
+const SHARE_PREFIX='#s=';
+function b64urlEncode(bytes){
+  let bin='';const chunk=0x8000;
+  for(let i=0;i<bytes.length;i+=chunk) bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+chunk));
+  return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+function b64urlDecode(s){
+  s=s.replace(/-/g,'+').replace(/_/g,'/');
+  while(s.length%4) s+='=';
+  const bin=atob(s),out=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) out[i]=bin.charCodeAt(i);
+  return out;
+}
+const canCompress=()=>typeof CompressionStream!=='undefined'&&typeof DecompressionStream!=='undefined';
+async function packShare(str){
+  const bytes=new TextEncoder().encode(str);
+  if(!canCompress()) return 'r'+b64urlEncode(bytes);       // raw fallback
+  const stream=new Blob([bytes]).stream().pipeThrough(new CompressionStream('gzip'));
+  return 'g'+b64urlEncode(new Uint8Array(await new Response(stream).arrayBuffer()));
+}
+async function unpackShare(s){
+  const flag=s[0],body=s.slice(1);
+  let bytes=b64urlDecode(body);
+  if(flag==='g'){
+    if(!canCompress()) throw new Error('This browser cannot decompress the link.');
+    const stream=new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+    bytes=new Uint8Array(await new Response(stream).arrayBuffer());
+  }else if(flag!=='r') throw new Error('Unrecognised link format.');
+  return new TextDecoder().decode(bytes);
+}
+function shareState(withImages){
+  const clone=JSON.parse(JSON.stringify(siteState));
+  if(!withImages) clone.media=blankMedia();
+  return {v:3,s:clone,wl:wl.on?{on:true,name:wl.name}:null};
+}
+async function buildShareURL(withImages){
+  const payload=JSON.stringify(shareState(withImages));
+  const packed=await packShare(payload);
+  const base=location.origin+location.pathname;
+  return base+SHARE_PREFIX+packed;
+}
+
+/* Prospect view: the page a shared link opens. Read-only, full viewport. */
+async function renderProspectView(raw){
+  let data;
+  try{ data=JSON.parse(await unpackShare(raw)); }
+  catch(e){
+    document.body.innerHTML=`<div style="font-family:var(--sans);max-width:520px;margin:16vh auto;padding:0 24px;text-align:center">
+      <h1 style="font-size:22px;margin-bottom:10px">This preview link is broken</h1>
+      <p style="color:var(--txt-3);line-height:1.6">The link may have been truncated in transit — long previews can get cut off by chat apps and email clients. Ask the sender for a fresh link, or for the HTML file.</p>
+      <p style="margin-top:18px"><a href="${location.origin+location.pathname}">Open Instant Site</a></p></div>`;
+    return;
+  }
+  const st=data.s; if(!st||!st.meta){ location.hash=''; location.reload(); return; }
+  st.media=st.media||blankMedia();
+  if(!Array.isArray(st.faqs)) st.faqs=[];
+  const agency=data.wl&&data.wl.name?data.wl.name:'';
+  document.documentElement.style.overflow='auto';
+  document.body.style.overflow='auto';
+  document.body.innerHTML=`
+    <iframe id="pv" title="${esc(st.meta.businessName)}" style="position:fixed;inset:0;width:100%;height:100%;border:0"></iframe>
+    <div id="pvbar" style="position:fixed;right:14px;bottom:14px;z-index:9;display:flex;gap:8px;align-items:center;
+      background:rgba(20,20,22,.86);backdrop-filter:blur(14px);color:#fff;padding:8px 10px 8px 14px;border-radius:999px;
+      font:500 12.5px/1 var(--sans);box-shadow:0 8px 26px rgba(0,0,0,.3)">
+      <span style="opacity:.85">${agency?esc(agency)+' — preview':'Website preview'}</span>
+      <a href="${location.origin+location.pathname}" style="color:#fff;background:rgba(255,255,255,.18);padding:6px 12px;border-radius:999px;text-decoration:none">Make your own</a>
+    </div>`;
+  document.getElementById('pv').srcdoc=buildSite(st,false);
+  document.title=st.meta.businessName+(st.meta.location?' — '+st.meta.location:'');
+}
+
+/* ==========================================================================
    14. EXPORT — built from siteState, so it always matches the preview,
    including manual edits. buildSite() carries no Instant Site branding.
    ========================================================================== */
@@ -1537,7 +1954,8 @@ function renderHistory(){
     const e=loadHistory().find(x=>x.id===b.dataset.id); if(!e) return;
     siteState=migrate(e.siteState); currentId=e.id;
     prefs.theme=siteState.meta.theme; savePrefs();
-    renderPreview(); renderThemeGrid(); renderThemeStrip(); renderChecks(); renderHistory();
+    lastShareURL=''; $('shareUrl').value=''; $('shareMeta').textContent='';
+    renderPreview(); renderThemeGrid(); renderThemeStrip(); renderChecks(); renderTips(); renderMediaPanel(); renderHistory();
     selectTab('preview'); showWork(); refreshStatus();
     if(window.innerWidth<=1240) $('app').classList.remove('showrail');
     if(window.innerWidth<=900) mobileTab('preview');
@@ -1549,6 +1967,10 @@ function migrate(s){
   if(!THEMES[s.meta.theme]) s.meta.theme=(PACKS[s.meta.type]&&PACKS[s.meta.type].theme)||DEFAULT_THEME;
   s.meta.contact=s.meta.contact||{};
   if(!Array.isArray(s.faqs)) s.faqs=[];
+  // `media` postdates earlier saves — backfill so old history still renders.
+  const m=blankMedia();
+  s.media=Object.assign(m,s.media||{});
+  Object.keys(m).forEach(k=>{ if(!s.media[k]||typeof s.media[k]!=='object') s.media[k]={src:'',alt:''}; });
   return s;
 }
 
@@ -1612,12 +2034,12 @@ $('btnDemo').onclick=()=>{
 };
 
 function selectTab(which){
-  const p=which==='preview';
-  $('tabPreview').classList.toggle('on',p); $('tabChecks').classList.toggle('on',!p);
+  if(!TABS[which]) which='preview';
+  activeTab=which;
+  Object.entries(TABS).forEach(([k,[tab]])=>$(tab).classList.toggle('on',k===which));
   showWork();
 }
-$('tabPreview').onclick=()=>selectTab('preview');
-$('tabChecks').onclick=()=>selectTab('checks');
+Object.keys(TABS).forEach(k=>{ $(TABS[k][0]).onclick=()=>selectTab(k); });
 $('segDesktop').onclick=()=>{ $('frameWrap').classList.remove('mobile'); $('segDesktop').classList.add('on'); $('segMobile').classList.remove('on'); };
 $('segMobile').onclick=()=>{ $('frameWrap').classList.add('mobile'); $('segMobile').classList.add('on'); $('segDesktop').classList.remove('on'); };
 $('btnCopy').onclick=copyHTML;
@@ -1685,6 +2107,80 @@ $('wlLogoFile').onchange=e=>{
 };
 $('btnLogoClear').onclick=()=>{ wl.logo=''; $('wlLogoPrev').classList.add('hidden'); saveWL(); applyBranding(); };
 
+/* ---- media panel ------------------------------------------------------ */
+function renderMediaPanel(){
+  const host=$('mediaPanel'); if(!host) return;
+  const md=(siteState&&siteState.media)||blankMedia();
+  const filled=Object.keys(MEDIA_SLOTS).filter(k=>md[k]&&md[k].src).length;
+  $('tagMedia').textContent=`${filled}/3`;
+  $('tagMedia').className='tag'+(filled===3?' ok':'');
+  if(!siteState){ host.innerHTML=`<div class="tiny">Generate a site first, then add images here.</div>`; return; }
+  host.innerHTML=Object.entries(MEDIA_SLOTS).map(([k,cfg])=>{
+    const cur=md[k]||{src:'',alt:''};
+    return `<div class="mslot">
+      <div class="mthumb">${cur.src?`<img src="${cur.src}" alt="">`:`<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>`}</div>
+      <div class="minfo">
+        <div class="mname">${cfg.label}</div>
+        <div class="mhint">${cur.src?'Added — alt text below':cfg.hint}</div>
+        ${cur.src?`<input class="malt" type="text" data-alt="${k}" maxlength="140" placeholder="Describe this image (alt text)" value="${esc(cur.alt)}">`:''}
+      </div>
+      <div class="mbtns">
+        <button type="button" data-pick="${k}">${cur.src?'Replace':'Add'}</button>
+        ${cur.src?`<button type="button" data-clear="${k}">Remove</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+  host.querySelectorAll('[data-pick]').forEach(b=>b.onclick=()=>pickImage(b.dataset.pick));
+  host.querySelectorAll('[data-clear]').forEach(b=>b.onclick=()=>clearImage(b.dataset.clear));
+  host.querySelectorAll('[data-alt]').forEach(i=>i.addEventListener('input',()=>{
+    siteState.media[i.dataset.alt].alt=i.value;
+    clearTimeout(i._t); i._t=setTimeout(()=>{ renderPreview(); renderChecks(); pushHistory(siteState); },600);
+  }));
+}
+$('mediaFile').onchange=e=>{ const f=e.target.files[0]; if(f) applyImage(f); };
+
+/* ---- share ------------------------------------------------------------ */
+let shareIncludesImages=false, lastShareURL='';
+$('shareImgSwitch').onclick=()=>{
+  shareIncludesImages=!shareIncludesImages;
+  $('shareImgSwitch').classList.toggle('on',shareIncludesImages);
+  if(lastShareURL) makeShareLink();
+};
+$('shareImgSwitch').onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); $('shareImgSwitch').click(); } };
+
+async function makeShareLink(){
+  if(!siteState){ $('shareMeta').textContent='Generate a site first.'; return; }
+  $('shareMeta').textContent='Building link…'; $('shareMeta').className='tiny';
+  try{
+    const url=await buildShareURL(shareIncludesImages);
+    lastShareURL=url; $('shareUrl').value=url;
+    const kb=(url.length/1024).toFixed(1);
+    const hasImgs=Object.values(siteState.media||{}).some(m=>m&&m.src);
+    let cls='tiny',msg=`${url.length.toLocaleString()} characters (${kb} KB). `;
+    if(url.length<8000) msg+='Safe to paste into any email, text or chat app.';
+    else if(url.length<120000){ cls='tiny shareWarn'; msg+='Works in browsers, but some chat apps truncate links this long — send it by email, or turn photos off.'; }
+    else { cls='tiny shareBad'; msg+='Very long. Expect this to break in most messaging apps — turn photos off for sharing, and use Download for the full-quality site.'; }
+    if(!shareIncludesImages&&hasImgs) msg+=' Photos are excluded from this link; the downloaded HTML still has them.';
+    if(!canCompress()) msg+=' (This browser lacks compression, so the link is larger than usual.)';
+    $('shareMeta').textContent=msg; $('shareMeta').className=cls;
+  }catch(e){ $('shareMeta').textContent='Could not build the link: '+e.message; $('shareMeta').className='tiny shareBad'; }
+}
+$('btnMakeShare').onclick=makeShareLink;
+$('btnCopyShare').onclick=async()=>{
+  if(!lastShareURL) await makeShareLink();
+  if(!lastShareURL) return;
+  try{ await navigator.clipboard.writeText(lastShareURL); $('btnCopyShare').textContent='Copied'; }
+  catch{ $('shareUrl').select(); document.execCommand('copy'); $('btnCopyShare').textContent='Copied'; }
+  setTimeout(()=>{ $('btnCopyShare').textContent='Copy link'; },1800);
+};
+$('btnOpenShare').onclick=async()=>{
+  if(!lastShareURL) await makeShareLink();
+  if(lastShareURL) window.open(lastShareURL,'_blank','noopener');
+};
+
+let hintDismissed=false;
+$('hintDismiss').onclick=()=>{ hintDismissed=true; $('editHint').classList.add('hidden'); };
+
 function mobileTab(which){
   const app=$('app');
   app.classList.toggle('mob-preview',which==='preview');
@@ -1750,6 +2246,8 @@ function verifyAppTokens(){
 /* ---- boot ---- */
 loadWL(); loadPrefs(); loadBrief();
 applyAppearance(); applyBranding();
+
+function bootDashboard(){
 $('apiKey').value=getKey();
 $('fontSwitch').classList.toggle('on',prefs.systemFonts);
 $('wlSwitch').classList.toggle('on',wl.on);
@@ -1758,11 +2256,27 @@ $('wlName').value=wl.name;
 if(wl.logo){ $('wlLogoPrev').src=wl.logo; $('wlLogoPrev').classList.remove('hidden'); }
 $('descCount').textContent=$('desc').value.length;
 syncOtherField();
-renderHistory(); renderRegenBar(); renderThemeGrid(); renderThemeStrip();
+renderHistory(); renderRegenBar(); renderThemeGrid(); renderThemeStrip(); renderMediaPanel();
 // No key yet? Open Settings so the field is visible immediately rather than
 // hidden inside a collapsed section the user has to discover.
 if(!getKey()) $('secSettings').open=true;
 pane('paneEmpty'); refreshStatus(); verifyThemes(); verifyAppTokens();
 if(window.innerWidth<=900) mobileTab('brief');
 if(window.innerWidth<=1240) $('btnRail').classList.remove('on'); else $('btnRail').classList.add('on');
+}
+
+/* A shared link opens straight into the read-only prospect view. The visitor
+   is not the owner: they should never see the editor or an API-key prompt, so
+   the dashboard is never booted at all in that case. */
+if(location.hash.startsWith(SHARE_PREFIX)){
+  renderProspectView(location.hash.slice(SHARE_PREFIX.length));
+}else{
+  bootDashboard();
+}
+/* Pasting a share link into an already-open tab only changes the fragment —
+   boot never re-runs, so the page would appear to ignore the link entirely.
+   Reload so the branch above evaluates against the new hash. */
+window.addEventListener('hashchange',()=>{
+  if(location.hash.startsWith(SHARE_PREFIX)&&!document.getElementById('pv')) location.reload();
+});
 </script>
