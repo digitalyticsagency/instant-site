@@ -41,7 +41,7 @@
           verifyThemes(). App chrome tokens are checked by verifyAppTokens().
 
   PERFORMANCE: exports are ~20 KB, zero JavaScript, all CSS inlined, icons as
-          inline SVG, content-visibility on below-fold sections. The only
+          inline SVG. The only
           optional external request is Google Fonts for the generated site
           (preconnected, display=swap); "System fonts only" drops it to zero.
 
@@ -398,6 +398,18 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
 .mbtns button{padding:5px 10px;font-size:11.5px;border-radius:99px;border:1px solid var(--stroke);background:var(--surface)}
 .mbtns button:hover{background:var(--fill)}
 
+/* pages */
+.pgrow{display:flex;align-items:center;gap:6px;padding:6px 8px;border:1px solid var(--stroke);border-radius:10px;margin-bottom:5px;background:var(--bg)}
+.pgrow.cur{border-color:var(--accent);background:var(--sel)}
+.pgopen{flex:1;min-width:0;text-align:left;padding:2px}
+.pgname{display:block;font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pgname em{font-style:normal;font-weight:400;color:var(--txt-3);font-size:11px}
+.pgslug{display:block;font-size:10px;color:var(--txt-3);font-family:ui-monospace,Menlo,monospace}
+.pgbtns{display:flex;gap:3px;flex:none}
+.pgbtns button{padding:3px 7px;border-radius:6px;border:1px solid var(--stroke);background:var(--surface);font-size:10px;color:var(--txt-3)}
+.pgbtns button:hover{background:var(--fill);color:var(--txt)}
+.pgbtns button.on{border-color:var(--accent);color:var(--accent);background:var(--sel)}
+
 /* section manager */
 .secrow{display:flex;align-items:center;gap:9px;padding:8px 10px;border:1px solid var(--stroke);border-radius:11px;margin-bottom:6px;background:var(--bg)}
 .secrow.off{opacity:.5}
@@ -583,6 +595,19 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
           <input type="text" id="cArea" placeholder="Tauranga, Mount Maunganui, Papamoa" maxlength="120"></div>
         <div class="field"><label for="cHours">Opening hours</label><input type="text" id="cHours" placeholder="Mon–Fri 7am–5pm · Emergency 24/7" maxlength="90"></div>
         <div class="field"><label for="cBook">Booking link <span class="opt">optional</span></label><input type="text" id="cBook" placeholder="https://calendly.com/…" maxlength="200"></div>
+      </div>
+    </details>
+
+    <details class="sec" id="secPages" open>
+      <summary>Pages <span class="tag" id="tagPages">1</span></summary>
+      <div class="body">
+        <div class="tiny">One page exports as a single HTML file. Two or more export as a ZIP of linked pages — up to <b>50</b>.</div>
+        <div id="pageList"></div>
+        <div style="display:flex;gap:6px">
+          <input type="text" id="newPageName" placeholder="Page name, e.g. Services" maxlength="40" style="flex:1">
+          <button class="mini" id="btnAddPage" type="button">Add</button>
+        </div>
+        <div id="pageStatus" class="tiny"></div>
       </div>
     </details>
 
@@ -919,6 +944,18 @@ const THEMES={
     display:"'Libre Baskerville'",body:"'Source Sans 3'",google:'Libre+Baskerville:wght@400;700&family=Source+Sans+3:wght@400;500;600',
     sysDisplay:"Georgia,'Times New Roman',serif",sysBody:"system-ui,-apple-system,Segoe UI",
     radius:'2px',hero:'split',services:'numbered',quotes:'featured',caps:true,weight:700,callBar:false,dark:false,density:92},
+  /* Storytelling themes: long-read proportions, generous measure, big type.
+     Built for scroll-driven narrative rather than a services grid. */
+  story:{label:'Narrative Longread',for:'Storytelling brands, studios, makers',
+    ink:'#1c1a17',ink2:'#56504a',bg:'#fffdf9',panel:'#f6f0e6',line:'#e6ddcf',primary:'#7a3b12',accent:'#2f5d50',
+    display:"'Newsreader'",body:"'Newsreader'",google:'Newsreader:opsz,wght@6..72,400;6..72,600;6..72,700',
+    sysDisplay:"Georgia,'Iowan Old Style',serif",sysBody:"Georgia,'Iowan Old Style',serif",
+    radius:'2px',hero:'center',services:'numbered',quotes:'featured',caps:false,weight:700,callBar:false,dark:false,density:112,story:true},
+  cinema:{label:'Cinematic Story',for:'Film, hospitality, premium brand stories',
+    ink:'#f4f4f6',ink2:'#a3a3ab',bg:'#0b0b0d',panel:'#16161a',line:'#26262c',primary:'#e8c26a',accent:'#7fb2ff',
+    display:"'Instrument Serif'",body:"'Inter'",google:'Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600',
+    sysDisplay:"Georgia,'Times New Roman',serif",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'4px',hero:'banner',services:'numbered',quotes:'featured',caps:false,weight:400,callBar:false,dark:true,density:118,story:true},
   auto:{label:'Auto & Industrial',for:'Mechanics, panel beaters, plant hire',
     ink:'#eef1f4',ink2:'#9aa3ad',bg:'#14181d',panel:'#1d2229',line:'#2e353e',primary:'#4ea3ff',accent:'#ff7a29',
     display:"'Barlow Condensed'",body:"'Barlow'",google:'Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600',
@@ -953,7 +990,43 @@ const ICON_PATHS={
 const ICON_NAMES=Object.keys(ICON_PATHS);
 const FALLBACK_ICON='sparkles';
 
-/* Page sections, in default order. Reorderable and hideable per site. */
+/* ==========================================================================
+   PAGES
+   Page 0 is home and lives at the top level of siteState, so every existing
+   code path and every saved site keeps working untouched. Extra pages live in
+   siteState.pages[] with the same content shape. meta (business, contact,
+   theme, links, SEO) is shared across all pages — a business has one phone
+   number, not one per page.
+   ========================================================================== */
+const PAGE_CAP=50;
+const pageOf=(st,i)=>(!i?st:(st.pages||[])[i-1])||st;
+const pageCount=st=>1+((st&&st.pages||[]).length);
+const slugify=(s,fallback)=>String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40)||fallback||'page';
+const pageHref=(st,i)=>i===0?'index.html':`${(pageOf(st,i).slug)||'page'}.html`;
+const pageTitle=(st,i)=>i===0?'Home':(pageOf(st,i).title||'Untitled');
+// Slugs become filenames in the ZIP, so they must be unique.
+function uniqueSlug(st,want,ignoreIdx){
+  let base=slugify(want),s=base,n=2;
+  const taken=i=>{ if(i===0) return 'index'===s; const p=(st.pages||[])[i-1]; return p&&p.slug===s; };
+  const clash=()=>{ if(s==='index') return true;
+    for(let i=1;i<pageCount(st);i++){ if(i===ignoreIdx) continue; if(taken(i)) return true; } return false; };
+  while(clash()){ s=`${base}-${n++}`; }
+  return s;
+}
+/* A fresh page. Deliberately sparse — the user fills it in, or regenerates
+   individual sections, rather than getting invented filler. */
+const blankPage=(title,st)=>({
+  id:'pg_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),
+  slug:uniqueSlug(st,title),title:title||'New page',inNav:true,
+  hero:{headline:title||'New page',subheadline:'Add a sentence about this page.',cta_text:'Get in touch'},
+  services:[],about:'',testimonials:[],faqs:[],stats:[],process:[],areas:[],
+  contact_cta:'Get in touch and we will come straight back to you.',
+  seo_meta_description:'',
+  media:blankMedia(),
+  sections:{order:SECTION_ORDER.slice(),hidden:['stats','services','process','about','gallery','reviews','faq','areas']}
+});
+
+/* Page sections, in default order. Reorderable and hideable per page. */
 const SECTION_ORDER=['hero','stats','services','process','about','gallery','reviews','faq','areas','contact'];
 const NAV_LABELS={services:'Services',process:'How it works',about:'About',gallery:'Work',reviews:'Reviews',faq:'FAQ',areas:'Areas',contact:'Contact'};
 const SECTION_META={
@@ -974,6 +1047,8 @@ const LOAD_LINES=['Drafting your hero section…','Writing service descriptions�
    2. STATE — siteState is the single source of truth for preview AND export
    ========================================================================== */
 let siteState=null, currentId=null, loadTimer=null, lastBrief=null, persistTimer=null, briefTimer=null;
+let currentPage=0;                       // which page the editor is showing
+const curPage=()=>pageOf(siteState,currentPage);
 let wl={on:false,name:'',logo:''};
 let prefs={systemFonts:false,motion:true,theme:DEFAULT_THEME,appearance:'auto'};
 const $=id=>document.getElementById(id);
@@ -1133,6 +1208,7 @@ What they do: ${brief.desc}`;
   if(brief.hours) u+=`\nOpening hours: ${brief.hours}`;
   if(brief.area) u+=`\nService area: ${brief.area}`;
   u+=`\nTone: ${brief.tone}\nLanguage: ${LOCALES[brief.locale].label} English`;
+  if(brief.page) u+=`\n\nIMPORTANT: this content is for a dedicated sub-page titled "${brief.page}", not the home page. Write specifically about "${brief.page}" — go deeper on that one topic rather than summarising the whole business.`;
   if(existing&&scope){
     u+=`\n\nExisting site content (keep tone and facts consistent; regenerate only "${scope}"):\n${JSON.stringify({
       hero:existing.hero,services:existing.services,about:existing.about,
@@ -1405,6 +1481,14 @@ async function processRemoteImage(url,slot){
 /* ==========================================================================
    9. SITE BUILDER — one skeleton, eight themes, preview + export
    ========================================================================== */
+/* NOTE — no `content-visibility:auto` on sections, deliberately. It skips
+   offscreen layout, so the browser resolves #anchor targets against ESTIMATED
+   heights, scrolls to the wrong place, then shifts as content renders.
+   Measured: #about did not move at all, #faq landed 230px off. The nav is
+   built from anchors, so correct scrolling beats a render saving that was
+   unmeasurable at this page size (DOMContentLoaded ~8ms).
+   Comments belong out here, not in the template literal — anything inside it
+   is shipped in every exported page. */
 function siteCSS(t,editable){
   const d=t.density;
   const onPrimary=bestOn(t.primary), onAccent=bestOn(t.accent);
@@ -1415,7 +1499,31 @@ body{background:${t.bg};color:${t.ink};font-family:${t.bodyFont},sans-serif;font
 h1,h2,h3{font-family:${t.displayFont},sans-serif;font-weight:${t.weight};line-height:1.12;letter-spacing:${t.caps?'.01em':'-.02em'}}
 img{max-width:100%;height:auto;display:block}
 a{color:inherit}
-.w{max-width:1120px;margin:0 auto;padding:0 24px}
+.w{max-width:${t.story?'980px':'1120px'};margin:0 auto;padding:0 24px}
+/* Anchor targets must clear the sticky nav, or clicking a nav link parks the
+   heading underneath it. */
+section,header{scroll-margin-top:96px}   /* nav is ~82px tall; leave breathing room */
+${t.story?`
+/* ---- storytelling / long-read proportions ----
+   Wider leading, a reading measure capped near 65 characters, and a drop cap.
+   The point is that the page reads like an article rather than a brochure. */
+body{font-size:19px;line-height:1.78}
+.head{max-width:38ch}
+.head.mid{max-width:44ch}
+.hero h1{font-size:clamp(40px,6.4vw,74px);letter-spacing:-.03em;line-height:1.05}
+.sub{font-size:clamp(19px,2.3vw,24px);max-width:34em;line-height:1.6}
+.about p,.rows p,.num p,.faq p{max-width:65ch}
+.about .w{max-width:900px}
+.about p:first-of-type::first-letter{float:left;font-family:${t.displayFont},serif;font-size:3.4em;line-height:.82;
+  padding:.06em .09em 0 0;color:${t.primary};font-weight:${t.weight}}
+.num{grid-template-columns:1fr;gap:0;max-width:70ch;margin:0 auto}
+.num .item{border-top:1px solid ${t.line};padding:38px 0 34px}
+.num .item:first-child{border-top:0}
+.num .n{font-size:13px;letter-spacing:.16em;text-transform:uppercase;opacity:.85}
+.num h3{font-size:clamp(24px,3vw,31px);margin-bottom:12px}
+.feat blockquote{font-size:clamp(24px,3.2vw,36px);line-height:1.32;font-style:italic}
+.q blockquote{font-size:19px}
+`:''}
 ${editable?`[contenteditable]{outline:none}
 [contenteditable]:hover{background:${rgba(t.primary,.07)};border-radius:4px;box-shadow:0 0 0 4px ${rgba(t.primary,.07)}}
 [contenteditable]:focus{background:${rgba(t.primary,.13)};border-radius:4px;box-shadow:0 0 0 4px ${rgba(t.primary,.13)}}
@@ -1432,6 +1540,8 @@ ${editable?`[contenteditable]{outline:none}
 .nl{display:flex;gap:26px;font-size:15px;font-weight:500}
 .nl a{color:${t.ink2};text-decoration:none;transition:color .2s}
 .nl a:hover{color:${t.primary}}
+.nl a.here{color:${t.primary};font-weight:600}
+.nl a.here::after{content:'';display:block;height:2px;background:${t.primary};margin-top:4px;border-radius:2px}
 .navcta{display:flex;align-items:center;gap:12px}
 .navtel{font-weight:600;font-size:15.5px;color:${t.primary};text-decoration:none;white-space:nowrap}
 .b{display:inline-block;padding:15px 30px;border-radius:${t.radius};background:${t.primary};color:${onPrimary};font-family:${t.displayFont},sans-serif;font-weight:${t.weight};font-size:17px;text-decoration:none;border:2px solid ${t.primary};transition:transform .18s,box-shadow .18s;${t.caps?'text-transform:uppercase;letter-spacing:.04em;':''}}
@@ -1465,7 +1575,7 @@ ${editable?`[contenteditable]{outline:none}
 .hcard dt{font-weight:600;color:${t.ink}}
 .hcard dd{color:${t.ink2}}
 .hcard .b{margin-top:20px;width:100%;text-align:center}
-section{padding:${d}px 0;content-visibility:auto;contain-intrinsic-size:auto 700px}
+section{padding:${d}px 0}
 .head{max-width:660px;margin-bottom:48px}
 .head.mid{text-align:center;margin-left:auto;margin-right:auto}
 .head h2{font-size:clamp(29px,3.8vw,42px);margin-bottom:12px}
@@ -1622,6 +1732,28 @@ ${prefs.motion?`
     .areas span{animation:fadeIn linear both;animation-timeline:view();animation-range:entry 8% cover 30%}
     .gal figure{animation:riseIn linear both;animation-timeline:view();animation-range:entry 8% cover 28%}
   }
+  /* ---- whole-page ambient motion ----
+     A single very large, very slow drifting wash behind everything. The rule
+     is that it should be almost subliminal: 38s and 44s cycles, ~4% alpha, and
+     it never moves more than a few percent of the viewport. One compositor
+     layer, no repaint, no JS. */
+  body::before{
+    content:'';position:fixed;inset:-12%;z-index:-1;pointer-events:none;
+    background:
+      radial-gradient(46vw 46vw at 18% 22%,${rgba(t.primary,.055)},transparent 62%),
+      radial-gradient(42vw 42vw at 82% 72%,${rgba(t.accent,.05)},transparent 60%);
+    animation:ambientA 38s ease-in-out infinite alternate;
+    will-change:transform;
+  }
+  body::after{
+    content:'';position:fixed;inset:-12%;z-index:-1;pointer-events:none;
+    background:radial-gradient(38vw 38vw at 62% 18%,${rgba(t.accent,.04)},transparent 60%);
+    animation:ambientB 44s ease-in-out infinite alternate;
+    will-change:transform;
+  }
+  @keyframes ambientA{from{transform:translate3d(0,0,0) scale(1)}to{transform:translate3d(2.5%,-2%,0) scale(1.06)}}
+  @keyframes ambientB{from{transform:translate3d(0,0,0) scale(1.04)}to{transform:translate3d(-3%,2.5%,0) scale(1)}}
+
   /* Runs everywhere, no scroll timeline needed — pure entrance polish. */
   @keyframes heroIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
   .hero h1{animation:heroIn .7s cubic-bezier(.22,1,.36,1) both}
@@ -1645,8 +1777,15 @@ function resolveTheme(id){
   });
 }
 
-function buildSite(state,editable){
-  const s=state,m=s.meta,t=resolveTheme(m.theme),c=m.contact||{};
+function buildSite(state,mode,pageIdx){
+  pageIdx=pageIdx||0;
+  /* mode: false = export (real hrefs, no editing)
+           true  = editor  (in-app page links + inline editing)
+           'view'= prospect (in-app page links, NO editing) */
+  const editable=mode===true;             // may the visitor edit?
+  const inApp=mode===true||mode==='view'; // are page links handled by the host app?
+  const m=state.meta,t=resolveTheme(m.theme),c=m.contact||{};
+  const s=pageOf(state,pageIdx);          // page content; meta stays shared
   const ed=(path,tag,cls,txt)=>`<${tag}${cls?` class="${cls}"`:''}${editable?` contenteditable="true" data-path="${path}" spellcheck="false"`:''}>${esc(txt)}</${tag}>`;
   const heroImg=mediaOf(s,'hero'), aboutImg=mediaOf(s,'about'), logoImg=mediaOf(s,'logo');
   // In editable mode every slot is a click target; in export they are plain markup.
@@ -1812,14 +1951,30 @@ function buildSite(state,editable){
      a temporal dead zone error. */
   const SECTION_HTML={hero:heroHTML,stats:statsHTML,services:servicesSection,process:processHTML,
     about:aboutSection,gallery:galleryHTML,reviews:reviewsSection,faq:faqHTML,areas:areasHTML,contact:contactSection};
-  const secCfg=m.sections||{};
+  const secCfg=s.sections||m.sections||{};
   const order=(Array.isArray(secCfg.order)&&secCfg.order.length?secCfg.order:SECTION_ORDER)
     .filter(k=>SECTION_HTML[k]!==undefined);
   SECTION_ORDER.forEach(k=>{ if(!order.includes(k)) order.push(k); });   // tolerate older saved orders
   const hidden=new Set(secCfg.hidden||[]);
   const sectionsHTML=order.filter(k=>!hidden.has(k)).map(k=>SECTION_HTML[k]).join('\n');
-  const navLinks=order.filter(k=>k!=='hero'&&!hidden.has(k)&&SECTION_HTML[k]&&NAV_LABELS[k])
+
+  /* Nav. With one page it lists in-page anchors; with several it lists the
+     pages, because site navigation beats section navigation once there is
+     somewhere else to go. In preview and share view the hrefs are inert and
+     carry data-page so the host app can switch pages — real .html filenames
+     only make sense in the exported ZIP. */
+  const multi=pageCount(state)>1;
+  const anchorLinks=order.filter(k=>k!=='hero'&&!hidden.has(k)&&SECTION_HTML[k]&&NAV_LABELS[k])
     .map(k=>`<a href="#${k}">${NAV_LABELS[k]}</a>`).slice(0,5).join('');
+  const navLinks=multi
+    ? Array.from({length:pageCount(state)},(_,i)=>i)
+        .filter(i=>i===0||pageOf(state,i).inNav!==false)
+        .slice(0,7)
+        .map(i=>inApp
+          ? `<a href="#" data-page="${i}"${i===pageIdx?' class="here"':''}>${esc(pageTitle(state,i))}</a>`
+          : `<a href="${esc(pageHref(state,i))}"${i===pageIdx?' class="here"':''}>${esc(pageTitle(state,i))}</a>`)
+        .join('')
+    : anchorLinks;
 
   /* CC BY / BY-SA require visible attribution wherever the work is used. This
      line is a licence condition on the exported site — removing it would put
@@ -1863,17 +2018,17 @@ function buildSite(state,editable){
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(m.businessName)}${m.location?' — '+esc(m.location):''}</title>
-<meta name="description" content="${esc(s.seo_meta_description)}">
+<title>${pageIdx?esc(pageTitle(state,pageIdx))+' — '+esc(m.businessName):esc(m.businessName)+(m.location?' — '+esc(m.location):'')}</title>
+<meta name="description" content="${esc(s.seo_meta_description||'')}">
 <meta name="theme-color" content="${t.primary}">
 <meta name="robots" content="index,follow,max-image-preview:large">
 <meta name="format-detection" content="telephone=yes">
-${canonical?`<link rel="canonical" href="${esc(canonical)}">`:'<!-- Add a canonical URL in the SEO panel once this page is hosted. -->'}
-<meta property="og:title" content="${esc(m.businessName)}${m.location?' — '+esc(m.location):''}">
-<meta property="og:description" content="${esc(s.seo_meta_description)}">
+${canonical?`<link rel="canonical" href="${esc(canonical.replace(/\/+$/,'')+(pageIdx?'/'+pageHref(state,pageIdx):'/'))}">`:'<!-- Add a canonical URL in the SEO panel once this page is hosted. -->'}
+<meta property="og:title" content="${pageIdx?esc(pageTitle(state,pageIdx))+' — '+esc(m.businessName):esc(m.businessName)+(m.location?' — '+esc(m.location):'')}">
+<meta property="og:description" content="${esc(s.seo_meta_description||'')}">
 <meta property="og:type" content="website">
 <meta property="og:locale" content="${lang.replace('-','_')}">
-${canonical?`<meta property="og:url" content="${esc(canonical)}">`:''}
+${canonical?`<meta property="og:url" content="${esc(canonical.replace(/\/+$/,'')+(pageIdx?'/'+pageHref(state,pageIdx):'/'))}">`:''}
 ${ogImage?`<meta property="og:image" content="${esc(ogImage)}">
 <meta name="twitter:card" content="summary_large_image">`:'<meta name="twitter:card" content="summary">'}
 <meta name="twitter:title" content="${esc(m.businessName)}">
@@ -1882,7 +2037,7 @@ ${heroImg.src&&!heroImg.src.startsWith('data:')?`<link rel="preload" as="image" 
 ${t.googleHref?`<link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="${t.googleHref}">`:'<!-- System fonts only: this page makes zero external requests. -->'}
-<style>${siteCSS(t,editable)}</style>
+<style>${siteCSS(t,editable).replace(/\/\*[\s\S]*?\*\//g,'').replace(/\n{2,}/g,'\n')}</style>
 <script type="application/ld+json">${JSON.stringify(ld)}<\/script>
 ${faqLd?`<script type="application/ld+json">${JSON.stringify(faqLd)}<\/script>`:''}
 </head>
@@ -1929,14 +2084,20 @@ function setByPath(obj,path,value){
 }
 function renderPreview(){
   const frame=$('frame');
-  frame.srcdoc=buildSite(siteState,true);
+  if(currentPage>=pageCount(siteState)) currentPage=0;
+  frame.srcdoc=buildSite(siteState,true,currentPage);
   frame.onload=()=>{
     const doc=frame.contentDocument; if(!doc) return;
+    // Page links inside the preview switch pages in the app rather than
+    // navigating the iframe to a file that does not exist yet.
+    doc.querySelectorAll('[data-page]').forEach(a=>{
+      a.addEventListener('click',e=>{ e.preventDefault(); gotoPage(+a.dataset.page); });
+    });
     doc.querySelectorAll('[data-path]').forEach(el=>{
       el.addEventListener('input',()=>{
         let v=el.textContent;
         if(el.tagName==='BLOCKQUOTE') v=v.replace(/^[“"']+|[”"']+$/g,'');
-        setByPath(siteState,el.dataset.path,v.trim());
+        setByPath(pageOf(siteState,currentPage),el.dataset.path,v.trim());
         schedulePersist();
       });
       el.addEventListener('paste',e=>{                // keep edits plain text
@@ -1972,8 +2133,8 @@ async function applyImage(file){
   setMediaStatus(`Processing ${MEDIA_SLOTS[slot].label.toLowerCase()}…`);
   try{
     const {src,w,h}=await processImage(file,slot);
-    siteState.media=siteState.media||blankMedia();
-    siteState.media[slot]={src,alt:siteState.media[slot]&&siteState.media[slot].alt||''};
+    const M=curPage(); M.media=M.media||blankMedia();
+    M.media[slot]={src,alt:M.media[slot]&&M.media[slot].alt||''};
     renderPreview(); renderMediaPanel(); renderChecks(); renderTips();
     if(!pushHistory(siteState)){
       setMediaStatus(`Image added (${Math.round(src.length/1024)} KB) — but this site is now too large to save in history.`,true);
@@ -1983,30 +2144,32 @@ async function applyImage(file){
   }catch(err){ setMediaStatus(err.message||'Could not add that image.',true); }
 }
 async function applyGalleryImage(file,credit){
-  siteState.media=siteState.media||blankMedia();
-  siteState.media.gallery=siteState.media.gallery||[];
-  if(siteState.media.gallery.length>=GALLERY_MAX){
+  const M=curPage(); M.media=M.media||blankMedia();
+  M.media.gallery=M.media.gallery||[];
+  if(M.media.gallery.length>=GALLERY_MAX){
     setMediaStatus(`Gallery is full (${GALLERY_MAX} photos). Remove one first.`,true); return;
   }
   setMediaStatus('Processing photo…');
   try{
     const {src,w,h}=await processImage(file,'gallery');
-    siteState.media.gallery.push({src,alt:'',credit:credit||null});
+    M.media.gallery.push({src,alt:'',credit:credit||null});
     renderPreview(); renderMediaPanel(); renderSections(); renderChecks(); renderTips();
     const ok=pushHistory(siteState);
-    setMediaStatus(ok?`Added to Recent work — ${w}×${h}, ${Math.round(src.length/1024)} KB (${siteState.media.gallery.length}/${GALLERY_MAX}).`
+    setMediaStatus(ok?`Added to Recent work — ${w}×${h}, ${Math.round(src.length/1024)} KB (${M.media.gallery.length}/${GALLERY_MAX}).`
                      :'Photo added but storage is full — download the HTML to keep it.',!ok);
   }catch(e){ setMediaStatus(e.message||'Could not add that image.',true); }
 }
 function removeGalleryImage(i){
-  if(!siteState||!siteState.media||!siteState.media.gallery) return;
-  siteState.media.gallery.splice(i,1);
+  if(!siteState) return;
+  const M=curPage(); if(!M.media||!M.media.gallery) return;
+  M.media.gallery.splice(i,1);
   renderPreview(); renderMediaPanel(); renderSections(); renderChecks(); pushHistory(siteState);
   setMediaStatus('Photo removed.');
 }
 function clearImage(slot){
-  if(!siteState||!siteState.media) return;
-  siteState.media[slot]={src:'',alt:'',credit:null};
+  if(!siteState) return;
+  const M=curPage(); if(!M.media) return;
+  M.media[slot]={src:'',alt:'',credit:null};
   renderPreview(); renderMediaPanel(); renderChecks(); renderTips(); pushHistory(siteState);
   setMediaStatus(`${MEDIA_SLOTS[slot].label} removed.`);
 }
@@ -2025,16 +2188,16 @@ function schedulePersist(){
 /* ==========================================================================
    11. PRE-FLIGHT CHECKS (advisory only — never blocks export)
    ========================================================================== */
-const faqCount=()=>Array.isArray(siteState&&siteState.faqs)?siteState.faqs.length:0;
+const faqCount=()=>Array.isArray(siteState&&curPage().faqs)?curPage().faqs.length:0;
 function renderChecks(){
   if(!siteState){ $('checkPanel').innerHTML=''; $('checkN').textContent=''; return; }
-  const t=resolveTheme(siteState.meta.theme), items=[];
+  const P=curPage(), t=resolveTheme(siteState.meta.theme), items=[];
   const cp=contrast(t.primary,t.bg),ca=contrast(t.accent,t.bg),ci=contrast(t.ink,t.bg);
   const passC=cp>=4.5&&ca>=4.5&&ci>=4.5;
   items.push({ok:passC,title:'Colour contrast',body:
     `Theme <b>${t.label}</b> — body text <b>${ci.toFixed(2)}:1</b>, primary <b>${cp.toFixed(2)}:1</b>, accent <b>${ca.toFixed(2)}:1</b> against the background. `+
     (passC?'All clear the WCAG AA 4.5:1 bar for normal text.':'One or more fall below WCAG AA 4.5:1.')});
-  const p=siteState.palette;
+  const p=siteState.palette||{primary:t.primary,accent:t.accent,background:t.bg};
   items.push({ok:true,title:'AI colour suggestion (not applied)',body:
     `Claude proposed <code>${p.primary}</code> / <code>${p.accent}</code> on <code>${p.background}</code> (${contrast(p.primary,p.background).toFixed(2)}:1 and ${contrast(p.accent,p.background).toFixed(2)}:1). Themes ship hand-tuned palettes instead, so this is reference only.`});
   const c=siteState.meta.contact||{};
@@ -2046,17 +2209,18 @@ function renderChecks(){
   items.push({ok:false,title:'Image alt text',body:
     'No images are generated. The about section uses a themed placeholder — when you add real photography, write a descriptive <code>alt</code> for each. The one manual step the export cannot do for you.'});
   items.push({ok:true,title:'Heading hierarchy',body:
-    `One <b>&lt;h1&gt;</b> (hero headline), section <b>&lt;h2&gt;</b>s, and <b>${siteState.services.length}</b> service <b>&lt;h3&gt;</b>s. No skipped levels.`});
-  const len=(siteState.seo_meta_description||'').length;
+    `One <b>&lt;h1&gt;</b> (hero headline), section <b>&lt;h2&gt;</b>s, and <b>${(P.services||[]).length}</b> service <b>&lt;h3&gt;</b>s. No skipped levels.`});
+  const len=(P.seo_meta_description||'').length;
   items.push({ok:len>0&&len<=160,title:'SEO meta description',body:
     len===0?'Empty — search engines will invent a snippet.'
     :len>160?`<b>${len} characters</b> — over the 160 limit, so it will be truncated. Trim by ${len-160}.`
     :`<b>${len} characters</b>, within the 160-character limit.`});
-  const html=buildSite(siteState,false);
+  const html=buildSite(siteState,false,currentPage);
   const kb=new Blob([html]).size/1024;
   const reqs=t.googleHref?3:0;
   const scripts=(html.match(/<script(?![^>]*ld\+json)/g)||[]).length;
-  const imgKB=Object.values(siteState.media||{}).reduce((n,x)=>n+((x&&x.src)?x.src.length/1024:0),0);
+  const imgKB=[...Object.values(P.media||{}).filter(x=>x&&!Array.isArray(x)),...((P.media&&P.media.gallery)||[])]
+    .reduce((n,x)=>n+((x&&x.src)?x.src.length/1024:0),0);
   // Slow-3G is ~50 KB/s effective; state the real arithmetic rather than a slogan.
   const slow3g=kb/50;
   items.push({ok:kb<250,title:'Page weight &amp; speed',body:
@@ -2082,7 +2246,7 @@ const WEAK_CTA=/^(learn more|click here|submit|read more|find out more|more info
 function renderTips(){
   const el=$('tipsPanel'); if(!el) return;
   if(!siteState){ el.innerHTML=''; $('tipsN').textContent=''; return; }
-  const s=siteState,m=s.meta,c=m.contact||{},md=s.media||blankMedia();
+  const s=curPage(),m=siteState.meta,c=m.contact||{},md=s.media||blankMedia();
   const tips=[];
   const add=(pri,title,body)=>tips.push({pri,title,body});
 
@@ -2211,10 +2375,12 @@ async function generate(brief){
       links:{primary:'',secondary:'',secondaryLabel:''},
       sections:{order:SECTION_ORDER.slice(),hidden:[]}};
     parsed.media=blankMedia();
+    parsed.pages=[]; parsed.sections={order:SECTION_ORDER.slice(),hidden:[]};
+    currentPage=0;
     siteState=parsed;
     currentId='is_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
     lastShareURL=''; $('shareUrl').value=''; $('shareMeta').textContent='';
-    stopLoading(); renderPreview(); renderThemeStrip(); renderChecks(); renderTips(); renderMediaPanel(); renderSections(); loadSeoFields(); loadLinkFields(); pushHistory(siteState);
+    stopLoading(); renderPreview(); renderThemeStrip(); renderChecks(); renderTips(); renderMediaPanel(); renderPages(); renderSections(); loadSeoFields(); loadLinkFields(); pushHistory(siteState);
     $('secMedia').open=true; $('secLinks').open=true;
     selectTab('preview'); showWork();
     if(window.innerWidth<=900) mobileTab('preview');
@@ -2236,12 +2402,14 @@ async function regenSection(section,btn){
   $('regenErr').innerHTML=''; btn.disabled=true; btn.classList.add('busy');
   const m=siteState.meta,c=m.contact||{};
   const brief={name:m.businessName,type:m.type,typeOther:m.typeOther,location:m.location,desc:m.desc,
-    standout:m.standout,tone:m.tone,locale:m.locale,area:c.area,hours:c.hours};
+    standout:m.standout,tone:m.tone,locale:m.locale,area:c.area,hours:c.hours,
+    // Sub-pages need to know what they are about, or every page reads like home.
+    page:currentPage?pageTitle(siteState,currentPage):''};
   try{
-    const raw=await callClaude(systemPrompt(brief,section),userPrompt(brief,siteState,section));
+    const raw=await callClaude(systemPrompt(brief,section),userPrompt(brief,curPage(),section));
     const parsed=parseAndValidate(raw);
     // Merge ONLY this section — every other field, including manual edits, is untouched.
-    siteState[section]=parsed[section];
+    curPage()[section]=parsed[section];
     renderPreview(); renderChecks(); pushHistory(siteState);
   }catch(err){
     const d=err instanceof ApiError?err.detail:'';
@@ -2322,8 +2490,13 @@ async function unpackShare(s){
 }
 function shareState(withImages){
   const clone=JSON.parse(JSON.stringify(siteState));
-  if(!withImages) clone.media=blankMedia();
-  return {v:3,s:clone,wl:wl.on?{on:true,name:wl.name}:null};
+  // Strip images from EVERY page, not just home — otherwise a text-only link
+  // still drags every sub-page photo along with it.
+  if(!withImages){
+    clone.media=blankMedia();
+    (clone.pages||[]).forEach(pg=>{ pg.media=blankMedia(); });
+  }
+  return {v:4,s:clone,wl:wl.on?{on:true,name:wl.name}:null};
 }
 async function buildShareURL(withImages){
   const payload=JSON.stringify(shareState(withImages));
@@ -2357,22 +2530,112 @@ async function renderProspectView(raw){
       <span style="opacity:.85">${agency?esc(agency)+' — preview':'Website preview'}</span>
       <a href="${location.origin+location.pathname}" style="color:#fff;background:rgba(255,255,255,.18);padding:6px 12px;border-radius:999px;text-decoration:none">Make your own</a>
     </div>`;
-  document.getElementById('pv').srcdoc=buildSite(st,false);
-  document.title=st.meta.businessName+(st.meta.location?' — '+st.meta.location:'');
+  /* Shared links carry every page, so the prospect view needs its own page
+     switching — the .html filenames only exist inside the exported ZIP. */
+  const view=migrate(st);
+  let pv=document.getElementById('pv'), shown=0;
+  const paint=i=>{
+    shown=i;
+    pv.srcdoc=buildSite(view,'view',i);
+    pv.onload=()=>{
+      const d=pv.contentDocument; if(!d) return;
+      d.querySelectorAll('[data-page]').forEach(a=>a.addEventListener('click',e=>{ e.preventDefault(); paint(+a.dataset.page); }));
+    };
+    document.title=(i?pageTitle(view,i)+' — ':'')+view.meta.businessName+(!i&&view.meta.location?' — '+view.meta.location:'');
+  };
+  paint(0);
 }
 
 /* ==========================================================================
    14. EXPORT — built from siteState, so it always matches the preview,
    including manual edits. buildSite() carries no Instant Site branding.
    ========================================================================== */
-const exportHTML=()=>buildSite(siteState,false);
-function download(){
-  if(!siteState) return;
-  const blob=new Blob([exportHTML()],{type:'text/html'});
+const exportHTML=(pageIdx)=>buildSite(siteState,false,pageIdx||0);
+
+/* ==========================================================================
+   ZIP WRITER
+   A multi-page site is several .html files, so it needs a container. Rather
+   than pull in JSZip (~100 KB) this writes the format directly and uses
+   CompressionStream('deflate-raw') — already a dependency for share links —
+   for the actual compression. Falls back to STORED entries if compression is
+   unavailable, which is still a perfectly valid ZIP.
+   ========================================================================== */
+const CRC_TABLE=(()=>{const t=new Uint32Array(256);
+  for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++) c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}
+  return t;})();
+function crc32(bytes){
+  let c=0xFFFFFFFF;
+  for(let i=0;i<bytes.length;i++) c=CRC_TABLE[(c^bytes[i])&0xFF]^(c>>>8);
+  return (c^0xFFFFFFFF)>>>0;
+}
+async function deflateRaw(bytes){
+  if(typeof CompressionStream==='undefined') return null;
+  try{
+    const st=new Blob([bytes]).stream().pipeThrough(new CompressionStream('deflate-raw'));
+    return new Uint8Array(await new Response(st).arrayBuffer());
+  }catch{ return null; }
+}
+async function makeZip(files){                       // files: [{name, text}]
+  const enc=new TextEncoder(), chunks=[], central=[];
+  let offset=0;
+  // DOS time/date. Anything before 1980 is unrepresentable, hence the clamp.
+  const d=new Date();
+  const dosTime=((d.getHours()&31)<<11)|((d.getMinutes()&63)<<5)|((d.getSeconds()/2)&31);
+  const dosDate=(((Math.max(1980,d.getFullYear())-1980)&127)<<9)|(((d.getMonth()+1)&15)<<5)|(d.getDate()&31);
+
+  for(const f of files){
+    const nameB=enc.encode(f.name), raw=enc.encode(f.text), crc=crc32(raw);
+    const packed=await deflateRaw(raw);
+    const useDeflate=!!packed&&packed.length<raw.length;
+    const body=useDeflate?packed:raw, method=useDeflate?8:0;
+
+    const lh=new Uint8Array(30+nameB.length), lv=new DataView(lh.buffer);
+    lv.setUint32(0,0x04034b50,true); lv.setUint16(4,20,true); lv.setUint16(6,0,true);
+    lv.setUint16(8,method,true); lv.setUint16(10,dosTime,true); lv.setUint16(12,dosDate,true);
+    lv.setUint32(14,crc,true); lv.setUint32(18,body.length,true); lv.setUint32(22,raw.length,true);
+    lv.setUint16(26,nameB.length,true); lv.setUint16(28,0,true);
+    lh.set(nameB,30);
+    chunks.push(lh,body);
+
+    const ch=new Uint8Array(46+nameB.length), cv=new DataView(ch.buffer);
+    cv.setUint32(0,0x02014b50,true); cv.setUint16(4,20,true); cv.setUint16(6,20,true);
+    cv.setUint16(8,0,true); cv.setUint16(10,method,true);
+    cv.setUint16(12,dosTime,true); cv.setUint16(14,dosDate,true);
+    cv.setUint32(16,crc,true); cv.setUint32(20,body.length,true); cv.setUint32(24,raw.length,true);
+    cv.setUint16(28,nameB.length,true); cv.setUint16(30,0,true); cv.setUint16(32,0,true);
+    cv.setUint16(34,0,true); cv.setUint16(36,0,true); cv.setUint32(38,0,true);
+    cv.setUint32(42,offset,true); ch.set(nameB,46);
+    central.push(ch);
+    offset+=lh.length+body.length;
+  }
+  const cdSize=central.reduce((n,c)=>n+c.length,0);
+  const eo=new Uint8Array(22), ev=new DataView(eo.buffer);
+  ev.setUint32(0,0x06054b50,true); ev.setUint16(4,0,true); ev.setUint16(6,0,true);
+  ev.setUint16(8,files.length,true); ev.setUint16(10,files.length,true);
+  ev.setUint32(12,cdSize,true); ev.setUint32(16,offset,true); ev.setUint16(20,0,true);
+  return new Blob([...chunks,...central,eo],{type:'application/zip'});
+}
+function saveBlob(blob,filename){
   const url=URL.createObjectURL(blob),a=document.createElement('a');
-  const slug=(siteState.meta.businessName||'website').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,50)||'website';
-  a.href=url; a.download=`${slug}.html`; document.body.appendChild(a); a.click(); a.remove();
+  a.href=url; a.download=filename; document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(url),1500);
+}
+async function download(){
+  if(!siteState) return;
+  const slug=(siteState.meta.businessName||'website').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,50)||'website';
+  const n=pageCount(siteState);
+  if(n===1){ saveBlob(new Blob([exportHTML(0)],{type:'text/html'}),`${slug}.html`); return; }
+  const btn=$('btnDownload'), label=btn.querySelector('span'), was=label.textContent;
+  label.textContent='Zipping…'; btn.disabled=true;
+  try{
+    const files=Array.from({length:n},(_,i)=>({name:pageHref(siteState,i),text:exportHTML(i)}));
+    saveBlob(await makeZip(files),`${slug}.zip`);
+    label.textContent=`${n} pages`;
+  }catch(e){
+    console.warn('ZIP failed',e); label.textContent='Failed';
+  }finally{
+    btn.disabled=false; setTimeout(()=>{label.textContent=was;},1800);
+  }
 }
 async function copyHTML(){
   if(!siteState) return;
@@ -2403,11 +2666,11 @@ function renderHistory(){
   }).join('');
   $('histList').querySelectorAll('.hist-item').forEach(b=>b.onclick=()=>{
     const e=loadHistory().find(x=>x.id===b.dataset.id); if(!e) return;
-    siteState=migrate(e.siteState); currentId=e.id;
+    siteState=migrate(e.siteState); currentId=e.id; currentPage=0;
     prefs.theme=siteState.meta.theme; savePrefs();
     lastShareURL=''; $('shareUrl').value=''; $('shareMeta').textContent='';
     loadBriefFromSite();   // panel must describe the site you just opened
-    renderPreview(); renderThemeGrid(); renderThemeStrip(); renderChecks(); renderTips(); renderMediaPanel(); renderSections(); loadSeoFields(); loadLinkFields(); renderHistory();
+    renderPreview(); renderThemeGrid(); renderThemeStrip(); renderChecks(); renderTips(); renderMediaPanel(); renderPages(); renderSections(); loadSeoFields(); loadLinkFields(); renderHistory();
     selectTab('preview'); showWork(); refreshStatus();
     if(window.innerWidth<=1240) $('app').classList.remove('showrail');
     if(window.innerWidth<=900) mobileTab('preview');
@@ -2434,6 +2697,29 @@ function migrate(s){
   SECTION_ORDER.forEach(k=>{ if(!s.meta.sections.order.includes(k)) s.meta.sections.order.push(k); });
   if(!Array.isArray(s.meta.sections.hidden)) s.meta.sections.hidden=[];
   ['stats','process','areas'].forEach(k=>{ if(!Array.isArray(s[k])) s[k]=[]; });
+  // Extra pages postdate earlier saves; normalise each one the same way.
+  if(!Array.isArray(s.pages)) s.pages=[];
+  s.pages=s.pages.slice(0,PAGE_CAP-1);
+  s.pages.forEach((pg,i)=>{
+    pg.id=pg.id||('pg_'+i+Math.random().toString(36).slice(2,6));
+    pg.title=pg.title||('Page '+(i+2));
+    pg.slug=pg.slug||slugify(pg.title,'page-'+(i+2));
+    if(pg.inNav===undefined) pg.inNav=true;
+    pg.hero=pg.hero||{headline:pg.title,subheadline:'',cta_text:'Get in touch'};
+    ['services','testimonials','faqs','stats','process','areas'].forEach(k=>{ if(!Array.isArray(pg[k])) pg[k]=[]; });
+    if(typeof pg.about!=='string') pg.about='';
+    if(typeof pg.contact_cta!=='string') pg.contact_cta='Get in touch.';
+    if(typeof pg.seo_meta_description!=='string') pg.seo_meta_description='';
+    const mm=blankMedia(); pg.media=Object.assign(mm,pg.media||{});
+    Object.keys(mm).forEach(k=>{ if(k!=='gallery'&&(!pg.media[k]||typeof pg.media[k]!=='object')) pg.media[k]={src:'',alt:'',credit:null}; });
+    if(!Array.isArray(pg.media.gallery)) pg.media.gallery=[];
+    pg.sections=pg.sections||{order:SECTION_ORDER.slice(),hidden:[]};
+    if(!Array.isArray(pg.sections.order)||!pg.sections.order.length) pg.sections.order=SECTION_ORDER.slice();
+    SECTION_ORDER.forEach(k=>{ if(!pg.sections.order.includes(k)) pg.sections.order.push(k); });
+    if(!Array.isArray(pg.sections.hidden)) pg.sections.hidden=[];
+  });
+  // Home keeps its own section config so pages are independent.
+  if(!s.sections) s.sections=s.meta.sections;
   return s;
 }
 
@@ -2640,7 +2926,7 @@ $('btnLogoClear').onclick=()=>{ wl.logo=''; $('wlLogoPrev').classList.add('hidde
 /* ---- media panel ------------------------------------------------------ */
 function renderMediaPanel(){
   const host=$('mediaPanel'); if(!host) return;
-  const md=(siteState&&siteState.media)||blankMedia();
+  const md=(siteState&&curPage().media)||blankMedia();
   const filled=Object.keys(MEDIA_SLOTS).filter(k=>md[k]&&md[k].src).length;
   $('tagMedia').textContent=`${filled}/3`;
   $('tagMedia').className='tag'+(filled===3?' ok':'');
@@ -2685,17 +2971,86 @@ function renderMediaPanel(){
   });
   setStockSlot(stockSlot);
   host.querySelectorAll('[data-alt]').forEach(i=>i.addEventListener('input',()=>{
-    siteState.media[i.dataset.alt].alt=i.value;
+    curPage().media[i.dataset.alt].alt=i.value;
     clearTimeout(i._t); i._t=setTimeout(()=>{ renderPreview(); renderChecks(); pushHistory(siteState); },600);
   }));
 }
 $('mediaFile').onchange=e=>{ const f=e.target.files[0]; if(f) applyImage(f); };
 
+/* ---- pages ------------------------------------------------------------- */
+function gotoPage(i){
+  if(!siteState) return;
+  currentPage=Math.max(0,Math.min(i,pageCount(siteState)-1));
+  renderPreview(); renderPages(); renderSections(); renderMediaPanel();
+  renderChecks(); renderTips(); loadLinkFields();
+  selectTab('preview'); showWork();
+}
+function setPageStatus(msg,bad){
+  const el=$('pageStatus'); if(!el) return;
+  el.textContent=msg||''; el.className='tiny'+(bad?' statusBad':'');
+  clearTimeout(setPageStatus._t);
+  if(msg) setPageStatus._t=setTimeout(()=>{el.textContent='';},5000);
+}
+function renderPages(){
+  const host=$('pageList'); if(!host) return;
+  if(!siteState){ host.innerHTML='<div class="tiny">Generate a site first.</div>'; $('tagPages').textContent='—'; return; }
+  const n=pageCount(siteState);
+  $('tagPages').textContent=String(n);
+  $('tagPages').className='tag'+(n>1?' ok':'');
+  host.innerHTML=Array.from({length:n},(_,i)=>{
+    const home=i===0, p=pageOf(siteState,i);
+    return `<div class="pgrow${i===currentPage?' cur':''}">
+      <button type="button" class="pgopen" data-go="${i}">
+        <span class="pgname">${esc(pageTitle(siteState,i))}${home?' <em>· home</em>':''}</span>
+        <span class="pgslug">/${home?'':esc(p.slug||'')}${home?'':'.html'}</span>
+      </button>
+      <div class="pgbtns">
+        ${home?'':`<button type="button" data-nav="${i}" class="${p.inNav===false?'':'on'}" title="Show in menu">menu</button>`}
+        ${home?'':`<button type="button" data-ren="${i}" title="Rename">✎</button>`}
+        ${home?'':`<button type="button" data-del="${i}" title="Delete page">×</button>`}
+      </div>
+    </div>`;
+  }).join('');
+  host.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>gotoPage(+b.dataset.go));
+  host.querySelectorAll('[data-nav]').forEach(b=>b.onclick=()=>{
+    const p=pageOf(siteState,+b.dataset.nav); p.inNav=p.inNav===false;
+    renderPreview(); renderPages(); pushHistory(siteState); lastShareURL='';
+  });
+  host.querySelectorAll('[data-ren]').forEach(b=>b.onclick=()=>{
+    const i=+b.dataset.ren, p=pageOf(siteState,i);
+    const name=prompt('Page name',p.title); if(name==null) return;
+    const t=name.trim(); if(!t) return;
+    p.title=t; p.slug=uniqueSlug(siteState,t,i);
+    renderPreview(); renderPages(); pushHistory(siteState); lastShareURL='';
+  });
+  host.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{
+    const i=+b.dataset.del;
+    if(!confirm(`Delete "${pageTitle(siteState,i)}"? This cannot be undone.`)) return;
+    siteState.pages.splice(i-1,1);
+    if(currentPage>=pageCount(siteState)) currentPage=pageCount(siteState)-1;
+    gotoPage(currentPage); pushHistory(siteState); lastShareURL='';
+    setPageStatus('Page deleted.');
+  });
+}
+$('btnAddPage').onclick=()=>{
+  if(!siteState){ setPageStatus('Generate a site first.',true); return; }
+  if(pageCount(siteState)>=PAGE_CAP){ setPageStatus(`Limit is ${PAGE_CAP} pages.`,true); return; }
+  const name=$('newPageName').value.trim();
+  if(!name){ setPageStatus('Give the page a name first.',true); return; }
+  siteState.pages=siteState.pages||[];
+  siteState.pages.push(blankPage(name,siteState));
+  $('newPageName').value='';
+  gotoPage(pageCount(siteState)-1);
+  pushHistory(siteState); lastShareURL='';
+  setPageStatus('Page added — edit it in the preview, or use the regenerate buttons to fill it with AI copy.');
+};
+$('newPageName').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); $('btnAddPage').click(); } });
+
 /* ---- section manager --------------------------------------------------- */
 function sectionCfg(){
   if(!siteState) return {order:SECTION_ORDER.slice(),hidden:[]};
-  siteState.meta.sections=siteState.meta.sections||{};
-  const c=siteState.meta.sections;
+  const P=curPage(); P.sections=P.sections||{};
+  const c=P.sections;
   if(!Array.isArray(c.order)||!c.order.length) c.order=SECTION_ORDER.slice();
   SECTION_ORDER.forEach(k=>{ if(!c.order.includes(k)) c.order.push(k); });
   c.order=c.order.filter(k=>SECTION_META[k]);
@@ -2706,7 +3061,7 @@ function sectionCfg(){
 // than silently missing, which is otherwise baffling.
 function sectionHasContent(k){
   if(!siteState) return false;
-  const s=siteState;
+  const s=curPage();
   switch(k){
     case 'stats':   return (s.stats||[]).length>0;
     case 'process': return (s.process||[]).length>0;
@@ -2792,7 +3147,7 @@ function renderLinks(){
 function loadLinkFields(){
   if(!$('lnkPrimary')||!siteState) return;
   const lk=siteState.meta.links||{};
-  $('lnkLabel').value=siteState.hero.cta_text||'';
+  $('lnkLabel').value=curPage().hero.cta_text||'';
   $('lnkPrimary').value=lk.primary||'';
   $('lnkSecondary').value=lk.secondary||'';
   $('lnkSecondLabel').value=lk.secondaryLabel||'';
@@ -2805,7 +3160,7 @@ function commitLinks(){
   siteState.meta.links.secondary=$('lnkSecondary').value.trim();
   siteState.meta.links.secondaryLabel=$('lnkSecondLabel').value.trim();
   const lab=$('lnkLabel').value.trim();
-  if(lab) siteState.hero.cta_text=lab;
+  if(lab) curPage().hero.cta_text=lab;
   renderPreview(); renderChecks(); renderTips(); renderLinks(); pushHistory(siteState); lastShareURL='';
 }
 ['lnkPrimary','lnkSecondary','lnkLabel','lnkSecondLabel'].forEach(id=>{
@@ -2885,8 +3240,8 @@ async function useStock(r){
   }
   try{
     const {src,w,h}=await processRemoteImage(ovFullSize(r.id),stockSlot);
-    siteState.media=siteState.media||blankMedia();
-    siteState.media[stockSlot]={
+    const M=curPage(); M.media=M.media||blankMedia();
+    M.media[stockSlot]={
       src, alt:r.title||'',
       credit:{title:r.title,creator:r.creator,creatorUrl:r.creatorUrl,license:r.license,
               licenseVersion:r.licenseVersion,sourceUrl:r.sourceUrl,text:r.attribution}
@@ -2916,7 +3271,7 @@ async function makeShareLink(){
     const url=await buildShareURL(shareIncludesImages);
     lastShareURL=url; $('shareUrl').value=url;
     const kb=(url.length/1024).toFixed(1);
-    const hasImgs=Object.values(siteState.media||{}).some(m=>m&&m.src);
+    const hasImgs=Object.values(curPage().media||{}).some(m=>m&&!Array.isArray(m)&&m.src);
     let cls='tiny',msg=`${url.length.toLocaleString()} characters (${kb} KB). `;
     if(url.length<8000) msg+='Safe to paste into any email, text or chat app.';
     else if(url.length<120000){ cls='tiny shareWarn'; msg+='Works in browsers, but some chat apps truncate links this long — send it by email, or turn photos off.'; }
@@ -3018,7 +3373,7 @@ $('wlName').value=wl.name;
 if(wl.logo){ $('wlLogoPrev').src=wl.logo; $('wlLogoPrev').classList.remove('hidden'); }
 $('descCount').textContent=$('desc').value.length;
 syncOtherField();
-renderHistory(); renderRegenBar(); renderThemeGrid(); renderThemeStrip(); renderMediaPanel();
+renderHistory(); renderRegenBar(); renderThemeGrid(); renderThemeStrip(); renderMediaPanel(); renderPages();
 // No key yet? Open Settings so the field is visible immediately rather than
 // hidden inside a collapsed section the user has to discover.
 if(!getKey()) $('secSettings').open=true;
