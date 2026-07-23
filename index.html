@@ -282,6 +282,13 @@ select{appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%
 .combo-group{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--txt-3);padding:8px 10px 4px}
 .combo-empty{padding:10px;font-size:12px;color:var(--txt-3)}
 .suggs{display:block;font-size:10.5px;color:var(--txt-3);margin-top:5px;letter-spacing:.02em}
+.scorebar{height:8px;border-radius:99px;background:var(--fill-2);overflow:hidden;margin:6px 0 10px}
+.scorebar i{display:block;height:100%;border-radius:99px;transition:width .5s var(--ease)}
+.scorerow{display:flex;gap:8px;align-items:flex-start;padding:6px 0;font-size:12px;border-bottom:1px solid var(--stroke)}
+.scorerow:last-child{border-bottom:0}
+.scorerow .dot{width:7px;height:7px;border-radius:50%;margin-top:5px;flex:none}
+.prow{cursor:pointer;border-radius:8px;padding:8px 9px!important;transition:background .14s}
+.prow:hover{background:var(--fill)}
 .pbox{margin-top:10px;padding:13px;border:1px solid var(--stroke);border-radius:12px;background:var(--surface-2)}
 .warnline{margin-top:6px;padding:8px 10px;border-radius:8px;line-height:1.55;
   background:color-mix(in srgb,var(--warn) 12%,transparent);color:var(--warn)}
@@ -741,11 +748,25 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
         <div id="prospectBox" class="hidden">
           <div class="pbox">
             <b style="font-size:13px">Find businesses with a Google profile and no website</b>
-            <div class="tiny warnline">This does not search the internet. Claude has no live web access from here, so anything it "found" would be invented, and invented names, addresses and phone numbers are worse than none. Instead it builds the search plan, and then analyses the real listings you paste in.</div>
+            <div class="tiny warnline">"Find them" queries real map data, so the names and numbers are real. Claude itself has no web access, so it never invents a business: it only plans the search and analyses listings you bring it.</div>
             <div class="tabs" id="pMode" style="margin:10px 0">
-              <button data-pm="plan" class="on">Build a search plan</button><button data-pm="analyse">Analyse a listing</button>
+              <button data-pm="find" class="on">Find them</button><button data-pm="plan">Search plan</button><button data-pm="analyse">Analyse a listing</button>
             </div>
-            <div id="pPlan">
+            <div id="pFind">
+              <div class="chips" id="pSources" style="margin-bottom:8px"></div>
+              <div class="tiny" id="pSourceNote" style="margin-bottom:8px"></div>
+              <div class="two">
+                <div class="field"><label for="pWhere">Town or suburb</label><input type="text" id="pWhere" placeholder="Rotorua, New Zealand" maxlength="80"></div>
+                <div class="field"><label for="pWhat">Category</label><select id="pWhat"></select></div>
+              </div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <button class="mini" id="btnFind" type="button">Find businesses with no website</button>
+                <button class="mini" id="btnFindCsv" type="button">Export CSV</button>
+                <button class="mini" id="btnFindClay" type="button">Send to Clay</button>
+              </div>
+              <div id="pResults"></div>
+            </div>
+            <div id="pPlan" class="hidden">
               <div class="two">
                 <div class="field"><label for="pTrade">Trade or category</label><input type="text" id="pTrade" placeholder="Roofers" maxlength="60"></div>
                 <div class="field"><label for="pArea">Area</label><input type="text" id="pArea" placeholder="Rotorua, Bay of Plenty" maxlength="80"></div>
@@ -883,7 +904,13 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
     <details class="sec" id="secSeo">
       <summary>SEO &amp; sharing <span class="tag" id="tagSeo">optional</span></summary>
       <div class="body">
-        <div class="tiny">These fill in the meta tags and structured data search engines read. All optional — leave blank and the page still works.</div>
+        <div class="tiny">These fill in the meta tags and structured data search engines read. All optional, leave blank and the page still works.</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin:10px 0">
+          <button class="mini" id="btnSeoScore" type="button">Score this page</button>
+          <button class="mini" id="btnOgImage" type="button">Make a share image</button>
+          <button class="mini" id="btnSeoFix" type="button">✨ Write the meta</button>
+        </div>
+        <div id="seoScore"></div>
         <div class="field">
           <label for="seoCanonical">Live URL <span class="opt">once hosted</span>
             <span class="help" data-tip="The final address of this page. Sets the canonical tag, og:url and the LocalBusiness url — which is how Google knows two copies of a page are the same one, so link credit is not split.">?</span></label>
@@ -983,6 +1010,14 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
             <span class="help" data-tip="Openverse and Wikimedia need no key. Pexels and Unsplash look far better and need no attribution, but require a free API key. Stored in this browser only, and sent only to that library.">?</span></label>
           <input type="password" id="pexelsKey" placeholder="Pexels API key" autocomplete="off" spellcheck="false">
           <input type="password" id="unsplashKey" placeholder="Unsplash Access Key" autocomplete="off" spellcheck="false" style="margin-top:6px">
+        </div>
+        <div class="field">
+          <label for="googlePlacesKey">Prospecting keys <span class="opt">optional</span>
+            <span class="help" data-tip="OpenStreetMap needs no key and already filters on 'has no website'. Google Places is the only source carrying real Google Business Profile data. Clay cannot be read from a browser, it blocks CORS, so the Clay field is a webhook to push rows into a table for enrichment.">?</span></label>
+          <input type="password" id="googlePlacesKey" placeholder="Google Maps Platform API key" autocomplete="off" spellcheck="false">
+          <input type="password" id="foursquareKey" placeholder="Foursquare Places key" autocomplete="off" spellcheck="false" style="margin-top:6px">
+          <input type="url" id="clayHookKey" placeholder="Clay table webhook URL" autocomplete="off" spellcheck="false" style="margin-top:6px">
+          <div class="tiny">All optional. Prospecting works with none of them via OpenStreetMap.</div>
           <div class="tiny">Free keys from <a href="https://www.pexels.com/api/" target="_blank" rel="noopener">pexels.com/api</a> and <a href="https://unsplash.com/developers" target="_blank" rel="noopener">unsplash.com/developers</a>. Both optional, photo search works without them.</div>
         </div>
         <div class="row">
@@ -1107,6 +1142,9 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
               <button class="mini" id="btnMakeShare" type="button">Create link</button>
               <button class="mini" id="btnCopyShare" type="button">Copy link</button>
               <button class="mini" id="btnOpenShare" type="button">Open preview</button>
+              <button class="mini" id="btnShareWa" type="button">WhatsApp</button>
+              <button class="mini" id="btnShareEmail" type="button">Email</button>
+              <button class="mini" id="btnShareNative" type="button">Share…</button>
             </div>
           </div>
 
@@ -2207,7 +2245,8 @@ let siteState=null, currentId=null, loadTimer=null, lastBrief=null, persistTimer
 let currentPage=0;                       // which page the editor is showing
 const curPage=()=>pageOf(siteState,currentPage);
 let wl={on:false,name:'',logo:''};
-let prefs={systemFonts:false,motion:true,js:'off',fx:[],theme:DEFAULT_THEME,appearance:'auto'};
+let prefs={systemFonts:false,motion:true,js:'off',fx:[],theme:DEFAULT_THEME,appearance:'auto',
+  contactLayout:'gradient',formCols:'auto',formFields:['name','phone','email','message']};
 const $=id=>document.getElementById(id);
 
 /* ==========================================================================
@@ -2271,10 +2310,20 @@ function loadPrefs(){
            js:JS_LEVELS[o.js]?o.js:'off',    // JS libraries stay opt-in
            fx:Array.isArray(o.fx)?o.fx.filter(k=>FX[k]):[],
            theme:THEMES[o.theme]?o.theme:DEFAULT_THEME,
-           appearance:['auto','light','dark'].includes(o.appearance)?o.appearance:'auto'};
+           appearance:['auto','light','dark'].includes(o.appearance)?o.appearance:'auto',
+           /* This function REPLACES prefs rather than merging into it, so every
+              new preference has to be listed here or it is silently wiped at
+              boot. That is exactly how the form controls ended up reading
+              "0 on" and ignoring every click. */
+           contactLayout:typeof o.contactLayout==='string'?o.contactLayout:'gradient',
+           formCols:['1','2','auto'].includes(o.formCols)?o.formCols:'auto',
+           formFields:(Array.isArray(o.formFields)&&o.formFields.length>=2)
+             ? o.formFields.slice() : ['name','phone','email','message'],
+           approveTo:typeof o.approveTo==='string'?o.approveTo:''};
   }catch{}
 }
-function savePrefs(){ localStorage.setItem(LS_PREF,JSON.stringify(prefs)); }
+// Private Browsing throws on write; a failed save must not take the click with it.
+function savePrefs(){ try{ localStorage.setItem(LS_PREF,JSON.stringify(prefs)); }catch(e){} }
 const BRIEF_FIELDS=['bizName','bizType','bizTypeOther','location','standout','desc','bizKeyword','bizEst','bizTeam','bizPrice','bizCert','bizGuar','cPhone','cEmail','cArea','cHours','cBook'];
 function saveBrief(){
   const o={}; BRIEF_FIELDS.forEach(f=>o[f]=$(f).value);
@@ -2874,7 +2923,7 @@ const OV_PAGE_SIZE=20;
    Anthropic one. They are opt-in and the app works fully without them.
    -------------------------------------------------------------------------- */
 const LS_IMGKEYS='instantsite_imgkeys';
-let imgKeys={pexels:'',unsplash:''};
+let imgKeys={pexels:'',unsplash:'',googlePlaces:'',foursquare:'',clayHook:''};
 try{ Object.assign(imgKeys,JSON.parse(localStorage.getItem(LS_IMGKEYS)||'{}')); }catch{}
 function saveImgKeys(){ try{ localStorage.setItem(LS_IMGKEYS,JSON.stringify(imgKeys)); }catch{} }
 const STOCK_SOURCES={
@@ -3748,12 +3797,15 @@ function buildSite(state,mode,pageIdx){
                                :(c.hours?`<div class="card cxtile"><div class="ico">${iconSVG('clock')}</div><h3>Open</h3><p>${esc(c.hours)}</p></div>`:'')}
                      </div></div></section>`,
     strip:      ()=>`<section id="contact" class="cx cx-strip"><div class="w"><div>${cH}${cP}</div>${callRow()}</div></section>`,
+    /* These carry a purpose, so they suggest a field set, but the chips in the
+       panel win. Ignoring the user's explicit choice because the layout has an
+       opinion is how a control stops feeling connected to anything. */
     quote:      ()=>`<section id="contact" class="cx cx-quote"><div class="w"><div class="cxpanel wide">${cH}${cP}
-                     ${formBody(['name','phone','service','urgency','address','message'],'Get my quote')||callRow(1)}</div></div></section>`,
+                     ${formBody(F,'Get my quote')||callRow(1)}</div></div></section>`,
     callback:   ()=>`<section id="contact" class="cx cx-boxed"><div class="w"><div class="cxbox tight">${cH}${cP}
-                     ${formBody(['name','phone','preferred'],'Request a callback')||callRow(1)}</div></div></section>`,
+                     ${formBody(F.slice(0,3),'Request a callback')||callRow(1)}</div></div></section>`,
     booking:    ()=>`<section id="contact" class="cx cx-split"><div class="w"><div>${cH}${cP}${detailList}</div>
-                     <div class="cxpanel">${formBody(['name','phone','service','date'],'Request this time')||callRow()}</div></div></section>`,
+                     <div class="cxpanel">${formBody(F,'Request this time')||callRow()}</div></div></section>`,
     trustclose: ()=>`<section id="contact" class="cx cx-stack alt"><div class="w">${cH}${cP}${trustRow}${callRow(1)}</div></section>`,
     mapcard:    ()=>`<section id="contact" class="cx cx-split"><div class="w"><div class="cxpanel">${detailList}${callRow()}</div>
                      <div>${cH}${cP}${c.area?`<p class="cxareas">${esc(c.area).split(',').map(x=>`<span>${esc(x.trim())}</span>`).join('')}</p>`:''}</div></div></section>`,
@@ -3763,9 +3815,9 @@ function buildSite(state,mode,pageIdx){
                      ${m.standout?`<div class="eyebrow">${esc(m.standout)}</div>`:''}${cH}${cP}
                      ${c.phone?`<a class="bigtel" href="${telHref(c.phone)}">${esc(c.phone)}</a>`:''}${callRow(1)}</div></div></section>`,
     twocol:     ()=>`<section id="contact" class="cx cx-two"><div class="w">${cH}${cP}
-                     <div class="cxgrid"><div>${detailList}</div><div>${formBody(['name','phone','message'])||callRow()}</div></div></section>`,
+                     <div class="cxgrid"><div>${detailList}</div><div>${formBody(F)||callRow()}</div></div></section>`,
     inline:     ()=>`<section id="contact" class="cx cx-inline alt"><div class="w"><div>${cH}${cP}</div>
-                     <div class="cxpanel">${formBody(['name','phone'],'Call me back')||callRow()}</div></div></section>`,
+                     <div class="cxpanel">${formBody(F.slice(0,2),'Call me back')||callRow()}</div></div></section>`,
     editorial:  ()=>`<section id="contact" class="cx cx-ed"><div class="w"><div class="cxrule"></div>${cH}${cP}${detailList}${callRow()}</div></section>`
   };
   const CONTACT_KEYS=Object.keys(CONTACT_LAYOUTS);
@@ -5398,11 +5450,11 @@ function migrate(s){
   if(!Array.isArray(s.media.gallery)) s.media.gallery=[];
   s.meta.seo=s.meta.seo||{};
   s.meta.links=s.meta.links||{primary:'',secondary:'',secondaryLabel:''};
-  s.meta.form=s.meta.form||{action:'',fields:['name','phone','email','message'],cols:'auto'};
+  s.meta.form=s.meta.form||{action:'',fields:(prefs.formFields||['name','phone','email','message']).slice(),cols:prefs.formCols||'auto'};
   if(!['1','2','auto'].includes(s.meta.form.cols)) s.meta.form.cols='auto';
-  if(!Array.isArray(s.meta.form.fields)||!s.meta.form.fields.length)
-    s.meta.form.fields=['name','phone','email','message'];
-  if(typeof s.meta.contactLayout!=='string') s.meta.contactLayout='gradient';
+  if(!Array.isArray(s.meta.form.fields)||s.meta.form.fields.length<2)
+    s.meta.form.fields=(prefs.formFields||['name','phone','email','message']).slice();
+  if(typeof s.meta.contactLayout!=='string') s.meta.contactLayout=prefs.contactLayout||'gradient';
   s.meta.sections=s.meta.sections||{order:SECTION_ORDER.slice(),hidden:[]};
   if(!Array.isArray(s.meta.sections.order)||!s.meta.sections.order.length) s.meta.sections.order=SECTION_ORDER.slice();
   SECTION_ORDER.forEach(k=>{ if(!s.meta.sections.order.includes(k)) s.meta.sections.order.push(k); });
@@ -5665,10 +5717,13 @@ $('bizType').addEventListener('change',()=>{
   $('demoWhich').textContent=n?`${n} ${PACKS[t].label} examples ready`:'No stock example for this type, use Invent one';
 });
 
-['pexelsKey','unsplashKey'].forEach(id=>{
-  const k=id.replace('Key','');
+['pexelsKey','unsplashKey','googlePlacesKey','foursquareKey','clayHookKey'].forEach(id=>{
+  const k=id.replace('Key','').replace('clayHook','clayHook');
   $(id).value=imgKeys[k]||'';
-  $(id).addEventListener('input',()=>{ imgKeys[k]=$(id).value.trim(); saveImgKeys(); renderStockSources(); });
+  $(id).addEventListener('input',()=>{
+    imgKeys[k]=$(id).value.trim(); saveImgKeys();
+    renderStockSources(); renderProspectSources();
+  });
 });
 
 function selectTab(which){
@@ -6203,6 +6258,164 @@ $('btnFillPage').onclick=async()=>{
   finally{ btn.disabled=false; btn.textContent=was; }
 };
 
+/* ---- SEO scoring, share image, share targets ---------------------------
+   The panel collected three fields and told you nothing about whether the page
+   was actually in good shape. This scores what is measurable from the built
+   HTML rather than guessing, generates the social preview image that was
+   previously a URL you had to produce elsewhere, and gives the share link the
+   destinations people actually use. */
+const SEO_CHECKS=[
+  {id:'title',label:'Title tag length',weight:10,run:(h)=>{
+    const t=(h.match(/<title>([^<]*)<\/title>/)||[])[1]||'';
+    if(!t) return [0,'No title tag.'];
+    if(t.length>60) return [5,`Title is ${t.length} characters, so Google will truncate it. Aim under 60.`];
+    if(t.length<25) return [6,`Title is only ${t.length} characters. There is room to say more.`];
+    return [10,`Title is ${t.length} characters.`];}},
+  {id:'desc',label:'Meta description',weight:10,run:(h)=>{
+    const d=(h.match(/name="description" content="([^"]*)"/)||[])[1]||'';
+    if(!d) return [0,'No meta description, so Google writes its own snippet.'];
+    if(d.length>160) return [5,`Description is ${d.length} characters and will be cut off. Aim under 155.`];
+    if(d.length<70) return [6,`Description is only ${d.length} characters. Use the space.`];
+    return [10,`Description is ${d.length} characters.`];}},
+  {id:'h1',label:'Exactly one H1',weight:10,run:(h)=>{
+    const n=(h.match(/<h1[\s>]/g)||[]).length;
+    return n===1?[10,'One H1, as it should be.']:[n?4:0,`${n} H1 tags found. There should be exactly one.`];}},
+  {id:'canonical',label:'Canonical URL',weight:10,run:(h)=>
+    /rel="canonical"/.test(h)?[10,'Canonical set.']:[0,'No canonical URL. Set the live URL above, which also unlocks the sitemap and breadcrumbs.']},
+  {id:'og',label:'Social preview image',weight:8,run:(h)=>
+    /property="og:image"/.test(h)?[8,'Share image set.']:[0,'No og:image, so links posted anywhere look blank. Use "Make a share image".']},
+  {id:'ld',label:'Structured data',weight:12,run:(h)=>{
+    const n=(h.match(/application\/ld\+json/g)||[]).length;
+    return n>=2?[12,`${n} schema blocks: LocalBusiness plus FAQ or breadcrumbs.`]
+      :n?[7,'LocalBusiness schema only. Add FAQs to earn the FAQ block.']:[0,'No structured data.'];}},
+  {id:'alt',label:'Image alt text',weight:8,run:(h)=>{
+    const imgs=h.match(/<img [^>]*>/g)||[];
+    if(!imgs.length) return [8,'No images to caption yet.'];
+    const bad=imgs.filter(i=>!/alt="[^"]+"/.test(i)).length;
+    return bad?[3,`${bad} of ${imgs.length} images have no alt text.`]:[8,`All ${imgs.length} images have alt text.`];}},
+  {id:'phone',label:'Tap-to-call',weight:6,run:(h)=>
+    /href="tel:/.test(h)?[6,'Phone number is a tap-to-call link.']:[0,'No tel: link. On a phone that is the main conversion.']},
+  {id:'words',label:'Enough content',weight:10,run:(h)=>{
+    const txt=h.replace(/<script[\s\S]*?<\/script>/g,'').replace(/<style[\s\S]*?<\/style>/g,'').replace(/<[^>]+>/g,' ');
+    const w=(txt.match(/\b\w+\b/g)||[]).length;
+    if(w<250) return [2,`About ${w} words. Thin for a page meant to rank.`];
+    if(w<450) return [6,`About ${w} words. Serviceable, more would help.`];
+    return [10,`About ${w} words.`];}},
+  {id:'weight',label:'Page weight',weight:8,run:(h)=>{
+    const kb=h.length/1024;
+    if(kb>400) return [2,`${kb.toFixed(0)} KB. Heavy, and weight is a ranking factor on mobile.`];
+    if(kb>150) return [6,`${kb.toFixed(0)} KB.`];
+    return [8,`${kb.toFixed(0)} KB, which is very fast.`];}},
+  {id:'js',label:'Script weight',weight:8,run:(h)=>{
+    const n=(h.match(/<script(?![^>]*application\/ld\+json)/g)||[]).length;
+    return n?[4,`${n} scripts. Each one delays first paint; keep them if they earn it.`]:[8,'Zero scripts.'];}}
+];
+function runSeoScore(){
+  if(!siteState){ $('seoScore').innerHTML='<div class="tiny">Generate a site first.</div>'; return; }
+  const h=buildSite(siteState,false,currentPage);
+  const max=SEO_CHECKS.reduce((a,c)=>a+c.weight,0);
+  let got=0; const rows=SEO_CHECKS.map(c=>{
+    const [pts,note]=c.run(h); got+=pts;
+    const ratio=pts/c.weight;
+    return {label:c.label,pts,of:c.weight,note,
+      colour:ratio>=0.99?'var(--good)':ratio>=0.5?'var(--warn)':'var(--bad)'};
+  });
+  const pct=Math.round(got/max*100);
+  $('seoScore').innerHTML=`<div class="gout">
+    <h5>Page score: ${pct}/100 · ${esc(pageTitle(siteState,currentPage))}</h5>
+    <div class="scorebar"><i style="width:${pct}%;background:${pct>=80?'var(--good)':pct>=55?'var(--warn)':'var(--bad)'}"></i></div>
+    ${rows.map(r=>`<div class="scorerow"><span class="dot" style="background:${r.colour}"></span>
+      <span><b>${esc(r.label)}</b> <span class="gmeta">${r.pts}/${r.of}</span><div class="gmeta">${esc(r.note)}</div></span></div>`).join('')}
+  </div>`;
+}
+$('btnSeoScore').onclick=runSeoScore;
+
+/* A 1200x630 share card drawn from the site's own theme and copy. Nothing else
+   in the app produced one, so og:image was a field you had to fill from
+   elsewhere, and links posted anywhere looked blank. */
+function makeOgImage(){
+  const st=siteState, m=st.meta, t=resolveTheme(m.theme), p=pageOf(st,currentPage);
+  const c=document.createElement('canvas'); c.width=1200; c.height=630;
+  const x=c.getContext('2d');
+  const g=x.createLinearGradient(0,0,1200,630);
+  g.addColorStop(0,t.primary); g.addColorStop(1,t.accent);
+  x.fillStyle=t.bg; x.fillRect(0,0,1200,630);
+  x.fillStyle=g; x.fillRect(0,0,1200,10);
+  x.globalAlpha=.10; x.fillStyle=g; x.fillRect(0,0,1200,630); x.globalAlpha=1;
+  const ink=t.ink, ink2=t.ink2;
+  x.fillStyle=ink2; x.font='500 26px system-ui,-apple-system,Segoe UI,sans-serif';
+  x.fillText(String(m.businessName||'').slice(0,44).toUpperCase(),72,110);
+  // wrap the headline by measuring, so long ones do not run off the card
+  const words=String((p.hero&&p.hero.headline)||m.businessName||'').split(/\s+/);
+  x.fillStyle=ink; x.font='700 64px Georgia,"Times New Roman",serif';
+  let line='', y=210; const lines=[];
+  words.forEach(w=>{ const test=line?line+' '+w:w;
+    if(x.measureText(test).width>1040&&line){ lines.push(line); line=w; } else line=test; });
+  if(line) lines.push(line);
+  lines.slice(0,4).forEach(l=>{ x.fillText(l,72,y); y+=78; });
+  x.fillStyle=ink2; x.font='400 30px system-ui,-apple-system,Segoe UI,sans-serif';
+  const sub=String((p.hero&&p.hero.subheadline)||'').slice(0,86);
+  if(sub) x.fillText(sub+(String((p.hero&&p.hero.subheadline)||'').length>86?'…':''),72,Math.min(y+22,520));
+  const c2=m.contact||{};
+  x.fillStyle=t.primary; x.fillRect(72,548,Math.min(560,x.measureText(c2.phone||m.location||'').width+64),0);
+  x.fillStyle=ink2; x.font='600 27px system-ui,-apple-system,Segoe UI,sans-serif';
+  x.fillText([m.location,c2.phone].filter(Boolean).join('  ·  '),72,568);
+  return c;
+}
+$('btnOgImage').onclick=()=>{
+  if(!siteState){ $('seoScore').innerHTML='<div class="tiny">Generate a site first.</div>'; return; }
+  const c=makeOgImage();
+  c.toBlob(b=>{
+    const slug=slugify(siteState.meta.businessName,'share');
+    saveBlob(b,`${slug}-share-card.png`);
+    $('seoScore').innerHTML=`<div class="gout"><h5>Share card, 1200 x 630</h5>
+      <img src="${c.toDataURL('image/png')}" style="width:100%;border-radius:8px;border:1px solid var(--stroke)">
+      <div class="gmeta" style="margin-top:8px">Downloaded. Upload it to your host, then paste its URL into the share image field below so links preview properly.</div></div>`;
+  },'image/png');
+};
+$('btnSeoFix').onclick=async()=>{
+  if(!siteState){ $('seoScore').innerHTML='<div class="tiny">Generate a site first.</div>'; return; }
+  if(!getKey()){ $('seoScore').innerHTML='<div class="tiny">Add an API key under Settings first.</div>'; return; }
+  const btn=$('btnSeoFix'), was=btn.textContent; btn.disabled=true; btn.textContent='Writing…';
+  const P=curPage(), b=briefFromMeta();
+  const sys=`You write the title tag and meta description for one page of a local business website.
+Return ONLY raw JSON: {"title":string,"description":string,"why":string}
+- "title" is 50 to 60 characters. Put the thing people search for near the front, then the business name. Count the characters.
+- "description" is 140 to 155 characters, says what the page offers and gives a reason to click. Not a summary, a pitch. Count the characters.
+- Neither may be padded with the location twice or read as a keyword list.
+- "why" is one short sentence on the choice.
+- NEVER use an em dash.`;
+  try{
+    const raw=await callClaude(sys,`${userPrompt(b,null,null)}\n\nPage: ${pageTitle(siteState,currentPage)}\nCurrent title: ${P.seo_title||'(none)'}\nCurrent description: ${P.seo_meta_description||'(none)'}\n\nReturn the JSON now.`);
+    const d=cleanCopy(JSON.parse(stripFences(raw)));
+    if(isStr(d.title)) P.seo_title=d.title.slice(0,70);
+    if(isStr(d.description)) P.seo_meta_description=d.description.slice(0,170);
+    renderPreview(); renderChecks(); pushHistory(siteState); lastShareURL='';
+    runSeoScore();
+    $('seoScore').insertAdjacentHTML('afterbegin',
+      `<div class="gout"><h5>Rewritten</h5><pre>${esc(P.seo_title)}\n\n${esc(P.seo_meta_description)}</pre><div class="gmeta">${esc(d.why||'')}</div></div>`);
+  }catch(e){ $('seoScore').innerHTML=`<div class="tiny statusBad">${esc(e.message||'Could not write the meta.')}</div>`; }
+  finally{ btn.disabled=false; btn.textContent=was; }
+};
+
+/* ---- share destinations ---- */
+async function shareURLNow(){ if(!lastShareURL) await makeShareLink(); return lastShareURL; }
+$('btnShareWa').onclick=async()=>{
+  const url=await shareURLNow(); if(!url) return;
+  const t=`Here is the website preview for ${siteState.meta.businessName}:`;
+  window.open(`https://wa.me/?text=${encodeURIComponent(t+'\n'+url)}`,'_blank','noopener');
+};
+$('btnShareEmail').onclick=async()=>{
+  const url=await shareURLNow(); if(!url) return;
+  location.href=`mailto:?subject=${encodeURIComponent('Website preview: '+siteState.meta.businessName)}`
+    +`&body=${encodeURIComponent(`Here is the preview I mentioned.\n\n${url}\n\nIt opens in any browser, nothing to install.`)}`;
+};
+$('btnShareNative').onclick=async()=>{
+  const url=await shareURLNow(); if(!url) return;
+  if(navigator.share){ try{ await navigator.share({title:siteState.meta.businessName,text:'Website preview',url}); }catch(e){} }
+  else { try{ await navigator.clipboard.writeText(url); $('shareMeta').textContent='Your browser has no share sheet, so the link was copied instead.'; }catch{} }
+};
+
 /* ---- prospecting --------------------------------------------------------
    The ask was for this to go and find real businesses that have a Google
    Business Profile but no website. It cannot: there is no web access from a
@@ -6215,16 +6428,193 @@ $('btnFillPage').onclick=async()=>{
    the qualification criteria, the user runs it on Google Maps, and Claude then
    analyses the real listings they paste back, scores the opportunity and fills
    the brief so a demo site is one click away. Real data in, analysis out. */
+/* ---- real prospect discovery -------------------------------------------
+   OpenStreetMap is the one that needs no key and can answer the actual
+   question: every mapped business carries a `website` tag or does not, so
+   "shops in this town with no website" is a single query rather than an
+   inference. Verified live: Nominatim and Overpass both send
+   `access-control-allow-origin: *`, and a Rotorua bbox returned 191 named
+   businesses of which 177 had no website and 8 of those listed a phone.
+
+   Google Places (New) and Foursquare both reflect the origin, so they work
+   from the browser with the user's own key, and Google is the one that
+   actually carries Google Business Profile data: rating, review count and the
+   presence or absence of websiteUri.
+
+   Clay cannot be read from here. Its API sends no CORS header at all, so a
+   browser request is blocked before it leaves. What does work is pushing the
+   other way, into a Clay table webhook for enrichment, which is where Clay
+   earns its money anyway. The response is opaque, so the UI says "sent", not
+   "delivered". */
+const PROSPECT_SOURCES={
+  osm:{label:'OpenStreetMap',key:null,
+    note:'Free, no key. Filters directly on "has no website", which is the whole question. Coverage is patchy for very small towns.'},
+  google:{label:'Google Places',key:'googlePlaces',
+    note:'Needs a Google Maps Platform key. The only source carrying real Google Business Profile data: rating, review count and whether a website is listed.'},
+  foursquare:{label:'Foursquare',key:'foursquare',
+    note:'Needs a free Foursquare Places key. Good on hospitality and retail, thinner on trades.'}
+};
+let prospectSource='osm', prospectRows=[];
+const OSM_CATS={
+  'Any business':['shop','craft','office','amenity'],
+  'Trades and craft':['craft'],
+  'Shops and retail':['shop'],
+  'Offices and services':['office'],
+  'Food and hospitality':['amenity=restaurant','amenity=cafe','amenity=bar','amenity=fast_food'],
+  'Health and clinics':['amenity=doctors','amenity=dentist','amenity=clinic','amenity=veterinary','shop=optician'],
+  'Beauty and salon':['shop=hairdresser','shop=beauty','shop=massage'],
+  'Auto and repair':['shop=car_repair','shop=tyres','shop=car_parts','craft=electronics_repair']
+};
+function renderProspectSources(){
+  const host=$('pSources'); if(!host) return;
+  host.innerHTML=Object.entries(PROSPECT_SOURCES).map(([k,v])=>{
+    const locked=v.key&&!imgKeys[v.key];
+    return `<button type="button" class="chip${k===prospectSource?' on':''}" data-ps="${k}">${v.label}${locked?' 🔑':''}</button>`;
+  }).join('');
+  host.querySelectorAll('[data-ps]').forEach(b=>b.onclick=()=>{ prospectSource=b.dataset.ps; renderProspectSources(); });
+  const v=PROSPECT_SOURCES[prospectSource], locked=v.key&&!imgKeys[v.key];
+  $('pSourceNote').innerHTML=esc(v.note)+(locked?' <b>No key set, add one under Settings.</b>':'');
+  const sel=$('pWhat');
+  if(sel&&!sel.dataset.filled){ sel.dataset.filled='1';
+    sel.innerHTML=Object.keys(OSM_CATS).map(k=>`<option>${esc(k)}</option>`).join(''); }
+}
+renderProspectSources();
+
+async function geocode(place){
+  const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(place)}&format=json&limit=1`);
+  if(!r.ok) throw new Error('Could not look up that place.');
+  const d=await r.json();
+  if(!d.length) throw new Error(`No map data for "${place}". Try adding the country.`);
+  const b=d[0].boundingbox.map(Number);          // [south, north, west, east]
+  return {s:b[0],n:b[1],w:b[2],e:b[3],name:d[0].display_name};
+}
+async function findOSM(place,cat){
+  const bb=await geocode(place);
+  const box=`(${bb.s},${bb.w},${bb.n},${bb.e})`;
+  const parts=(OSM_CATS[cat]||OSM_CATS['Any business']).map(t=>{
+    const [k,v]=t.split('=');
+    return `nwr["${k}"${v?`="${v}"`:''}]${box}["name"][!"website"][!"contact:website"];`;
+  }).join('');
+  const q=`[out:json][timeout:25];(${parts});out center 300;`;
+  const r=await fetch('https://overpass-api.de/api/interpreter',{method:'POST',body:'data='+encodeURIComponent(q)});
+  if(r.status===429||r.status===504) throw new Error('The map server is busy. Wait a moment and try again.');
+  if(!r.ok) throw new Error(`Map search failed (HTTP ${r.status}).`);
+  const d=await r.json();
+  return (d.elements||[]).map(e=>{
+    const t=e.tags||{};
+    return {name:t.name, cat:t.craft||t.shop||t.office||t.amenity||'business',
+      phone:t.phone||t['contact:phone']||'', email:t.email||t['contact:email']||'',
+      addr:[t['addr:housenumber'],t['addr:street'],t['addr:suburb'],t['addr:city']].filter(Boolean).join(' '),
+      site:'', rating:'', reviews:'',
+      map:`https://www.google.com/maps/search/${encodeURIComponent(t.name+' '+(t['addr:city']||place))}`,
+      src:'OpenStreetMap'};
+  }).filter(x=>x.name);
+}
+async function findGoogle(place,cat){
+  const key=imgKeys.googlePlaces;
+  if(!key) throw new Error('Add a Google Maps Platform key under Settings first.');
+  const r=await fetch('https://places.googleapis.com/v1/places:searchText',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','X-Goog-Api-Key':key,
+      'X-Goog-FieldMask':'places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.websiteUri,places.rating,places.userRatingCount,places.primaryTypeDisplayName,places.googleMapsUri'},
+    body:JSON.stringify({textQuery:`${cat==='Any business'?'business':cat} in ${place}`,maxResultCount:20})});
+  if(r.status===403) throw new Error('Google rejected that key. Check Places API (New) is enabled and the key allows your origin.');
+  if(!r.ok){ let d=''; try{ d=(await r.json()).error.message; }catch{} throw new Error(`Google Places failed (HTTP ${r.status})${d?': '+d:'.'}`); }
+  const d=await r.json();
+  return (d.places||[]).map(p=>({
+    name:(p.displayName&&p.displayName.text)||'', cat:(p.primaryTypeDisplayName&&p.primaryTypeDisplayName.text)||'business',
+    phone:p.nationalPhoneNumber||'', email:'', addr:p.formattedAddress||'',
+    site:p.websiteUri||'', rating:p.rating||'', reviews:p.userRatingCount||'',
+    map:p.googleMapsUri||'', src:'Google'})).filter(x=>x.name);
+}
+async function findFoursquare(place,cat){
+  const key=imgKeys.foursquare;
+  if(!key) throw new Error('Add a Foursquare Places key under Settings first.');
+  const r=await fetch(`https://api.foursquare.com/v3/places/search?query=${encodeURIComponent(cat==='Any business'?'':cat)}&near=${encodeURIComponent(place)}&limit=30&fields=name,location,tel,website,categories,rating,stats`,
+    {headers:{Authorization:key,Accept:'application/json'}});
+  if(r.status===401) throw new Error('Foursquare rejected that key.');
+  if(!r.ok) throw new Error(`Foursquare failed (HTTP ${r.status}).`);
+  const d=await r.json();
+  return (d.results||[]).map(p=>({
+    name:p.name||'', cat:((p.categories||[])[0]||{}).name||'business',
+    phone:p.tel||'', email:'', addr:(p.location&&p.location.formatted_address)||'',
+    site:p.website||'', rating:p.rating||'', reviews:(p.stats&&p.stats.total_ratings)||'',
+    map:`https://www.google.com/maps/search/${encodeURIComponent(p.name+' '+((p.location||{}).locality||place))}`,
+    src:'Foursquare'})).filter(x=>x.name);
+}
+$('btnFind').onclick=async()=>{
+  const place=$('pWhere').value.trim()||$('location').value.trim();
+  const cat=$('pWhat').value;
+  if(!place){ $('pStatus').textContent='Enter a town or suburb first.'; return; }
+  const btn=$('btnFind'), was=btn.textContent; btn.disabled=true; btn.textContent='Searching…';
+  $('pStatus').textContent=`Searching ${PROSPECT_SOURCES[prospectSource].label}…`;
+  $('pResults').innerHTML='';
+  try{
+    let rows=prospectSource==='google'?await findGoogle(place,cat)
+            :prospectSource==='foursquare'?await findFoursquare(place,cat)
+            :await findOSM(place,cat);
+    const total=rows.length;
+    // The whole point: only the ones with no website.
+    rows=rows.filter(r=>!r.site);
+    rows.sort((a,b)=>(b.phone?1:0)-(a.phone?1:0)||(+b.reviews||0)-(+a.reviews||0));
+    prospectRows=rows;
+    if(!rows.length){ $('pStatus').textContent=`Found ${total} businesses but every one already has a website. Try another category or a nearby town.`; return; }
+    const withPhone=rows.filter(r=>r.phone).length;
+    $('pStatus').textContent=`${rows.length} of ${total} have no website, ${withPhone} with a phone number. Click one to load it into the brief.`;
+    $('pResults').innerHTML=`<div class="gout"><h5>No website listed</h5>${rows.slice(0,60).map((r,i)=>
+      `<div class="gitem prow" data-pi="${i}" role="button" tabindex="0">
+         <b>${esc(r.name)}</b>
+         <div class="gmeta">${esc(r.cat)}${r.addr?' · '+esc(r.addr):''}</div>
+         <div class="gmeta">${r.phone?esc(r.phone):'<i>no phone listed</i>'}${r.rating?` · ${r.rating}★ (${r.reviews})`:''} · <a href="${esc(r.map)}" target="_blank" rel="noopener">Maps ↗</a></div>
+       </div>`).join('')}</div>`;
+    $('pResults').querySelectorAll('.prow').forEach(el=>el.onclick=e=>{
+      if(e.target.tagName==='A') return;
+      const r=prospectRows[+el.dataset.pi];
+      $('bizName').value=r.name;
+      $('location').value=(r.addr||place).split(',').slice(-2).join(',').trim()||place;
+      $('cPhone').value=r.phone||''; $('cArea').value=r.addr||'';
+      $('desc').value=''; $('descCount').textContent='0';
+      $('pPaste').value=`Name: ${r.name}\nCategory: ${r.cat}\nAddress: ${r.addr}\nPhone: ${r.phone}\nRating: ${r.rating||'not shown'} (${r.reviews||0} reviews)\nWebsite: none listed\nSource: ${r.src}`;
+      saveBrief(); refreshStatus();
+      $('pStatus').textContent=`Loaded ${r.name}. Switch to "Analyse a listing" to have Claude write the brief and the pitch.`;
+    });
+  }catch(e){ $('pStatus').textContent=e.message||'Search failed.'; }
+  finally{ btn.disabled=false; btn.textContent=was; }
+};
+$('btnFindCsv').onclick=()=>{
+  if(!prospectRows.length){ $('pStatus').textContent='Run a search first.'; return; }
+  const cols=['name','cat','phone','email','addr','rating','reviews','map','src'];
+  const q=v=>`"${String(v==null?'':v).replace(/"/g,'""')}"`;
+  const csv=[cols.join(',')].concat(prospectRows.map(r=>cols.map(c=>q(r[c])).join(','))).join('\n');
+  saveBlob(new Blob([csv],{type:'text/csv'}),`prospects-${slugify($('pWhere').value||'area','area')}.csv`);
+};
+$('btnFindClay').onclick=async()=>{
+  const hook=(imgKeys.clayHook||'').trim();
+  if(!prospectRows.length){ $('pStatus').textContent='Run a search first.'; return; }
+  if(!/^https:\/\//.test(hook)){ $('pStatus').textContent='Add your Clay table webhook URL under Settings first.'; return; }
+  $('pStatus').textContent=`Sending ${prospectRows.length} rows to Clay…`;
+  let sent=0;
+  for(const r of prospectRows){
+    try{ await fetch(hook,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(r)}); sent++; }
+    catch(e){ /* opaque either way */ }
+  }
+  // no-cors responses are opaque, so this can only honestly claim it was sent
+  $('pStatus').textContent=`${sent} rows posted to your Clay webhook. Clay blocks browsers from reading its responses, so check the table to confirm they arrived.`;
+};
+
 $('btnProspect').onclick=()=>{
   const box=$('prospectBox');
   box.classList.toggle('hidden');
   if(!box.classList.contains('hidden')){
     if(!$('pTrade').value) $('pTrade').value=PACKS[$('bizType').value].label.split(' / ')[0];
     if(!$('pArea').value) $('pArea').value=$('location').value||'';
+    if(!$('pWhere').value) $('pWhere').value=$('location').value||'';
+    renderProspectSources();
   }
 };
 document.querySelectorAll('#pMode [data-pm]').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('#pMode [data-pm]').forEach(x=>x.classList.toggle('on',x===b));
+  $('pFind').classList.toggle('hidden',b.dataset.pm!=='find');
   $('pPlan').classList.toggle('hidden',b.dataset.pm!=='plan');
   $('pAnalyse').classList.toggle('hidden',b.dataset.pm!=='analyse');
   $('pOut').innerHTML=''; $('pStatus').textContent='';
@@ -6565,13 +6955,24 @@ const CX_META={
   editorial: ['Editorial rule','A quiet rule, then copy and details. For premium brands.']
 };
 const CX_KEYS=Object.keys(CX_META);
-const cxNow=()=>(siteState&&siteState.meta.contactLayout)||'gradient';
+/* These three controls used to read straight off siteState, so before a site
+   existed they rendered "0 on" and every click was a no-op. The choice lives in
+   prefs, which persists and seeds the next generation; siteState takes over
+   once there is a site to edit. */
+const cxNow=()=>(siteState?siteState.meta.contactLayout:prefs.contactLayout)||'gradient';
+const formCfg=()=>{
+  if(siteState) return siteState.meta.form;
+  if(!Array.isArray(prefs.formFields)||prefs.formFields.length<2)
+    prefs.formFields=['name','phone','email','message'];
+  return {action:'',cols:prefs.formCols||'auto',fields:prefs.formFields};
+};
 function setContactLayout(k,why){
-  if(!siteState||!CX_META[k]) return;
-  siteState.meta.contactLayout=k;
-  renderCxPick(); renderPreview(); renderChecks(); pushHistory(siteState);
-  lastShareURL=''; lastReviewURL='';
-  if(why!==undefined) $('cxWhy').textContent=why;
+  if(!CX_META[k]) return;
+  prefs.contactLayout=k; savePrefs();
+  if(siteState){ siteState.meta.contactLayout=k; pushHistory(siteState); lastShareURL=''; lastReviewURL=''; }
+  renderCxPick();
+  if(siteState){ renderPreview(); renderChecks(); }
+  if(why!==undefined) $('cxWhy').textContent=why+(siteState?'':' Applied when you generate.');
 }
 function renderCxPick(){
   const host=$('cxPick'); if(!host) return;
@@ -6583,7 +6984,6 @@ function renderCxPick(){
 }
 renderCxPick();
 $('btnCycleCx').onclick=()=>{
-  if(!siteState) return;
   const i=CX_KEYS.indexOf(cxNow());
   setContactLayout(CX_KEYS[(i+1)%CX_KEYS.length],'');
 };
@@ -6630,27 +7030,29 @@ const FORM_FIELD_KEYS=['name','phone','email','address','suburb','service','urge
 const FORM_FIELD_LABEL={name:'Name',phone:'Phone',email:'Email',address:'Address',suburb:'Suburb',
   service:'Service',urgency:'Urgency',budget:'Budget',preferred:'Best time',date:'Date',message:'Message'};
 function renderFormCols(){
-  const cur=(siteState&&siteState.meta.form&&siteState.meta.form.cols)||'auto';
+  const cur=formCfg().cols||'auto';
   document.querySelectorAll('#formColsSeg [data-fc]').forEach(b=>b.classList.toggle('on',b.dataset.fc===cur));
 }
 document.querySelectorAll('#formColsSeg [data-fc]').forEach(b=>b.onclick=()=>{
-  if(!siteState) return;
-  siteState.meta.form.cols=b.dataset.fc;
-  renderFormCols(); renderPreview(); pushHistory(siteState); lastShareURL='';
+  prefs.formCols=b.dataset.fc; savePrefs();
+  if(siteState){ siteState.meta.form.cols=b.dataset.fc; pushHistory(siteState); lastShareURL=''; renderPreview(); }
+  renderFormCols();
 });
 renderFormCols();
 function renderFormFields(){
   const host=$('formFields'); if(!host) return;
-  const on=new Set(((siteState&&siteState.meta.form&&siteState.meta.form.fields)||[]));
+  const on=new Set(formCfg().fields||[]);
   const fc=$('formFieldCount'); if(fc) fc.textContent=`${on.size} on`;
   host.innerHTML=FORM_FIELD_KEYS.map(k=>
     `<button type="button" class="chip${on.has(k)?' on':''}" data-ff="${k}">${FORM_FIELD_LABEL[k]}</button>`).join('');
   host.querySelectorAll('[data-ff]').forEach(b=>b.onclick=()=>{
-    if(!siteState) return;
-    const f=siteState.meta.form.fields;
+    const f=formCfg().fields;
     const i=f.indexOf(b.dataset.ff);
+    // Two is the floor: a form with one box is a search bar, not an enquiry.
     if(i>-1){ if(f.length<=2) return; f.splice(i,1); } else f.push(b.dataset.ff);
-    renderFormFields(); renderPreview(); pushHistory(siteState); lastShareURL='';
+    prefs.formFields=formCfg().fields.slice(); savePrefs();
+    renderFormFields();
+    if(siteState){ renderPreview(); pushHistory(siteState); lastShareURL=''; }
   });
 }
 renderFormFields();
