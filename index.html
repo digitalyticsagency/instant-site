@@ -622,12 +622,12 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
     <span>Add API key</span>
   </button>
   <button class="icon-btn" id="btnTheme" title="Appearance" aria-label="Toggle light or dark appearance"></button>
-  <button class="hbtn" id="btnCopy" disabled>
+  <button class="hbtn" id="btnCopy" title="Copy the full HTML of the open page to the clipboard." disabled>
     <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2.5"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
     <span id="copyLabel">Copy HTML</span>
   </button>
   <div class="dlwrap">
-    <button class="hbtn hbtn-primary" id="btnDownload" disabled aria-haspopup="true" aria-expanded="false">
+    <button class="hbtn hbtn-primary" id="btnDownload" title="Export: static HTML, a client review link, or an installable WordPress theme." disabled aria-haspopup="true" aria-expanded="false">
       <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg>
       <span>Download</span>
       <svg class="caret" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
@@ -650,8 +650,8 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
 </header>
 
 <div class="mtabs" id="mtabs">
-  <button id="mtBrief" class="on">Brief &amp; settings</button>
-  <button id="mtPreview">Preview</button>
+  <button id="mtBrief" title="Show the brief and settings." class="on">Brief &amp; settings</button>
+  <button id="mtPreview" title="Show the preview.">Preview</button>
 </div>
 
 <div class="app" id="app">
@@ -660,9 +660,9 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
   <aside class="col rail" id="rail">
     <div class="rail-head"><span>History</span><span id="histCount">0 / 20</span></div>
     <div id="histList"></div>
-    <button class="mini" id="btnClearHist" style="width:100%;margin-top:8px">Clear history</button>
+    <button class="mini" id="btnClearHist" title="Delete every saved generation from this browser. Cannot be undone." style="width:100%;margin-top:8px">Clear history</button>
 
-    <button class="go" id="btnGen">
+    <button class="go" id="btnGen" title="Send the brief to Claude and build the site. Uses one API call.">
       <span class="go-scan"></span>
       <span class="go-inner">
         <svg viewBox="0 0 24 24"><path d="M13 2 4.5 13.5H11l-1 8.5 8.5-11.5H12l1-8.5z"/></svg>
@@ -680,7 +680,7 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
         <strong>Add your API key to generate</strong>
         Instant Site talks to Claude from your browser using your own key. Nothing is sent anywhere except api.anthropic.com.
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:9px">
-          <button class="mini" id="keyNoticeOpen" type="button">Add API key</button>
+          <button class="mini" id="keyNoticeOpen" title="Open Settings and jump to the API key field." type="button">Add API key</button>
           <a class="mini" href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener" style="text-decoration:none">Get a key ↗</a>
         </div>
       </div>
@@ -738,7 +738,7 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
               <input type="text" id="toneInput" autocomplete="off" role="combobox"
                      aria-expanded="false" aria-controls="toneList" aria-autocomplete="list"
                      placeholder="Search or type any tone" maxlength="60">
-              <button type="button" class="combo-x" id="toneClear" title="Clear" aria-label="Clear tone">&times;</button>
+              <button type="button" class="combo-x" id="toneClear" title="Clear the tone and browse the full list" aria-label="Clear tone">&times;</button>
               <div class="combo-list" id="toneList" role="listbox"></div>
             </div>
             <div class="tiny" id="toneHint">Pick one, or type your own — anything you write is used verbatim.</div>
@@ -746,9 +746,9 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
           <div class="field"><label>Language</label><div class="chips" id="localeChips"></div></div>
         </div>
         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-          <button class="mini" id="btnDemo" type="button">Fill example</button>
-          <button class="mini" id="btnAiExample" type="button">✨ Invent one</button>
-          <button class="mini" id="btnProspect" type="button">🔎 Prospect</button>
+          <button class="mini" id="btnDemo" title="Load the next stock example. Stays inside the business type you have selected." type="button">Fill example</button>
+          <button class="mini" id="btnAiExample" title="Have Claude invent a fresh example business for the selected type." type="button">✨ Invent one</button>
+          <button class="mini" id="btnProspect" title="Find local businesses that have a map listing but no website." type="button">🔎 Prospect</button>
           <span class="tiny" id="demoWhich"></span>
         </div>
         <div id="prospectBox" class="hidden">
@@ -766,9 +766,9 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
                 <div class="field"><label for="pWhat">Category</label><select id="pWhat"></select></div>
               </div>
               <div style="display:flex;gap:6px;flex-wrap:wrap">
-                <button class="mini" id="btnFind" type="button">Find businesses with no website</button>
-                <button class="mini" id="btnFindCsv" type="button">Export CSV</button>
-                <button class="mini" id="btnFindClay" type="button">Send to Clay</button>
+                <button class="mini" id="btnFind" title="Search real map data and return only businesses with no website listed." type="button">Find businesses with no website</button>
+                <button class="mini" id="btnFindCsv" title="Download the results as a CSV for your CRM." type="button">Export CSV</button>
+                <button class="mini" id="btnFindClay" title="Post the results to your Clay table webhook for enrichment." type="button">Send to Clay</button>
               </div>
               <div id="pResults"></div>
             </div>
@@ -777,14 +777,14 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
                 <div class="field"><label for="pTrade">Trade or category</label><input type="text" id="pTrade" placeholder="Roofers" maxlength="60"></div>
                 <div class="field"><label for="pArea">Area</label><input type="text" id="pArea" placeholder="Rotorua, Bay of Plenty" maxlength="80"></div>
               </div>
-              <button class="mini" id="btnPlan" type="button">Build the plan</button>
+              <button class="mini" id="btnPlan" title="Have Claude write the Google Maps searches and qualifying criteria." type="button">Build the plan</button>
             </div>
             <div id="pAnalyse" class="hidden">
               <div class="field">
                 <label for="pPaste">Paste the listing</label>
                 <textarea id="pPaste" rows="6" placeholder="Copy straight off Google Maps and paste it here. Name, category, address, phone, rating, review count, hours, and whether a website is listed."></textarea>
               </div>
-              <button class="mini" id="btnAnalyse" type="button">Analyse and fill the brief</button>
+              <button class="mini" id="btnAnalyse" title="Score the pasted listing and fill the brief from it." type="button">Analyse and fill the brief</button>
             </div>
             <div id="pStatus" class="tiny" style="margin-top:8px"></div>
             <div id="pOut"></div>
@@ -818,11 +818,11 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
         <div id="pageList"></div>
         <div style="display:flex;gap:6px">
           <input type="text" id="newPageName" placeholder="Page name, e.g. Services" maxlength="40" style="flex:1">
-          <button class="mini" id="btnAddPage" type="button">Add</button>
+          <button class="mini" id="btnAddPage" title="Add a page using the name on the left." type="button">Add</button>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <button class="mini" id="btnSuggestPages" type="button">Suggest pages with AI</button>
-          <button class="mini" id="btnFillPage" type="button">Write this page</button>
+          <button class="mini" id="btnSuggestPages" title="Ask Claude which pages this business should have, with a section plan for each." type="button">Suggest pages with AI</button>
+          <button class="mini" id="btnFillPage" title="Write the open sub-page: its own sections, headings and copy." type="button">Write this page</button>
         </div>
         <div id="pageSuggest"></div>
         <div id="pageStatus" class="tiny"></div>
@@ -832,7 +832,7 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
           <div class="tiny" style="margin-top:5px;line-height:1.6">Linked in the footer, kept out of the main nav. Written from the business details you have already entered.</div>
           <div class="chips" id="legalPick" style="margin-top:10px"></div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
-            <button class="mini" id="btnLegal" type="button">Write policy pages</button>
+            <button class="mini" id="btnLegal" title="Generate the selected policy pages. A starting draft, not legal advice." type="button">Write policy pages</button>
           </div>
           <div id="legalStatus" class="tiny" style="margin-top:8px"></div>
           <div class="tiny legalwarn">These are a competent starting draft, not legal advice. Have a lawyer read them before you rely on them, especially if you take payments or handle health data.</div>
@@ -850,8 +850,8 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
           <div class="cxgridpick" id="hfPick"></div>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin:10px 0">
-          <button class="mini" id="btnSuggestCx" type="button">✨ Suggest the best one</button>
-          <button class="mini" id="btnCycleCx" type="button">Try the next one</button>
+          <button class="mini" id="btnSuggestCx" title="Pick the closing layout and form fields that suit this business." type="button">✨ Suggest the best one</button>
+          <button class="mini" id="btnCycleCx" title="Step through the twenty closing layouts one at a time." type="button">Try the next one</button>
         </div>
         <div id="cxWhy" class="tiny" style="margin-bottom:8px"></div>
         <div class="cxgridpick" id="cxPick"></div>
@@ -908,7 +908,7 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
           <input type="text" id="lnkSecondary" placeholder="auto" maxlength="300">
           <div class="tiny" id="lnkSecondNow"></div>
         </div>
-        <button class="mini" id="lnkReset" type="button" style="justify-self:start">Reset to automatic</button>
+        <button class="mini" id="lnkReset" title="Clear the API key, history, preferences and saved brief from this browser." type="button" style="justify-self:start">Reset to automatic</button>
       </div>
     </details>
 
@@ -917,13 +917,13 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
       <div class="body">
         <div class="tiny">These fill in the meta tags and structured data search engines read. All optional, leave blank and the page still works.</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin:10px 0">
-          <button class="mini" id="btnSeoScore" type="button">Score this page</button>
-          <button class="mini" id="btnOgImage" type="button">Make a share image</button>
-          <button class="mini" id="btnSeoFix" type="button">✨ Write the meta</button>
-          <button class="mini" id="btnSiteAudit" type="button">Audit whole site</button>
-          <button class="mini" id="btnSerp" type="button">Preview snippets</button>
-          <button class="mini" id="btnSchema" type="button">Schema</button>
-          <button class="mini" id="btnTestLinks" type="button">Open testers</button>
+          <button class="mini" id="btnSeoScore" title="Score the open page against eleven checks, measured on the built HTML." type="button">Score this page</button>
+          <button class="mini" id="btnOgImage" title="Generate a 1200 by 630 share card from this site theme and copy." type="button">Make a share image</button>
+          <button class="mini" id="btnSeoFix" title="Rewrite the title tag and meta description to the real character limits." type="button">✨ Write the meta</button>
+          <button class="mini" id="btnSiteAudit" title="Check the whole site for duplicate titles, orphan pages and competing keywords." type="button">Audit whole site</button>
+          <button class="mini" id="btnSerp" title="See the Google result and the social card at their real truncation points." type="button">Preview snippets</button>
+          <button class="mini" id="btnSchema" title="Inspect the structured data on this page and what could be richer." type="button">Schema</button>
+          <button class="mini" id="btnTestLinks" title="Open Rich Results, PageSpeed and the other testers with this URL." type="button">Open testers</button>
         </div>
         <div class="row">
           <div class="lbl"><b>AI crawlers</b>Adds llms.txt and robots rules for GPTBot, ClaudeBot, PerplexityBot and Google-Extended, so answer engines can read the site.</div>
@@ -964,7 +964,7 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
           <div class="tiny" id="stockSourceNote" style="margin-bottom:8px"></div>
           <div style="display:flex;gap:6px">
             <input type="text" id="stockQ" placeholder="e.g. electrician, van, workshop" maxlength="60" style="flex:1">
-            <button class="mini" id="stockGo" type="button">Search</button>
+            <button class="mini" id="stockGo" title="Search the selected photo library." type="button">Search</button>
           </div>
           <div id="stockStatus" class="tiny" style="margin-top:7px"></div>
           <div id="stockResults" class="stockgrid"></div>
@@ -988,14 +988,14 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
         <div class="field" style="margin-top:12px">
           <label>Generate</label>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
-            <button class="mini" id="btnGbp" type="button">Google Business Profile</button>
-            <button class="mini" id="btnAds" type="button">Google Ads copy</button>
-            <button class="mini" id="btnKw" type="button">Keyword plan</button>
-            <button class="mini" id="btnSocial" type="button">Social calendar</button>
-            <button class="mini" id="btnEmail" type="button">Follow-up sequence</button>
-            <button class="mini" id="btnReviews" type="button">Review engine</button>
-            <button class="mini" id="btnAudit" type="button">Local SEO audit</button>
-            <button class="mini" id="btnProposal" type="button">Proposal &amp; pricing</button>
+            <button class="mini" id="btnGbp" title="Write the Google Business Profile description, services, posts and Q and A." type="button">Google Business Profile</button>
+            <button class="mini" id="btnAds" title="Write responsive search ads against Google character limits." type="button">Google Ads copy</button>
+            <button class="mini" id="btnKw" title="Build a keyword plan mapped to the pages this site already has." type="button">Keyword plan</button>
+            <button class="mini" id="btnSocial" title="Plan four weeks of posts, including the photo to take for each." type="button">Social calendar</button>
+            <button class="mini" id="btnEmail" title="Write the follow-up sequence for enquiries that do not book." type="button">Follow-up sequence</button>
+            <button class="mini" id="btnReviews" title="Set up review requests and reply templates for one to five stars." type="button">Review engine</button>
+            <button class="mini" id="btnAudit" title="Produce a local SEO audit checklist with effort ratings." type="button">Local SEO audit</button>
+            <button class="mini" id="btnProposal" title="Draft the proposal, three pricing tiers and what to sell next." type="button">Proposal &amp; pricing</button>
           </div>
           <div id="growthStatus" class="tiny" style="margin-top:8px"></div>
         </div>
@@ -1020,7 +1020,7 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
           <label for="apiKey">Anthropic API key</label>
           <div style="display:flex;gap:6px">
             <input type="password" id="apiKey" placeholder="sk-ant-api03-…" spellcheck="false" style="flex:1">
-            <button class="mini" id="btnReveal" type="button">Show</button>
+            <button class="mini" id="btnReveal" title="Show or hide the API key." type="button">Show</button>
           </div>
           <div class="tiny">Stored only in this browser under <code>instantsite_api_key</code>, sent only to <code>api.anthropic.com</code>. Get one at <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>. Anyone with access to this browser profile can read it — don't use a shared machine.</div>
         </div>
@@ -1038,6 +1038,16 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
           <input type="url" id="clayHookKey" placeholder="Clay table webhook URL" autocomplete="off" spellcheck="false" style="margin-top:6px">
           <div class="tiny">All optional. Prospecting works with none of them via OpenStreetMap.</div>
           <div class="tiny">Free keys from <a href="https://www.pexels.com/api/" target="_blank" rel="noopener">pexels.com/api</a> and <a href="https://unsplash.com/developers" target="_blank" rel="noopener">unsplash.com/developers</a>. Both optional, photo search works without them.</div>
+        </div>
+        <div class="field">
+          <label>Workspace</label>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button class="mini" id="btnExportAll" type="button" title="Download every saved site, your preferences and your white-label settings as one .json backup.">Back up everything</button>
+            <button class="mini" id="btnImportAll" type="button" title="Restore from a backup .json. Merges with what is already here rather than replacing it.">Restore backup</button>
+            <button class="mini" id="btnSelfTest" type="button" title="Run every internal guard: theme contrast, app contrast, rendered button states across all themes, and the motion runtime.">Run self-test</button>
+          </div>
+          <input type="file" id="importFile" accept="application/json" class="hidden">
+          <div class="tiny" id="workspaceNote">Backups include your sites and settings. They never include your API keys.</div>
         </div>
         <div class="row">
           <div class="lbl"><b>Appearance</b>Follows your system by default.</div>
@@ -1057,8 +1067,8 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
           <div id="fxWrap" style="margin-top:10px">
             <label style="margin-bottom:6px">Effects <span class="opt" id="fxCount"></span></label>
             <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
-              <button class="mini" id="btnSuggestFX" type="button">✨ Suggest the best set</button>
-              <button class="mini" id="btnClearFX" type="button">Turn all off</button>
+              <button class="mini" id="btnSuggestFX" title="Pick a coherent set of effects for this theme and content." type="button">✨ Suggest the best set</button>
+              <button class="mini" id="btnClearFX" title="Turn every JavaScript effect off. CSS motion stays on." type="button">Turn all off</button>
             </div>
             <div id="fxWhy" class="tiny" style="margin-bottom:8px"></div>
             <div class="fxgrid" id="fxGrid"></div>
@@ -1077,8 +1087,8 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
           <div class="field"><label>Logo</label>
             <div style="display:flex;align-items:center;gap:9px">
               <img id="wlLogoPrev" class="logo-prev hidden" alt="Agency logo preview">
-              <button class="mini" id="btnLogo" type="button">Upload</button>
-              <button class="mini" id="btnLogoClear" type="button">Clear</button>
+              <button class="mini" id="btnLogo" title="Upload a logo for white-label mode." type="button">Upload</button>
+              <button class="mini" id="btnLogoClear" title="Remove the white-label logo." type="button">Clear</button>
               <input type="file" id="wlLogoFile" accept="image/*" class="hidden">
             </div>
           </div>
@@ -1093,22 +1103,22 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
   <section class="work" id="work">
     <div class="wbar">
       <div class="tabs">
-        <button id="tabPreview" class="on">Preview</button>
-        <button id="tabTips">Tips<span class="n" id="tipsN"></span></button>
-        <button id="tabChecks">Pre-flight<span class="n" id="checkN"></span></button>
-        <button id="tabShare">Share</button>
+        <button id="tabPreview" title="The live, editable site." class="on">Preview</button>
+        <button id="tabTips" title="Suggestions for improving this site.">Tips<span class="n" id="tipsN"></span></button>
+        <button id="tabChecks" title="Pre-flight checks before you hand it over.">Pre-flight<span class="n" id="checkN"></span></button>
+        <button id="tabShare" title="Share links and client sign-off.">Share</button>
       </div>
       <div class="spacer"></div>
       <span class="savestate" id="saveState"></span>
       <div class="tabs">
-        <button id="segDesktop" class="on">Desktop</button>
-        <button id="segMobile">Mobile</button>
+        <button id="segDesktop" title="Preview at desktop width." class="on">Desktop</button>
+        <button id="segMobile" title="Preview at phone width.">Mobile</button>
       </div>
     </div>
     <div class="edithint" id="editHint">
       <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
       <span><b>This preview is live.</b> Click any text to edit it. Click the hero, the About panel or the logo to add a photo. Changes save automatically.</span>
-      <button class="mini" id="hintDismiss" type="button">Got it</button>
+      <button class="mini" id="hintDismiss" title="Hide this tip." type="button">Got it</button>
     </div>
 
     <div class="tstrip" id="themeStrip"></div>
@@ -1158,12 +1168,12 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
             <textarea id="shareUrl" readonly rows="3" spellcheck="false" placeholder="Generate a link…"></textarea>
             <div id="shareMeta" class="tiny" style="margin-top:8px"></div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
-              <button class="mini" id="btnMakeShare" type="button">Create link</button>
-              <button class="mini" id="btnCopyShare" type="button">Copy link</button>
-              <button class="mini" id="btnOpenShare" type="button">Open preview</button>
-              <button class="mini" id="btnShareWa" type="button">WhatsApp</button>
-              <button class="mini" id="btnShareEmail" type="button">Email</button>
-              <button class="mini" id="btnShareNative" type="button">Share…</button>
+              <button class="mini" id="btnMakeShare" title="Build a link that rebuilds this site in their browser. Nothing is uploaded." type="button">Create link</button>
+              <button class="mini" id="btnCopyShare" title="Copy the preview link to the clipboard." type="button">Copy link</button>
+              <button class="mini" id="btnOpenShare" title="Open the preview link in a new tab." type="button">Open preview</button>
+              <button class="mini" id="btnShareWa" title="Send the preview link on WhatsApp." type="button">WhatsApp</button>
+              <button class="mini" id="btnShareEmail" title="Email the preview link." type="button">Email</button>
+              <button class="mini" id="btnShareNative" title="Use your device share sheet." type="button">Share…</button>
             </div>
           </div>
 
@@ -1176,9 +1186,9 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
             <textarea id="reviewUrl" readonly rows="3" spellcheck="false" placeholder="Create a review link…"></textarea>
             <div id="reviewMeta" class="tiny" style="margin-top:8px"></div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
-              <button class="mini" id="btnMakeReview" type="button">Create review link</button>
-              <button class="mini" id="btnCopyReview" type="button">Copy link</button>
-              <button class="mini" id="btnOpenReview" type="button">Open as the client</button>
+              <button class="mini" id="btnMakeReview" title="Build a link the client pages through and approves." type="button">Create review link</button>
+              <button class="mini" id="btnCopyReview" title="Copy the review link to the clipboard." type="button">Copy link</button>
+              <button class="mini" id="btnOpenReview" title="Open the review link as the client sees it." type="button">Open as the client</button>
             </div>
           </div>
 
@@ -3277,10 +3287,20 @@ section{padding:${d}px 0}
 .logoimg{height:38px;width:auto;max-width:210px;object-fit:contain;display:block}
 /* Hero photo: a scrim keeps headline contrast honest over an unknown image. */
 .hero.photo::before{background:linear-gradient(${t.dark||t.hero==='banner'?'180deg,rgba(0,0,0,.58),rgba(0,0,0,.72)':'180deg,rgba(0,0,0,.50),rgba(0,0,0,.66)'})}
-.hero.photo{background-size:cover;background-position:center;color:#fff}
+/* An explicit dark ground, not just the image. Everything in a photo hero is
+   forced white, so if the image fails to load, or is still loading, or the
+   data URL is truncated by a share link, the text would otherwise be white on
+   the theme's white page. The colour sits under the image, so it costs
+   nothing when the image is fine. */
+.hero.photo{background-color:#14161a;background-size:cover;background-position:center;color:#fff}
 .hero.photo h1,.hero.photo .sub,.hero.photo .trust{color:#fff}
 .hero.photo .eyebrow{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.34);color:#fff}
-.hero.photo .b2{color:#fff;border-color:rgba(255,255,255,.6)}
+/* The banner hero's .b rule sets a filled accent background and outranks .b2
+   on specificity, so the secondary button came out filled with the accent
+   while still being told to use white text. On a light accent that is white
+   on near-white. These restate the transparent background at matching
+   specificity, and sit after the banner rule so they win. */
+.hero.banner .b2,.hero.photo .b2{background:transparent;color:#fff;border-color:rgba(255,255,255,.6)}
 .hero.photo .trust svg{color:#fff}
 .hero.photo .hcard{background:rgba(255,255,255,.96);color:${t.ink}}
 .hero.photo .hcard dt{color:${t.ink}}.hero.photo .hcard dd{color:${t.ink2}}.hero.photo .hcard h3{color:${t.ink}}
@@ -3495,7 +3515,12 @@ ${prefs.motion?`
     /* Hero parallax: background drifts slower than the page as you scroll. */
     .hero.photo{animation:heroPan linear both;animation-timeline:view();animation-range:entry 0% exit 100%}
     @keyframes heroPan{from{background-position:center 42%}to{background-position:center 58%}}
-    .trust span{animation:fadeIn linear both;animation-timeline:view();animation-range:entry 12% cover 26%}
+    /* Scoped OUT of the hero. Everything else above the fold uses a time-based
+       animation for exactly this reason: a view() timeline on content that is
+       already on screen at load can resolve to partial progress and leave the
+       item permanently half-faded, which is what happened to the third trust
+       item once it wrapped to a second row. */
+    section .trust span,.cx .trust span{animation:fadeIn linear both;animation-timeline:view();animation-range:entry 12% cover 26%}
     /* Vivus-style SVG line draw, without Vivus. Icons are stroked paths, so
        animating stroke-dashoffset draws them on as they enter the viewport.
        pathLength normalises every path to 100 units so one rule fits all. */
@@ -3538,6 +3563,8 @@ ${prefs.motion?`
   .hero .sub{animation:heroIn .7s cubic-bezier(.22,1,.36,1) .08s both}
   .hero .cta-row{animation:heroIn .7s cubic-bezier(.22,1,.36,1) .16s both}
   .hero .eyebrow{animation:heroIn .6s cubic-bezier(.22,1,.36,1) both}
+  .hero .trust{animation:heroIn .7s cubic-bezier(.22,1,.36,1) .24s both}
+  .hero .trust span{animation:none;opacity:1}
   .b{transition:transform .18s cubic-bezier(.22,1,.36,1),box-shadow .18s,filter .18s}
   .b:active{transform:translateY(0) scale(.98)}
   .ico{transition:transform .3s cubic-bezier(.22,1,.36,1)}
@@ -6736,7 +6763,7 @@ function renderProspectSources(){
   const host=$('pSources'); if(!host) return;
   host.innerHTML=Object.entries(PROSPECT_SOURCES).map(([k,v])=>{
     const locked=v.key&&!imgKeys[v.key];
-    return `<button type="button" class="chip${k===prospectSource?' on':''}" data-ps="${k}">${v.label}${locked?' 🔑':''}</button>`;
+    return `<button type="button" class="chip${k===prospectSource?' on':''}" data-ps="${k}" title="${esc(v.note)}">${v.label}${locked?' 🔑':''}</button>`;
   }).join('');
   host.querySelectorAll('[data-ps]').forEach(b=>b.onclick=()=>{ prospectSource=b.dataset.ps; renderProspectSources(); });
   const v=PROSPECT_SOURCES[prospectSource], locked=v.key&&!imgKeys[v.key];
@@ -7198,6 +7225,68 @@ Object.entries(GROWTH).forEach(([kind,g])=>{
   });
 });
 
+/* ---- workspace backup + self-test --------------------------------------
+   Everything lives in this browser's localStorage, which means one cleared
+   profile loses the lot. A backup is the only honest answer to that in an app
+   with no server. Keys are deliberately excluded: a file that quietly carries
+   a live API key is a file someone will email to a colleague. */
+$('btnExportAll').onclick=()=>{
+  const dump={v:1,at:new Date().toISOString(),
+    history:loadHistory(), prefs, whitelabel:wl, brief:(()=>{try{return JSON.parse(localStorage.getItem(LS_BRIEF)||'{}')}catch{return{}}})(),
+    tones:customTones()};
+  const n=dump.history.length;
+  saveBlob(new Blob([JSON.stringify(dump,null,2)],{type:'application/json'}),
+    `instant-site-backup-${new Date().toISOString().slice(0,10)}.json`);
+  $('workspaceNote').textContent=`Backed up ${n} site${n===1?'':'s'}, your preferences and white-label settings. No API keys are in the file.`;
+};
+$('btnImportAll').onclick=()=>$('importFile').click();
+$('importFile').onchange=e=>{
+  const f=e.target.files&&e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const d=JSON.parse(r.result);
+      if(!d||typeof d!=='object') throw new Error('Not a backup file.');
+      let added=0;
+      if(Array.isArray(d.history)){
+        const have=new Set(loadHistory().map(h=>h.id));
+        const merged=loadHistory().concat(d.history.filter(h=>h&&h.id&&!have.has(h.id)));
+        added=merged.length-loadHistory().length;
+        saveHistory(merged); renderHistory();
+      }
+      if(d.prefs&&typeof d.prefs==='object'){
+        Object.assign(prefs,d.prefs); savePrefs(); loadPrefs();
+        renderCxPick(); renderFormCols(); renderFormFields(); renderHfPick(); renderFx(); renderJsOpts();
+      }
+      if(d.whitelabel&&typeof d.whitelabel==='object'){ wl=Object.assign(wl,d.whitelabel); saveWL(); applyBranding(); }
+      if(Array.isArray(d.tones)) try{ localStorage.setItem(LS_TONES,JSON.stringify(d.tones)); }catch{}
+      $('workspaceNote').textContent=`Restored. ${added} new site${added===1?'':'s'} added, preferences and white-label applied. Nothing was overwritten.`;
+    }catch(err){ $('workspaceNote').textContent='That file could not be read as a backup: '+(err.message||err); }
+  };
+  r.readAsText(f);
+  e.target.value='';
+};
+$('btnSelfTest').onclick=async()=>{
+  const btn=$('btnSelfTest'), was=btn.textContent;
+  btn.disabled=true; btn.textContent='Testing…';
+  $('workspaceNote').textContent='Running every guard across all themes…';
+  try{
+    const t=verifyThemes(), a=verifyAppTokens();
+    const b=await verifyButtons();
+    let motion=[];
+    const keepM=prefs.motion,keepJ=prefs.js,keepF=prefs.fx;
+    prefs.motion=true; prefs.fx=Object.keys(FX);
+    ['smooth','gsap','webgl'].forEach(lv=>{ prefs.js=lv;
+      try{ new Function(motionRuntime(lv,THEMES.trades)); }catch(e){ motion.push(lv+': '+e.message); } });
+    prefs.motion=keepM; prefs.js=keepJ; prefs.fx=keepF;
+    const all=[...t,...a,...b,...motion];
+    $('workspaceNote').innerHTML=all.length
+      ? `<b>${all.length} problem${all.length===1?'':'s'}</b><br>${all.slice(0,8).map(esc).join('<br>')}`
+      : `All clear. ${Object.keys(THEMES).length} output themes and the app chrome pass AA, every button state passes on a real render in both hero modes, and all three motion levels parse.`;
+  }catch(e){ $('workspaceNote').textContent='Self-test failed to run: '+(e.message||e); }
+  finally{ btn.disabled=false; btn.textContent=was; }
+};
+
 /* ---- hero form picker -------------------------------------------------- */
 const HF_META={
   none:      ['Contact card','The default. Phone, email, hours and area.'],
@@ -7218,7 +7307,7 @@ function renderHfPick(){
   const host=$('hfPick'); if(!host) return;
   const cur=hfNow(), split=siteState?resolveTheme(siteState.meta.theme).hero==='split':true;
   host.innerHTML=HF_KEYS.map(k=>
-    `<button type="button" class="cxbtn${k===cur?' on':''}" data-hf="${k}"><b>${esc(HF_META[k][0])}</b><span>${esc(HF_META[k][1])}</span></button>`).join('')
+    `<button type="button" class="cxbtn${k===cur?' on':''}" data-hf="${k}" title="${esc(HF_META[k][1])}"><b>${esc(HF_META[k][0])}</b><span>${esc(HF_META[k][1])}</span></button>`).join('')
     +(split?'':`<div class="tiny" style="grid-column:1/-1;margin-top:6px">This theme does not use a split hero, so the hero form is not shown. Pick a split-hero theme to use it.</div>`);
   host.querySelectorAll('[data-hf]').forEach(b=>b.onclick=()=>{
     prefs.heroForm=b.dataset.hf; savePrefs();
@@ -7276,7 +7365,7 @@ function renderCxPick(){
   const cur=cxNow();
   $('tagCx').textContent=CX_META[cur]?CX_META[cur][0]:'gradient';
   host.innerHTML=CX_KEYS.map(k=>
-    `<button type="button" class="cxbtn${k===cur?' on':''}" data-cx="${k}"><b>${esc(CX_META[k][0])}</b><span>${esc(CX_META[k][1])}</span></button>`).join('');
+    `<button type="button" class="cxbtn${k===cur?' on':''}" data-cx="${k}" title="${esc(CX_META[k][1])}"><b>${esc(CX_META[k][0])}</b><span>${esc(CX_META[k][1])}</span></button>`).join('');
   host.querySelectorAll('[data-cx]').forEach(b=>b.onclick=()=>setContactLayout(b.dataset.cx,''));
 }
 renderCxPick();
@@ -7341,7 +7430,7 @@ function renderFormFields(){
   const on=new Set(formCfg().fields||[]);
   const fc=$('formFieldCount'); if(fc) fc.textContent=`${on.size} on`;
   host.innerHTML=FORM_FIELD_KEYS.map(k=>
-    `<button type="button" class="chip${on.has(k)?' on':''}" data-ff="${k}">${FORM_FIELD_LABEL[k]}</button>`).join('');
+    `<button type="button" class="chip${on.has(k)?' on':''}" data-ff="${k}" title="Add or remove the ${FORM_FIELD_LABEL[k].toLowerCase()} field. Every extra field costs enquiries.">${FORM_FIELD_LABEL[k]}</button>`).join('');
   host.querySelectorAll('[data-ff]').forEach(b=>b.onclick=()=>{
     const f=formCfg().fields;
     const i=f.indexOf(b.dataset.ff);
@@ -7385,7 +7474,7 @@ let legalPick=new Set(['privacy','terms']);
 function renderLegalPick(){
   const host=$('legalPick'); if(!host) return;
   host.innerHTML=Object.entries(LEGAL_KINDS).map(([k,v])=>
-    `<button type="button" class="chip${legalPick.has(k)?' on':''}" data-lg="${k}">${v.label}</button>`).join('');
+    `<button type="button" class="chip${legalPick.has(k)?' on':''}" data-lg="${k}" title="${esc(v.brief.slice(0,110))}…">${v.label}</button>`).join('');
   host.querySelectorAll('[data-lg]').forEach(b=>b.onclick=()=>{
     const k=b.dataset.lg;
     legalPick.has(k)?legalPick.delete(k):legalPick.add(k);
@@ -7702,7 +7791,7 @@ function renderStockSources(){
   const host=$('stockSources'); if(!host) return;
   host.innerHTML=Object.entries(STOCK_SOURCES).map(([k,v])=>{
     const locked=v.key&&!imgKeys[v.key];
-    return `<button type="button" class="chip${k===stockSource?' on':''}" data-src="${k}"${locked?' title="Needs an API key under Settings"':''}>${v.label}${locked?' 🔑':''}</button>`;
+    return `<button type="button" class="chip${k===stockSource?' on':''}" data-src="${k}" title="${esc(v.note)}${locked?' Needs an API key under Settings.':''}">${v.label}${locked?' 🔑':''}</button>`;
   }).join('');
   host.querySelectorAll('[data-src]').forEach(b=>b.onclick=()=>{
     stockSource=b.dataset.src; renderStockSources();
@@ -7804,6 +7893,78 @@ const APP_TOKENS={
          accent:'#3d9bff',fill:'#0f6fd0',fillHover:'#1074d6',onAccent:'#ffffff',
          good:'#30d158',warn:'#ff9f0a',bad:'#ff6961'}
 };
+/* Dev guard 3: the OUTPUT's interactive states, measured on a real render
+   rather than on the palette. verifyThemes() checks colour pairs I remembered
+   to list; this renders every button in every theme and asks the browser what
+   it actually painted, which is how a white-on-white hover gets caught. */
+async function verifyButtons(sample){
+  const fails=[];
+  const themes=sample||Object.keys(THEMES);
+  const probe=parseAndValidate(JSON.stringify({
+    hero:{headline:'H',subheadline:'S',cta_text:'Get a quote for your listing'},
+    services:[{title:'A',description:'a',icon:'home'},{title:'B',description:'b',icon:'wrench'},{title:'C',description:'c',icon:'clock'}],
+    about:'x',testimonials:[{quote:'q',author_placeholder:'x'},{quote:'q',author_placeholder:'x'},{quote:'q',author_placeholder:'x'}],
+    faqs:[{question:'Q?',answer:'A.'}],stats:[{value:'1',label:'l'},{value:'2',label:'m'},{value:'3',label:'n'}],
+    process:[{title:'p',description:'d'},{title:'p2',description:'d'},{title:'p3',description:'d'}],areas:['X'],
+    contact_cta:'c',palette:{primary:'#1447e6',accent:'#c2410c',background:'#f7f8fb'},seo_meta_description:''}));
+  probe.meta={businessName:'Probe',location:'X',standout:'S',type:'tradie',typeOther:'',tone:'Professional',
+    locale:'nz',desc:'d',theme:'trades',keyword:'',est:'',team:'',price:'',cert:'',guarantee:'',
+    contact:{phone:'07 555 0166',email:'a@b.co',area:'X',hours:'Mon-Fri',book:''},
+    seo:{},links:{},sections:{order:SECTION_ORDER.slice(),hidden:[]}};
+  probe.media=blankMedia(); probe.pages=[]; probe.sections={order:SECTION_ORDER.slice(),hidden:[]}; probe.headings={};
+  migrate(probe);
+  const f=document.createElement('iframe');
+  f.style.cssText='position:fixed;left:-9999px;top:0;width:1200px;height:900px;visibility:hidden';
+  document.body.appendChild(f);
+  // Resolve a colour against what is painted behind it, so a transparent
+  // background is measured against its real ground rather than assumed black.
+  const hex3=m=>'#'+m.slice(0,3).map(x=>Math.round(+x).toString(16).padStart(2,'0')).join('');
+  const solid=(el,w)=>{
+    let n=el;
+    while(n&&n.nodeType===1){
+      const cs=w.getComputedStyle(n);
+      const m=(cs.backgroundColor||'').match(/[\d.]+/g);
+      if(m&&(m.length<4||+m[3]>0.9)) return hex3(m);
+      /* A gradient IS a painted ground even though background-color reads
+         transparent. Without this the walk skips straight past the closing
+         CTA panel to the white page and reports white-on-white for text that
+         is actually sitting on a dark gradient. */
+      const bi=cs.backgroundImage||'';
+      if(bi&&bi!=='none'){
+        const stops=[...bi.matchAll(/rgba?\(([^)]+)\)/g)].map(x=>x[1].split(',').map(Number));
+        if(stops.length){
+          const avg=[0,1,2].map(i=>stops.reduce((a,s)=>a+s[i],0)/stops.length);
+          return hex3(avg);
+        }
+      }
+      n=n.parentElement;
+    }
+    return '#ffffff';
+  };
+  for(const th of themes){
+    probe.meta.theme=th;
+    for(const withPhoto of [false,true]){
+      // the second pass simulates a photo hero whose image never arrives
+      probe.media.hero=withPhoto?{src:'data:image/gif;base64,BROKEN',alt:'x',credit:null}:null;
+      f.srcdoc=buildSite(probe,false,0);
+      await new Promise(r=>{ f.onload=r; });
+      const d=f.contentDocument, w=f.contentWindow;
+      d.querySelectorAll('.b,.footcta,.cxtile,.navtel').forEach(el=>{
+        const cs=w.getComputedStyle(el);
+        const fg=(cs.color.match(/[\d.]+/g)||[]).slice(0,3)
+          .map(x=>Math.round(+x).toString(16).padStart(2,'0')).join('');
+        if(!fg) return;
+        const bg=solid(el,w);
+        const r=contrast('#'+fg,bg);
+        if(r<4.5) fails.push(`${th}${withPhoto?' (photo hero, image failed)':''} .${el.className}: #${fg} on ${bg} = ${r.toFixed(2)}:1`);
+      });
+    }
+  }
+  f.remove();
+  if(fails.length) console.warn('[Instant Site] Button contrast below AA:',fails);
+  return fails;
+}
+
 function verifyAppTokens(){
   const fails=[];
   const check=(label,fg,bg)=>{ const r=contrast(fg,bg); if(r<4.5) fails.push(`${label} = ${r.toFixed(2)}:1`); };
