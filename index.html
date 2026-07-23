@@ -750,6 +750,9 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
       <summary>Sections <span class="tag" id="tagSections">10</span></summary>
       <div class="body">
         <div class="tiny">Show, hide and reorder the page. Sections with no content are skipped automatically.</div>
+        <input type="search" id="secFind" placeholder="Find a section — name, purpose or heading" autocomplete="off"
+               aria-controls="sectionList" style="margin:10px 0 4px">
+        <div id="secFindMeta" class="tiny"></div>
         <div id="sectionList"></div>
       </div>
     </details>
@@ -1385,7 +1388,7 @@ const blankPage=(title,st)=>({
   hero:{headline:title||'New page',subheadline:'Add a sentence about this page.',cta_text:'Get in touch'},
   services:[],about:'',testimonials:[],faqs:[],stats:[],process:[],areas:[],
   contact_cta:'Get in touch and we will come straight back to you.',
-  seo_meta_description:'',seo_title:'',keyword:'',page_intent:'',
+  seo_meta_description:'',seo_title:'',keyword:'',page_intent:'',headings:{},
   media:blankMedia(),
   sections:{order:SECTION_ORDER.slice(),hidden:['stats','services','process','about','gallery','reviews','faq','areas']}
 });
@@ -2079,7 +2082,10 @@ function siteDigest(st,skipIdx){
       page:pageTitle(st,i),
       headline:(P.hero&&P.hero.headline)||'',
       covers:(P.services||[]).map(x=>x.title),
-      questions:(P.faqs||[]).map(x=>x.question)
+      questions:(P.faqs||[]).map(x=>x.question),
+      // Section H2s are the loudest duplication signal, so they go in the
+      // digest too — the model cannot avoid reusing what it cannot see.
+      headings:Object.values(P.headings||{}).map(x=>x&&x.h).filter(Boolean)
     });
   }
   return out;
@@ -2107,6 +2113,7 @@ Required JSON shape:
 {
   "page_intent": "transactional" | "informational" | "local" | "trust",
   "sections": [ string ],
+  "section_headings": { "<section key>": { "h": string, "sub": string } },
   "seo_title": string,
   "seo_meta_description": string,
   "hero": { "headline": string, "subheadline": string, "cta_text": string },
@@ -2141,7 +2148,13 @@ Section rules — these matter more than any other rule here:
 - Return content arrays ONLY for the sections you chose. For every section you did not choose, return an empty array (or "" for "about"). Do not write content you are not going to show.
 - Before you answer, count your content sections. If the count is under 3, go back and find another angle on this page's topic that earns its own section — a comparison, a step-by-step, the questions it raises, who it suits — rather than padding an existing one.
 
-STEP 3 — WRITE FOR SEARCH ENGINES AND ANSWER ENGINES.
+STEP 3 — GIVE EVERY SECTION ITS OWN HEADING.
+"section_headings" must contain one entry for EVERY key you listed in "sections" except "hero" (its headline is the H1). Each entry is {"h": the H2, "sub": one supporting sentence — use "" where a sentence would only pad}.
+- These are the page's section H2s. Write them for THIS page's topic. A page about emergency callouts does not head its list "What we do" and its closing "Ready when you are" — it heads them for what they actually are on this page.
+- Every H2 must be different from the other pages' H2s listed under ALREADY COVERED. Reusing them is the single most visible way an interior page reads as a copy of the home page, even when the content underneath is new.
+- Keep each "h" under 60 characters. Do not restate the H1.
+
+STEP 4 — WRITE FOR SEARCH ENGINES AND ANSWER ENGINES.
 This page has to win a classic search result AND be quotable by an AI assistant answering a question out loud. That means:
 - "hero.headline" — the page's single H1. Under 65 characters. It must state the page's specific topic, not the business's general pitch. Do not restate the home page headline.
 - "hero.subheadline" — 1 to 2 sentences that stand completely on their own as a direct answer to what the searcher asked, naming the business and the place. Assume it will be lifted out of the page and read aloud with no surrounding context: no "we", "this", "it" or "as mentioned" pointing at something outside the sentence.
@@ -2191,10 +2204,11 @@ Page title: "${brief.page}"`;
   if(digest&&digest.length){
     u+=`\n\n=== ALREADY COVERED ELSEWHERE ON THIS SITE — DO NOT REPEAT ===
 ${digest.map(d=>`- ${d.page}: "${d.headline}"`
+  +(d.headings&&d.headings.length?`\n    section headings used: ${d.headings.join(' | ')}`:'')
   +(d.covers.length?`\n    covers: ${d.covers.join(', ')}`:'')
   +(d.questions.length?`\n    already answers: ${d.questions.join(' | ')}`:'')).join('\n')}
 
-Your page must add something these do not. Do not reuse their headlines, their service titles or their questions. Where your topic touches one of them, go a level deeper instead of summarising it again.`;
+Your page must add something these do not. Do not reuse their headlines, their section headings, their service titles or their questions. Where your topic touches one of them, go a level deeper instead of summarising it again.`;
   }
   return u+`\n\nReturn the JSON now.`;
 }
@@ -2228,6 +2242,20 @@ function parsePageContent(raw){
      turned on if it was asked for AND there is something to put in it —
      otherwise "pick fewer sections" would just move the empty-section problem
      from the home-page skeleton to the model's optimism. */
+  /* Headings are page data now, so they go through the same sanitising as
+     anything else the model returns. Anything missing falls back to the
+     template default at render time. */
+  const hd={}, rawHd=(obj.section_headings&&typeof obj.section_headings==='object')?obj.section_headings:{};
+  Object.keys(rawHd).forEach(k=>{
+    const key=String(k).trim().toLowerCase();
+    if(!SECTION_META[key]||key==='hero') return;
+    const v=rawHd[k]||{};
+    const e={};
+    if(isStr(v.h)) e.h=String(v.h).trim().slice(0,90);
+    if(isStr(v.sub)) e.sub=String(v.sub).trim().slice(0,200);
+    if(e.h||e.sub) hd[key]=e;
+  });
+  obj.headings=hd;
   const asked=(Array.isArray(obj.sections)?obj.sections:[]).map(k=>String(k).trim().toLowerCase()).filter(k=>SECTION_META[k]);
   const has={ hero:1, contact:1,
     stats:obj.stats.length, services:obj.services.length, process:obj.process.length,
@@ -2870,6 +2898,20 @@ function buildSite(state,mode,pageIdx){
               :jsLevel==='webgl'?['lenis','gsap','scrolltrigger','three']:[];
   const ed=(path,tag,cls,txt)=>`<${tag}${cls?` class="${cls}"`:''}${editable?` contenteditable="true" data-path="${path}" spellcheck="false"`:''}>${esc(txt)}</${tag}>`;
   const heroImg=mediaOf(s,'hero'), aboutImg=mediaOf(s,'about'), logoImg=mediaOf(s,'logo');
+  /* Section headings are page data, not template furniture. They used to be
+     hardcoded, so every sub-page repeated the home page word for word —
+     "What we do", "About <business>", "Questions we get asked" — no matter how
+     different its content was. That is the duplication you see on an interior
+     page even when its copy is genuinely new. The old strings survive as
+     fallbacks so existing saved sites are unchanged. */
+  const HD=(k,defH,defSub)=>{
+    const x=((s.headings||{})[k])||{};
+    return {h:isStr(x.h)?x.h:defH, sub:isStr(x.sub)?x.sub:(defSub||'')};
+  };
+  const hdH=(k,defH)=>ed(`headings.${k}.h`,'h2','',HD(k,defH).h);
+  const hdSub=(k,defH,defSub)=>{ const v=HD(k,defH,defSub).sub;
+    return v?ed(`headings.${k}.sub`,'p','',v):''; };
+  const head=(k,defH,defSub)=>`<div class="head mid">${hdH(k,defH)}${hdSub(k,defH,defSub)}</div>`;
   // In editable mode every slot is a click target; in export they are plain markup.
   const slot=(name,cta)=>editable?` data-media="${name}" data-cta="${esc(cta)}" title="${esc(cta)}"`:'';
   const star='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.9 6.2 6.6.9-4.8 4.6 1.2 6.6L12 17.2 6.1 20.3l1.2-6.6L2.5 9.1l6.6-.9z"/></svg>';
@@ -2919,7 +2961,7 @@ function buildSite(state,mode,pageIdx){
   const faqHTML=faqs.length?`
 <section id="faq"${t.services==='cards'?' class="alt"':''}>
   <div class="w">
-    <div class="head mid"><h2>Questions we get asked</h2></div>
+    ${head('faq','Questions we get asked','')}
     <div class="faq">${faqs.map((f,i)=>`
       <details${i===0?' open':''}>
         <summary${editable?` contenteditable="true" data-path="faqs.${i}.question" spellcheck="false"`:''}>${esc(f.question)}</summary>
@@ -2942,7 +2984,7 @@ function buildSite(state,mode,pageIdx){
 
   const processHTML=process.length?`
 <section id="process"><div class="w">
-  <div class="head mid"><h2>How it works</h2><p>No surprises — here is exactly what happens.</p></div>
+  ${head('process','How it works','No surprises — here is exactly what happens.')}
   <div class="steps">${process.map((x,i)=>`
     <div class="step">${ed(`process.${i}.title`,'h3','',x.title)}${ed(`process.${i}.description`,'p','',x.description)}</div>`).join('')}
   </div>
@@ -2950,28 +2992,28 @@ function buildSite(state,mode,pageIdx){
 
   const areasHTML=areas.length?`
 <section id="areas" class="alt"><div class="w">
-  <div class="head mid"><h2>Where we work</h2><p>${esc(m.businessName)} covers these areas${m.location?` around ${esc(m.location)}`:''}.</p></div>
+  ${head('areas','Where we work',`${m.businessName} covers these areas${m.location?` around ${m.location}`:''}.`)}
   <div class="areas">${areas.map((a,i)=>`<span${editable?` contenteditable="true" data-path="areas.${i}" spellcheck="false"`:''}>${pin}${esc(a)}</span>`).join('')}</div>
 </div></section>`:'';
 
   const galleryHTML=gallery.length?`
 <section id="gallery"><div class="w">
-  <div class="head mid"><h2>Recent work</h2><p>A few jobs from around ${esc(m.location||'the area')}.</p></div>
+  ${head('gallery','Recent work',`A few jobs from around ${m.location||'the area'}.`)}
   <div class="gal">${gallery.map(g=>`<figure><img src="${g.src}" alt="${esc(g.alt||'Recent work by '+m.businessName)}" loading="lazy" decoding="async"></figure>`).join('')}</div>
 </div></section>`:'';
 
-  const servicesSection=`
+  const servicesSection=!s.services.length?'':`
 <section id="services"${t.services!=='list'?' class="alt"':''}>
   <div class="w">
-    <div class="head mid"><h2>What we do</h2><p>Straightforward work, done properly, by people who live here too.</p></div>
+    ${head('services','What we do','Straightforward work, done properly, by people who live here too.')}
     ${servicesHTML}
   </div>
 </section>`;
 
-  const aboutSection=`
+  const aboutSection=(!isStr(s.about)&&!aboutImg.src)?'':`
 <section id="about" class="about"><div class="w">
   <div>
-    <h2>About ${esc(m.businessName)}</h2>
+    ${hdH('about','About '+m.businessName)}
     ${ed('about','p','',s.about)}
     ${c.hours?`<p style="margin-top:18px"><strong>Hours:</strong> ${esc(c.hours)}</p>`:''}
   </div>
@@ -2981,17 +3023,17 @@ function buildSite(state,mode,pageIdx){
   <div class="fig" role="img" aria-label="Placeholder — replace with a photo of the team or recent work"${slot('about','Add a photo')}>${iconSVG('camera')}</div>`}
 </div></section>`;
 
-  const reviewsSection=`
+  const reviewsSection=!s.testimonials.length?'':`
 <section id="reviews"${t.services==='list'?' class="alt"':''}>
   <div class="w">
-    <div class="head mid"><h2>What clients say</h2><p>Replace the placeholder names with real, permission-granted client names.</p></div>
+    ${head('reviews','What clients say','Replace the placeholder names with real, permission-granted client names.')}
     ${quotesHTML}
   </div>
 </section>`;
 
   const contactSection=`
 <section id="contact" class="final"><div class="w"><div class="inner">
-  <h2>Ready when you are</h2>
+  ${hdH('contact','Ready when you are')}
   ${ed('contact_cta','p','',s.contact_cta)}
   <div class="cta-row" style="justify-content:center">
     <a href="${primaryHref}" class="b">${c.phone&&!c.book?`Call ${esc(c.phone)}`:esc(s.hero.cta_text)}</a>
@@ -3167,7 +3209,12 @@ ${jsLevel==='off'?'':`${jsLibs.map(libTag).join('\n')}
    ========================================================================== */
 function setByPath(obj,path,value){
   const parts=path.split('.');
-  let n=obj; for(let i=0;i<parts.length-1;i++) n=n[parts[i]];
+  let n=obj;
+  for(let i=0;i<parts.length-1;i++){
+    // headings.* are created on first edit, so intermediates may not exist yet
+    if(n[parts[i]]==null||typeof n[parts[i]]!=='object') n[parts[i]]={};
+    n=n[parts[i]];
+  }
   n[parts[parts.length-1]]=value;
 }
 function renderPreview(){
@@ -4428,6 +4475,7 @@ function migrate(s){
   SECTION_ORDER.forEach(k=>{ if(!s.meta.sections.order.includes(k)) s.meta.sections.order.push(k); });
   if(!Array.isArray(s.meta.sections.hidden)) s.meta.sections.hidden=[];
   ['stats','process','areas'].forEach(k=>{ if(!Array.isArray(s[k])) s[k]=[]; });
+  if(!s.headings||typeof s.headings!=='object') s.headings={};
   // Extra pages postdate earlier saves; normalise each one the same way.
   if(!Array.isArray(s.pages)) s.pages=[];
   s.pages=s.pages.slice(0,PAGE_CAP-1);
@@ -4442,6 +4490,7 @@ function migrate(s){
     if(typeof pg.contact_cta!=='string') pg.contact_cta='Get in touch.';
     if(typeof pg.seo_meta_description!=='string') pg.seo_meta_description='';
     if(typeof pg.seo_title!=='string') pg.seo_title='';
+    if(!pg.headings||typeof pg.headings!=='object') pg.headings={};
     if(typeof pg.keyword!=='string') pg.keyword='';
     const mm=blankMedia(); pg.media=Object.assign(mm,pg.media||{});
     Object.keys(mm).forEach(k=>{ if(k!=='gallery'&&(!pg.media[k]||typeof pg.media[k]!=='object')) pg.media[k]={src:'',alt:'',credit:null}; });
@@ -4683,6 +4732,8 @@ $('btnOpenReview').onclick=async()=>{
 };
 if(prefs.approveTo) $('approveTo').value=prefs.approveTo;
 $('approveTo').addEventListener('input',()=>{ lastReviewURL=''; $('reviewUrl').value=''; $('reviewMeta').textContent=''; });
+$('secFind').addEventListener('input',renderSections);
+$('secFind').addEventListener('search',renderSections);
 
 async function downloadWordPress(){
   if(!siteState) return;
@@ -5035,7 +5086,7 @@ $('btnFillPage').onclick=async()=>{
       }catch(e){ /* keep the first attempt rather than losing both */ }
     }
     ['hero','services','about','testimonials','faqs','stats','process','areas',
-     'contact_cta','seo_title','seo_meta_description','page_intent']
+     'contact_cta','seo_title','seo_meta_description','page_intent','headings']
       .forEach(k=>{ if(parsed[k]!==undefined) P[k]=parsed[k]; });
     /* The page's own section set — NOT the home-page skeleton. Turning every
        section on here was what made each new page a copy of the home page. */
@@ -5082,14 +5133,29 @@ function renderSections(){
   const c=sectionCfg(), hidden=new Set(c.hidden);
   const shown=c.order.filter(k=>!hidden.has(k)&&sectionHasContent(k)).length;
   $('tagSections').textContent=`${shown} on`;
-  host.innerHTML=c.order.map((k,i)=>{
+  /* Search matches the section name, what it is for, and this page's own
+     heading — so "questions", "faq" and whatever the AI actually called it all
+     find the same row. */
+  const q=(($('secFind')&&$('secFind').value)||'').trim().toLowerCase();
+  const hay=k=>{
+    const P=curPage(), h=(P.headings||{})[k]||{};
+    return [k,SECTION_META[k].label,SECTION_META[k].note,h.h||'',h.sub||''].join(' ').toLowerCase();
+  };
+  const match=k=>!q||hay(k).includes(q);
+  const rows=c.order.filter(match);
+  if($('secFindMeta')) $('secFindMeta').textContent=
+    q?(rows.length?`${rows.length} of ${c.order.length} sections match “${q}”.`:`Nothing matches “${q}”.`):'';
+  if(!rows.length){ host.innerHTML=`<div class="tiny">No section matches that. Clear the search to see all ${c.order.length}.</div>`; return; }
+  host.innerHTML=rows.map((k)=>{
+    const i=c.order.indexOf(k);
     const meta=SECTION_META[k], off=hidden.has(k), empty=!sectionHasContent(k);
     return `<div class="secrow${off?' off':''}">
       <div class="secmove">
         <button type="button" data-up="${k}" ${i===0?'disabled':''} title="Move up">↑</button>
         <button type="button" data-down="${k}" ${i===c.order.length-1?'disabled':''} title="Move down">↓</button>
       </div>
-      <div class="secinfo"><div class="secname">${meta.label}${empty?' <em>· empty</em>':''}</div><div class="secnote">${meta.note}</div></div>
+      <div class="secinfo"><div class="secname">${meta.label}${empty?' <em>· empty</em>':''}</div>
+        <div class="secnote">${esc(((curPage().headings||{})[k]||{}).h||meta.note)}</div></div>
       ${meta.always?`<span class="tiny" style="flex:none">always</span>`
                    :`<div class="switch sm${off?'':' on'}" data-toggle="${k}" role="switch" tabindex="0"></div>`}
     </div>`;
