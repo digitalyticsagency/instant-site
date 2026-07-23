@@ -1222,7 +1222,7 @@ const blankPage=(title,st)=>({
   hero:{headline:title||'New page',subheadline:'Add a sentence about this page.',cta_text:'Get in touch'},
   services:[],about:'',testimonials:[],faqs:[],stats:[],process:[],areas:[],
   contact_cta:'Get in touch and we will come straight back to you.',
-  seo_meta_description:'',
+  seo_meta_description:'',seo_title:'',keyword:'',page_intent:'',
   media:blankMedia(),
   sections:{order:SECTION_ORDER.slice(),hidden:['stats','services','process','about','gallery','reviews','faq','areas']}
 });
@@ -1521,6 +1521,8 @@ const SECTION_META={
   areas:{label:'Service areas',note:'Suburb list — helps local search'},
   contact:{label:'Closing CTA',always:true,note:'Final call to action'}
 };
+const INTENT_LABEL={transactional:'built to convert',informational:'built to answer',
+  local:'built for local search',trust:'built to build trust'};
 const LOAD_LINES=['Drafting your hero section…','Writing service descriptions…','Answering the questions buyers ask…','Composing testimonials…','Tightening the copy…','Applying your theme…'];
 
 /* ==========================================================================
@@ -1709,6 +1711,192 @@ What they do: ${brief.desc}`;
       contact_cta:existing.contact_cta,palette:existing.palette},null,2)}`;
   }
   return u+`\n\nReturn the JSON now.`;
+}
+
+/* --------------------------------------------------------------------------
+   SUB-PAGE WRITING
+   A sub-page is NOT a second home page. Reusing systemPrompt() gave every page
+   the identical section skeleton — the same trust band, the same "how it
+   works", the same suburb list, the same four objection FAQs — which reads as
+   duplicate content to both a reader and a crawler, and gives an answer engine
+   nothing new to quote. So the page brief is its own prompt: the model picks
+   which sections the page's intent actually needs, is shown what home already
+   says, and is told not to say it again.
+   -------------------------------------------------------------------------- */
+
+/* A compact digest of what the rest of the site already covers, so the model
+   can deliberately avoid restating it. Kept small — this rides along on every
+   page-write request. */
+function siteDigest(st,skipIdx){
+  const out=[];
+  for(let i=0;i<pageCount(st);i++){
+    if(i===skipIdx) continue;
+    const P=pageOf(st,i);
+    out.push({
+      page:pageTitle(st,i),
+      headline:(P.hero&&P.hero.headline)||'',
+      covers:(P.services||[]).map(x=>x.title),
+      questions:(P.faqs||[]).map(x=>x.question)
+    });
+  }
+  return out;
+}
+
+const PAGE_SECTION_MENU=`  hero      — headline, standfirst and buttons. ALWAYS included, always first.
+  stats     — a band of 3 short proof figures.
+  services  — a card grid. On a sub-page these are the sub-topics OF THIS PAGE (menu categories, package tiers, problem types), not the business's top-level services.
+  process   — numbered steps. Only where the page's job is to explain how something works.
+  about     — one prose block. Use for the substantive explanatory body of the page.
+  gallery   — photo grid. Only suggest if the page is genuinely visual; it starts empty and the owner adds images.
+  reviews   — three client quotes.
+  faq       — question-and-answer pairs.
+  areas     — a list of suburbs served.
+  contact   — closing call to action. ALWAYS included, always last.`;
+
+function pageSystemPrompt(brief){
+  const pack=PACKS[brief.type]||PACKS.other;
+  const packHint=brief.type==='other'?(brief.typeOther?`The business category is: ${brief.typeOther}.`:''):pack.promptHint;
+  let p=`You are a senior SEO content strategist and conversion copywriter. You are writing ONE interior page of a small local service business website — not the home page.
+
+Return ONLY raw JSON. No markdown fences, no preamble, no commentary. The response must begin with { and end with }.
+
+Required JSON shape:
+{
+  "page_intent": "transactional" | "informational" | "local" | "trust",
+  "sections": [ string ],
+  "seo_title": string,
+  "seo_meta_description": string,
+  "hero": { "headline": string, "subheadline": string, "cta_text": string },
+  "services": [ { "title": string, "description": string, "icon": string } ],
+  "about": string,
+  "process": [ { "title": string, "description": string } ],
+  "stats": [ { "value": string, "label": string } ],
+  "testimonials": [ { "quote": string, "author_placeholder": string } ],
+  "faqs": [ { "question": string, "answer": string } ],
+  "areas": [ string ],
+  "contact_cta": string
+}
+
+STEP 1 — DECIDE THE PAGE'S JOB.
+Set "page_intent" from what a person searching for this page actually wants:
+- "transactional" — ready to buy or book. Lead with the offer, price basis and the next step.
+- "informational" — comparing, researching or diagnosing. Lead with the answer, then the detail.
+- "local" — looking for this service in a specific place. Lead with coverage and proximity.
+- "trust" — deciding whether to believe this operator. Lead with evidence, people and credentials.
+
+STEP 2 — CHOOSE ONLY THE SECTIONS THAT SERVE THAT JOB.
+"sections" is an ORDERED subset of these keys. Available sections:
+${PAGE_SECTION_MENU}
+
+Section rules — these matter more than any other rule here:
+- Pick 4 to 6 sections TOTAL, including the two mandatory ones. Fewer, deeper sections beat a full set of thin ones.
+- Order them so the page answers its own question in the first screen, then supports the answer.
+- OMIT any section that would restate what another page already says. A page that repeats the home page's trust band, steps, suburb list and objections is duplicate content — it will not rank and it gives an answer engine nothing new to quote.
+- Only include "stats", "process" or "areas" on an interior page if THIS page's topic genuinely needs them and the content would differ from the home page's. Usually it does not. Do not reach for them to pad the page out.
+- Only include "reviews" if you can write quotes that are specifically about THIS page's topic rather than the business in general.
+- Return content arrays ONLY for the sections you chose. For every section you did not choose, return an empty array (or "" for "about"). Do not write content you are not going to show.
+
+STEP 3 — WRITE FOR SEARCH ENGINES AND ANSWER ENGINES.
+This page has to win a classic search result AND be quotable by an AI assistant answering a question out loud. That means:
+- "hero.headline" — the page's single H1. Under 65 characters. It must state the page's specific topic, not the business's general pitch. Do not restate the home page headline.
+- "hero.subheadline" — 1 to 2 sentences that stand completely on their own as a direct answer to what the searcher asked, naming the business and the place. Assume it will be lifted out of the page and read aloud with no surrounding context: no "we", "this", "it" or "as mentioned" pointing at something outside the sentence.
+- "about" — the substantive body. 3 to 5 sentences. Lead with the direct answer, then the specifics: materials, timeframes, what is included, what is not, who it suits. Specificity is what makes a passage worth quoting; generalities are what get skipped.
+- "faqs" — 3 to 5. Phrase each "question" verbatim the way a person would type or say it, including question words ("How much does...", "Do you...", "How long before..."). Each "answer" must be self-contained and complete in its FIRST sentence, then add one sentence of detail. These are the passages an answer engine extracts, so an answer that only makes sense after reading the question above it is wasted.
+- The questions must be ones THIS page's topic raises, not the general pre-booking objections the home page already handles.
+- "seo_title" — under 60 characters, the target phrase near the front, then the business name. Do not duplicate any other page's title.
+- "seo_meta_description" — under 155 characters, describing THIS page, with a reason to click.
+
+Content rules:
+- "services": 3 to 5 items when chosen, otherwise []. Titles 2-4 words. Descriptions 1-2 concrete sentences.
+- "icon": MUST be exactly one of — ${ICON_NAMES.join(', ')}. Never invent one.
+- "process": 3 to 5 steps when chosen, otherwise [].
+- "stats": exactly 3 when chosen, otherwise []. Only figures derivable from the brief; otherwise a non-numeric proof point. Never fabricate counts, years or ratings.
+- "testimonials": exactly 3 when chosen, otherwise []. "author_placeholder" must literally be "[Replace with real client name]".
+- "areas": 6 to 10 real place names when chosen, otherwise []. Never invent place names.
+- "contact_cta": one sentence, matched to "page_intent" — a transactional page asks for the booking, an informational page offers the next question answered.
+- Never invent prices, licence numbers, certifications or dates that are not in the brief.
+- Never use: unlock, elevate, seamless, cutting-edge, solutions, passionate, bespoke, "in today's world", "look no further", "nestled".
+
+${LOCALES[brief.locale].promptHint}`;
+  if(packHint) p+=`\n\nSector guidance: ${packHint}`;
+  p+=`\n\nTone: ${brief.tone}. Match it consistently across every field.`;
+  return p;
+}
+
+function pageUserPrompt(brief,digest){
+  let u=`Business name: ${brief.name}
+Business type: ${brief.type==='other'?(brief.typeOther||'Other'):PACKS[brief.type].label}
+Location: ${brief.location}
+What they do: ${brief.desc}`;
+  if(brief.standout) u+=`\nStandout feature: ${brief.standout}`;
+  if(brief.hours)    u+=`\nOpening hours: ${brief.hours}`;
+  if(brief.area)     u+=`\nService area: ${brief.area}`;
+  if(brief.est)      u+=`\nEstablished: ${brief.est}`;
+  if(brief.team)     u+=`\nTeam size: ${brief.team} people`;
+  if(brief.cert)     u+=`\nLicences and certifications (use verbatim): ${brief.cert}`;
+  if(brief.guarantee)u+=`\nGuarantee offered: ${brief.guarantee}`;
+  if(brief.price)    u+=`\nPrice positioning: ${brief.price} (informs tone only, never print the symbol)`;
+  u+=`\nTone: ${brief.tone}\nLanguage: ${LOCALES[brief.locale].label} English`;
+
+  u+=`\n\n=== THE PAGE YOU ARE WRITING ===
+Page title: "${brief.page}"`;
+  if(brief.pageKeyword) u+=`\nTarget search phrase: "${brief.pageKeyword}" — work it into the H1, the standfirst and the meta description, naturally, never mechanically.`;
+  else u+=`\nNo target phrase was given. Infer the one phrase this page should rank for from its title and the business, and write to it.`;
+
+  if(digest&&digest.length){
+    u+=`\n\n=== ALREADY COVERED ELSEWHERE ON THIS SITE — DO NOT REPEAT ===
+${digest.map(d=>`- ${d.page}: "${d.headline}"`
+  +(d.covers.length?`\n    covers: ${d.covers.join(', ')}`:'')
+  +(d.questions.length?`\n    already answers: ${d.questions.join(' | ')}`:'')).join('\n')}
+
+Your page must add something these do not. Do not reuse their headlines, their service titles or their questions. Where your topic touches one of them, go a level deeper instead of summarising it again.`;
+  }
+  return u+`\n\nReturn the JSON now.`;
+}
+
+/* Interior pages are validated leniently: nothing is merged unless the whole
+   parse succeeds, so a thin section costs the user a section, not the page. */
+function parsePageContent(raw){
+  let obj;
+  try{ obj=JSON.parse(stripFences(raw)); }
+  catch(e){ throw new ApiError("Claude's response was not valid JSON, so nothing was written.",'Parse error: '+e.message+'\n\n--- Raw response ---\n'+raw); }
+  const bad=m=>{ throw new ApiError("Claude's response did not match the page schema, so nothing was written.",m+'\n\n--- Raw response ---\n'+raw); };
+  if(!obj||typeof obj!=='object') bad('Top-level value is not an object.');
+  if(!obj.hero||typeof obj.hero!=='object') bad('Missing "hero" object.');
+  ['headline','subheadline','cta_text'].forEach(k=>{ if(!isStr(obj.hero[k])) bad(`Missing or empty "hero.${k}".`); });
+  if(!isStr(obj.contact_cta)) bad('Missing or empty "contact_cta".');
+
+  obj.services=Array.isArray(obj.services)?obj.services.filter(x=>x&&isStr(x.title)&&isStr(x.description)).slice(0,6):[];
+  obj.services.forEach(x=>{ const n=String(x.icon||'').trim().toLowerCase(); x.icon=ICON_PATHS[n]?n:FALLBACK_ICON; });
+  obj.testimonials=Array.isArray(obj.testimonials)?obj.testimonials.filter(t=>t&&isStr(t.quote)).slice(0,3):[];
+  obj.testimonials.forEach(t=>{ t.author_placeholder='[Replace with real client name]'; });
+  obj.faqs=Array.isArray(obj.faqs)?obj.faqs.filter(f=>f&&isStr(f.question)&&isStr(f.answer)).slice(0,6):[];
+  obj.stats=Array.isArray(obj.stats)?obj.stats.filter(x=>x&&isStr(x.value)&&isStr(x.label)).slice(0,4):[];
+  obj.process=Array.isArray(obj.process)?obj.process.filter(x=>x&&isStr(x.title)&&isStr(x.description)).slice(0,5):[];
+  obj.areas=Array.isArray(obj.areas)?obj.areas.filter(isStr).map(a=>a.trim()).slice(0,12):[];
+  obj.about=isStr(obj.about)?obj.about.trim():'';
+  obj.seo_title=isStr(obj.seo_title)?obj.seo_title.trim():'';
+  obj.seo_meta_description=typeof obj.seo_meta_description==='string'?obj.seo_meta_description:'';
+  obj.page_intent=['transactional','informational','local','trust'].includes(obj.page_intent)?obj.page_intent:'informational';
+
+  /* The model's section choice is a request, not a command. A section is only
+     turned on if it was asked for AND there is something to put in it —
+     otherwise "pick fewer sections" would just move the empty-section problem
+     from the home-page skeleton to the model's optimism. */
+  const asked=(Array.isArray(obj.sections)?obj.sections:[]).map(k=>String(k).trim().toLowerCase()).filter(k=>SECTION_META[k]);
+  const has={ hero:1, contact:1,
+    stats:obj.stats.length, services:obj.services.length, process:obj.process.length,
+    about:obj.about?1:0, gallery:0, reviews:obj.testimonials.length, faq:obj.faqs.length,
+    areas:obj.areas.length };
+  let picked=asked.filter(k=>has[k]);
+  if(!picked.includes('hero')) picked.unshift('hero');
+  if(!picked.includes('contact')) picked.push('contact');
+  /* If the model returned no usable choice at all, fall back to whatever it
+     actually wrote rather than to the full home-page set. */
+  if(picked.length<3) picked=SECTION_ORDER.filter(k=>has[k]);
+  obj.sections={ order:[...picked,...SECTION_ORDER.filter(k=>!picked.includes(k))],
+                 hidden:SECTION_ORDER.filter(k=>!picked.includes(k)) };
+  return obj;
 }
 
 /* ==========================================================================
@@ -2553,7 +2741,7 @@ function buildSite(state,mode,pageIdx){
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${pageIdx?esc(pageTitle(state,pageIdx))+' — '+esc(m.businessName):esc(m.businessName)+(m.location?' — '+esc(m.location):'')}</title>
+<title>${s.seo_title?esc(s.seo_title):(pageIdx?esc(pageTitle(state,pageIdx))+' — '+esc(m.businessName):esc(m.businessName)+(m.location?' — '+esc(m.location):''))}</title>
 <meta name="description" content="${esc(s.seo_meta_description||'')}">
 <meta name="theme-color" content="${t.primary}">
 <meta name="robots" content="index,follow,max-image-preview:large">
@@ -3795,6 +3983,8 @@ function migrate(s){
     if(typeof pg.about!=='string') pg.about='';
     if(typeof pg.contact_cta!=='string') pg.contact_cta='Get in touch.';
     if(typeof pg.seo_meta_description!=='string') pg.seo_meta_description='';
+    if(typeof pg.seo_title!=='string') pg.seo_title='';
+    if(typeof pg.keyword!=='string') pg.keyword='';
     const mm=blankMedia(); pg.media=Object.assign(mm,pg.media||{});
     Object.keys(mm).forEach(k=>{ if(k!=='gallery'&&(!pg.media[k]||typeof pg.media[k]!=='object')) pg.media[k]={src:'',alt:'',credit:null}; });
     if(!Array.isArray(pg.media.gallery)) pg.media.gallery=[];
@@ -4207,11 +4397,16 @@ $('btnAddPage').onclick=()=>{
   const name=$('newPageName').value.trim();
   if(!name){ setPageStatus('Give the page a name first.',true); return; }
   siteState.pages=siteState.pages||[];
-  siteState.pages.push(blankPage(name,siteState));
-  $('newPageName').value='';
+  const pg=blankPage(name,siteState);
+  /* Carry the suggested target phrase onto the page itself. Reading it off the
+     input's dataset at write time meant a keyword went stale the moment you
+     added a second page. */
+  pg.keyword=$('newPageName').dataset.keyword||'';
+  siteState.pages.push(pg);
+  $('newPageName').value=''; $('newPageName').dataset.keyword='';
   gotoPage(pageCount(siteState)-1);
   pushHistory(siteState); lastShareURL='';
-  setPageStatus('Page added — edit it in the preview, or use the regenerate buttons to fill it with AI copy.');
+  setPageStatus(`Page added${pg.keyword?` targeting "${pg.keyword}"`:''} — press "Write this page" to fill it.`);
 };
 $('newPageName').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); $('btnAddPage').click(); } });
 
@@ -4270,20 +4465,24 @@ $('btnFillPage').onclick=async()=>{
   const btn=$('btnFillPage'), was=btn.textContent;
   btn.disabled=true; btn.textContent='Writing…';
   const P=curPage(), title=P.title;
-  setPageStatus(`Writing "${title}" — this takes 15–30 seconds…`);
+  setPageStatus(`Writing "${title}" — planning its structure, then the copy. 20–40 seconds…`);
   const b=briefFromMeta();
   b.page=title;
-  b.pageKeyword=$('newPageName').dataset.keyword||'';
+  b.pageKeyword=P.keyword||$('newPageName').dataset.keyword||'';
   try{
-    const raw=await callClaude(systemPrompt(b,null),userPrompt(b,null,null));
-    const parsed=parseAndValidate(raw);
-    // Overwrite content, keep identity and per-page settings.
-    ['hero','services','about','testimonials','faqs','stats','process','areas','contact_cta','seo_meta_description']
+    const raw=await callClaude(pageSystemPrompt(b),pageUserPrompt(b,siteDigest(siteState,currentPage)));
+    const parsed=parsePageContent(raw);
+    ['hero','services','about','testimonials','faqs','stats','process','areas',
+     'contact_cta','seo_title','seo_meta_description','page_intent']
       .forEach(k=>{ if(parsed[k]!==undefined) P[k]=parsed[k]; });
-    P.sections={order:SECTION_ORDER.slice(),hidden:[]};
+    /* The page's own section set — NOT the home-page skeleton. Turning every
+       section on here was what made each new page a copy of the home page. */
+    P.sections=parsed.sections;
+    P.keyword=b.pageKeyword;
     renderPreview(); renderSections(); renderChecks(); renderTips(); loadLinkFields(); pushHistory(siteState);
     lastShareURL='';
-    setPageStatus(`"${title}" written — ${(P.services||[]).length} services, ${(P.faqs||[]).length} FAQs.`);
+    const on=P.sections.order.filter(k=>!P.sections.hidden.includes(k));
+    setPageStatus(`"${title}" written — ${INTENT_LABEL[P.page_intent]||'page'}, ${on.length} sections: ${on.map(k=>SECTION_META[k].label).join(', ')}.`);
   }catch(e){ setPageStatus(e.message||'Could not write that page.',true); }
   finally{ btn.disabled=false; btn.textContent=was; }
 };
