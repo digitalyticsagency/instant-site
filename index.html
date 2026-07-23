@@ -681,9 +681,9 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
           <div class="field"><label for="bizPrice">Price range
             <span class="help" data-tip="Goes into the LocalBusiness schema as priceRange, which Google shows in some local results. $ = budget, $$$$ = premium.">?</span></label>
             <select id="bizPrice">
-              <option value="">Not shown</option><option value="$">$ — budget</option>
-              <option value="$$">$$ — mid</option><option value="$$$">$$$ — premium</option>
-              <option value="$$$$">$$$$ — high end</option>
+              <option value="">Not shown</option><option value="$">$ &middot; budget</option>
+              <option value="$$">$$ &middot; mid</option><option value="$$$">$$$ &middot; premium</option>
+              <option value="$$$$">$$$$ &middot; high end</option>
             </select></div>
         </div>
         <div class="field"><label for="bizCert">Licences &amp; certifications
@@ -1401,7 +1401,7 @@ const EXAMPLES=[
   ph:'03 555 0368',em:'clinic@motuekanutrition.co.nz',area:'Motueka, Riwaka, Māpua, Richmond, Golden Bay',hrs:'Tue–Fri 9am–5pm',
   kw:'dietitian Nelson Tasman',est:'2018',team:'2',cert:'NZ Registered Dietitian, Dietitians Board',price:'$$',guar:'Written summary and plan after every session',tone:'Evidence-based'},
  {name:'River City Strength',type:'fitness',loc:'Whanganui, Manawatū-Whanganui',stand:'Coached sessions, never a swipe card gym',
-  desc:'Small-group strength and conditioning in central Whanganui. Every session is coached — barbell technique, progressive programming and a lifting log that follows you — with classes capped at twelve so no one trains unsupervised. Beginner blocks run monthly for people who have never touched a barbell.',
+  desc:'Small-group strength and conditioning in central Whanganui. Every session is coached, barbell technique, progressive programming and a lifting log that follows you, with classes capped at twelve so no one trains unsupervised. Beginner blocks run monthly for people who have never touched a barbell.',
   ph:'06 555 0379',em:'train@rivercitystrength.co.nz',area:'Whanganui, Aramoho, Castlecliff, Gonville, Bulls',hrs:'Mon–Fri 5.30am–7.30pm · Sat 7am–11am',
   kw:'strength gym Whanganui',est:'2017',team:'5',cert:'REPs registered coaches, first aid current',price:'$$',guar:'Two weeks free before you commit to anything',tone:'Can-do'},
  {name:'Stillpoint Pilates',type:'fitness',loc:'Devonport, Auckland',stand:'Reformer classes capped at six',
@@ -1421,7 +1421,7 @@ const EXAMPLES=[
   ph:'06 555 0413',em:'events@ashandvine.co.nz',area:'Martinborough, Greytown, Featherston, Masterton, Wellington',hrs:'Viewings by appointment, Tue–Sat',
   kw:'wedding venue Martinborough',est:'2015',team:'9',cert:'On-licence, full public liability cover',price:'$$$$',guar:'Date held for seven days with no deposit',tone:'Refined'},
  {name:'Harbour Street Bakehouse',type:'hospitality',loc:'Oamaru, North Otago',stand:'Sourdough started at 3am daily',
-  desc:'Wholesale and retail bakery in Oamaru’s Victorian precinct. Long-fermented sourdough, laminated pastries, birthday cakes to order, and daily deliveries to cafés between Ōamaru and Timaru. Everything is mixed on site and nothing is baked from frozen — which is why we sell out by two most days.',
+  desc:'Wholesale and retail bakery in Oamaru’s Victorian precinct. Long-fermented sourdough, laminated pastries, birthday cakes to order, and daily deliveries to cafés between Ōamaru and Timaru. Everything is mixed on site and nothing is baked from frozen, which is why we sell out by two most days.',
   ph:'03 555 0424',em:'orders@harbourstreetbakehouse.co.nz',area:'Ōamaru, Weston, Kakanui, Palmerston, Waimate',hrs:'Tue–Sun 7am–3pm',
   kw:'bakery Oamaru',est:'2016',team:'11',cert:'Registered food control plan, MPI verified',price:'$$',guar:'Wholesale orders confirmed by 4pm for next-day delivery',tone:'Neighbourly'},
  {name:'Kāpiti Property Management',type:'realestate',loc:'Paraparaumu, Kāpiti Coast',stand:'Owner keeps the tenant relationship',
@@ -1429,7 +1429,7 @@ const EXAMPLES=[
   ph:'04 555 0435',em:'owners@kapitipm.co.nz',area:'Paraparaumu, Waikanae, Raumati, Ōtaki, Paekākāriki',hrs:'Mon–Fri 8.30am–5pm',
   kw:'property management Kāpiti Coast',est:'2011',team:'12',cert:'REINZ member, Residential Property Managers Association',price:'$$',guar:'No letting fee if the tenancy ends inside 90 days',tone:'Factual'},
  {name:'Eastward Buyers Agency',type:'realestate',loc:'Howick, Auckland',stand:'We never act for the seller',
-  desc:'Buyer’s agents working east and south Auckland. We shortlist, inspect, order the builder’s and LIM reports, and bid or negotiate on your behalf — and because we never list property, there is no side of the table we are quietly on. Fixed engagement fee agreed before we start looking.',
+  desc:'Buyer’s agents working east and south Auckland. We shortlist, inspect, order the builder’s and LIM reports, and bid or negotiate on your behalf, and because we never list property, there is no side of the table we are quietly on. Fixed engagement fee agreed before we start looking.',
   ph:'09 555 0446',em:'buy@eastwardbuyers.co.nz',area:'Howick, Botany, Pakuranga, Flat Bush, Beachlands',hrs:'Mon–Sat 9am–6pm',
   kw:'buyers agent East Auckland',est:'2020',team:'4',cert:'Licensed under the REA Act 2008',price:'$$$',guar:'Fee refunded if you do not buy inside six months',tone:'Uncompromising'},
  {name:'Lakeside Employment Law',type:'legal',loc:'Taupō, Waikato',stand:'Fixed fees for every fixed-scope matter',
@@ -1449,7 +1449,7 @@ const EXAMPLES=[
   ph:'07 555 0480',em:'service@mercurybaymarine.co.nz',area:'Whitianga, Tairua, Cooks Beach, Coroglen, Whangamatā',hrs:'Mon–Fri 8am–5pm · Sat by arrangement',
   kw:'outboard servicing Coromandel',est:'2014',team:'5',cert:'Factory-trained Yamaha and Mercury technicians',price:'$$$',guar:'Written condition report with every annual service',tone:'Straight-talking'},
  {name:'Matakana Risk & Insurance',type:'corporate',loc:'Warkworth, Auckland',stand:'We handle the claim, not just the policy',
-  desc:'Independent insurance broking for businesses, lifestyle blocks and rural operators north of Auckland. Commercial property, liability, vehicle fleets and business interruption, placed across multiple insurers rather than one preferred book. When something goes wrong we run the claim, gather the evidence and argue it — that is the part brokers are actually for.',
+  desc:'Independent insurance broking for businesses, lifestyle blocks and rural operators north of Auckland. Commercial property, liability, vehicle fleets and business interruption, placed across multiple insurers rather than one preferred book. When something goes wrong we run the claim, gather the evidence and argue it, that is the part brokers are actually for.',
   ph:'09 555 0491',em:'advice@matakanarisk.co.nz',area:'Warkworth, Matakana, Snells Beach, Wellsford, Silverdale',hrs:'Mon–Fri 8.30am–5pm',
   kw:'insurance broker Warkworth',est:'2006',team:'11',cert:'Financial Advice Provider licensed, IBANZ member',price:'$$$',guar:'Annual policy review at no additional cost',tone:'Quietly confident'},
  {name:'Clutha Frame & Focus',type:'drone',loc:'Alexandra, Central Otago',stand:'Two operators at every wedding',
@@ -1457,10 +1457,10 @@ const EXAMPLES=[
   ph:'03 555 0502',em:'shoot@cluthaframe.co.nz',area:'Alexandra, Clyde, Cromwell, Roxburgh, Bannockburn',hrs:'Tue–Sat, weekends on shoot',
   kw:'wedding videographer Central Otago',est:'2019',team:'4',cert:'CAA Part 102 operator certificate',price:'$$$',guar:'Edit delivered inside four weeks or the fee drops 20%',tone:'Editorial'},
  {name:'Katikati Dog Grooming',type:'other',other:'Dog grooming and pet care',loc:'Katikati, Bay of Plenty',stand:'One dog in the salon at a time',
-  desc:'Full grooming for every coat type — hand stripping, de-shedding, puppy first-groom sessions, nail and ear care. Only one dog is in the salon at a time, so anxious and elderly dogs are never crated waiting their turn, and you get a photo and a short note on their skin and coat at pick-up.',
+  desc:'Full grooming for every coat type, hand stripping, de-shedding, puppy first-groom sessions, nail and ear care. Only one dog is in the salon at a time, so anxious and elderly dogs are never crated waiting their turn, and you get a photo and a short note on their skin and coat at pick-up.',
   ph:'07 555 0513',em:'bookings@katikatidoggrooming.co.nz',area:'Katikati, Waihī Beach, Ōmokoroa, Te Puna, Tauranga',hrs:'Tue–Sat 8am–4pm',
   kw:'dog groomer Katikati',est:'2018',team:'2',cert:'NZ Pet Grooming Association member, canine first aid',price:'$$',guar:'Unhappy with the cut? Free tidy-up inside a week',tone:'Playful'},
- {name:'Thames Mobile Coffee',type:'other',other:'Mobile coffee cart and event catering',loc:'Thames, Coromandel',stand:'Fully self-powered — no site power needed',
+ {name:'Thames Mobile Coffee',type:'other',other:'Mobile coffee cart and event catering',loc:'Thames, Coromandel',stand:'Fully self-powered, no site power needed',
   desc:'Espresso cart for weddings, markets, film sets and workplace events across the Coromandel and Hauraki Plains. We carry our own power, water and waste, so we can set up on a beach, a paddock or a warehouse floor with nothing on site. Per-head or per-hour pricing, and the barista is the owner every time.',
   ph:'07 555 0524',em:'book@thamesmobilecoffee.co.nz',area:'Thames, Paeroa, Ngatea, Coromandel Town, Waihī',hrs:'Bookings 7 days, 5am starts available',
   kw:'mobile coffee cart Coromandel',est:'2021',team:'2',cert:'Registered food control plan, MPI verified',price:'$$',guar:'No power or water on site is never an extra charge',tone:'Upbeat'}
@@ -2143,19 +2143,33 @@ Required JSON shape:
 }
 
 Rules:
-- "services": 3 to 5 items. Titles 2-4 words. Descriptions 1-2 sentences, concrete about what is actually done.
+- "services": EXACTLY 3 or EXACTLY 6 items. Never 4, 5 or 7 — these render as a card grid, and any other count leaves an orphan card stranded on its own row. Choose 3 if the business has three things worth saying properly, 6 if it genuinely has six. Titles 2-4 words. Descriptions 1-2 sentences naming what is actually done and what it saves the customer.
 - "icon": MUST be exactly one of — ${ICON_NAMES.join(', ')}. Never invent a name; pick the closest match.
 - "about": 2-3 sentences, first person plural, grounded in the details given.
 - "testimonials": EXACTLY 3. Quotes must read like real specific customers (a concrete job, timeframe or outcome), never generic praise. "author_placeholder" must literally be "[Replace with real client name]" for all three.
 - "faqs": 4 items. Real objections a buyer in this trade actually raises before booking (pricing basis, timing, guarantees, coverage, what's included). Answers 1-2 sentences, direct and honest. Never invent specific prices, licence numbers or years unless given.
 - "stats": 3 items. Short trust figures with a 1-3 word label, e.g. {"value":"Since 2009","label":"On the tools"}. ONLY use numbers you can derive from the description supplied. If no number is stated, use a non-numeric proof point ("Fully insured", "Licensed", "Same-day callouts") rather than inventing a figure. Never fabricate job counts, customer counts, years, or star ratings.
-- "process": 3 items. The actual steps of working with this business, from first contact to finished job. Titles 1-3 words, descriptions one short sentence.
+- "process": EXACTLY 3 or EXACTLY 6 items, for the same grid reason. The actual steps of working with this business, from first contact to finished job. Titles 1-3 words, descriptions one short sentence written in the second person.
 - "areas": 6 to 10 suburbs, towns or districts inside the stated service area or near the stated location. Real place names only — if you are not confident of local place names, return fewer, or an empty array. Never invent place names.
 - "hero.headline": under 70 characters, benefit-led, no colon-and-subtitle formatting.
 - "contact_cta": one short sentence pushing the visitor to make contact.
 - "palette": colours suiting this trade and tone. "background" must be light. "primary" and "accent" must each hit 4.5:1 against "background".
 - "seo_meta_description": under 160 characters, includes the business name and location.
-- Never use: unlock, elevate, seamless, cutting-edge, solutions, passionate, bespoke, "in today's world".
+
+HOW TO WRITE. This copy is read by a homeowner on a phone who has a problem right now, not by a marketer. Every line has to earn its place.
+
+- Lead with their problem, not your company. The reader does not care that you are "passionate about quality"; they care that their drain is blocked and they do not know what it will cost. Name the problem, then remove it.
+- Write to one person as "you". Active voice, present tense. "We clear the blockage and show you the camera footage", never "blockages are cleared and footage is provided".
+- Be specific instead of positive. "Same day, most of the time" beats "fast, reliable service". "We quote off the job, not per hour" beats "competitive pricing". Anything that could sit on a competitor's site unchanged is filler, so cut it.
+- Every service description should answer the unspoken question after its title: so what does that get me? End on the benefit, not the process.
+- Short sentences. Aim for a reading age of about twelve. Break anything over about twenty-five words into two.
+- NEVER use an em dash or a spaced en dash. Use a comma, a full stop or brackets. Ranges like "Mon-Fri" and "8am-5pm" are fine.
+- No exclamation marks. No rhetorical questions as headings. No "Looking for X? You've come to the right place."
+- No throat-clearing openers: do not start a sentence with "At [business name], we", "Whether you need", "In today's", "When it comes to", "Look no further".
+- Banned words and phrases: unlock, elevate, seamless, cutting-edge, solutions, passionate, bespoke, robust, leverage, tailored, holistic, journey, nestled, boasts, we pride ourselves, second to none, state-of-the-art, one-stop shop, hassle-free, peace of mind (as a closing line), your trusted partner.
+- Do not repeat the business name in every paragraph. Twice on a page is plenty; the reader knows whose site they are on.
+- Contractions are fine and usually better: "we'll", "you're", "doesn't". This is how people actually speak.
+- Put the search phrase in naturally or leave it out. A sentence bent around a keyword reads worse and ranks no better than one that simply answers the question well.
 
 ${LOCALES[brief.locale].promptHint}`;
   if(packHint) p+=`\n\nSector guidance: ${packHint}`;
@@ -2310,15 +2324,29 @@ This page has to win a classic search result AND be quotable by an AI assistant 
 - "seo_meta_description" — under 155 characters, describing THIS page, with a reason to click.
 
 Content rules:
-- "services": 3 to 5 items when chosen, otherwise []. Titles 2-4 words. Descriptions 1-2 concrete sentences.
+- "services": EXACTLY 3 or EXACTLY 6 when chosen, otherwise []. Never 4 or 5: these render as a card grid and any other count strands an orphan card on its own row. Titles 2-4 words. Descriptions 1-2 concrete sentences.
 - "icon": MUST be exactly one of — ${ICON_NAMES.join(', ')}. Never invent one.
-- "process": 3 to 5 steps when chosen, otherwise [].
-- "stats": exactly 3 when chosen, otherwise []. Only figures derivable from the brief; otherwise a non-numeric proof point. Never fabricate counts, years or ratings.
+- "process": EXACTLY 3 or EXACTLY 6 steps when chosen, otherwise [].
+- "stats": exactly 3 or exactly 6 when chosen, otherwise []. Only figures derivable from the brief; otherwise a non-numeric proof point. Never fabricate counts, years or ratings.
 - "testimonials": exactly 3 when chosen, otherwise []. "author_placeholder" must literally be "[Replace with real client name]".
 - "areas": 6 to 10 real place names when chosen, otherwise []. Never invent place names.
 - "contact_cta": one sentence, matched to "page_intent" — a transactional page asks for the booking, an informational page offers the next question answered.
 - Never invent prices, licence numbers, certifications or dates that are not in the brief.
-- Never use: unlock, elevate, seamless, cutting-edge, solutions, passionate, bespoke, "in today's world", "look no further", "nestled".
+
+HOW TO WRITE. This copy is read by a homeowner on a phone who has a problem right now, not by a marketer. Every line has to earn its place.
+
+- Lead with their problem, not your company. The reader does not care that you are "passionate about quality"; they care that their drain is blocked and they do not know what it will cost. Name the problem, then remove it.
+- Write to one person as "you". Active voice, present tense. "We clear the blockage and show you the camera footage", never "blockages are cleared and footage is provided".
+- Be specific instead of positive. "Same day, most of the time" beats "fast, reliable service". "We quote off the job, not per hour" beats "competitive pricing". Anything that could sit on a competitor's site unchanged is filler, so cut it.
+- Every service description should answer the unspoken question after its title: so what does that get me? End on the benefit, not the process.
+- Short sentences. Aim for a reading age of about twelve. Break anything over about twenty-five words into two.
+- NEVER use an em dash or a spaced en dash. Use a comma, a full stop or brackets. Ranges like "Mon-Fri" and "8am-5pm" are fine.
+- No exclamation marks. No rhetorical questions as headings. No "Looking for X? You've come to the right place."
+- No throat-clearing openers: do not start a sentence with "At [business name], we", "Whether you need", "In today's", "When it comes to", "Look no further".
+- Banned words and phrases: unlock, elevate, seamless, cutting-edge, solutions, passionate, bespoke, robust, leverage, tailored, holistic, journey, nestled, boasts, we pride ourselves, second to none, state-of-the-art, one-stop shop, hassle-free, peace of mind (as a closing line), your trusted partner.
+- Do not repeat the business name in every paragraph. Twice on a page is plenty; the reader knows whose site they are on.
+- Contractions are fine and usually better: "we'll", "you're", "doesn't". This is how people actually speak.
+- Put the search phrase in naturally or leave it out. A sentence bent around a keyword reads worse and ranks no better than one that simply answers the question well.
 
 ${LOCALES[brief.locale].promptHint}`;
   if(packHint) p+=`\n\nSector guidance: ${packHint}`;
@@ -2371,13 +2399,13 @@ function parsePageContent(raw){
   ['headline','subheadline','cta_text'].forEach(k=>{ if(!isStr(obj.hero[k])) bad(`Missing or empty "hero.${k}".`); });
   if(!isStr(obj.contact_cta)) bad('Missing or empty "contact_cta".');
 
-  obj.services=Array.isArray(obj.services)?obj.services.filter(x=>x&&isStr(x.title)&&isStr(x.description)).slice(0,6):[];
+  obj.services=gridTrim(Array.isArray(obj.services)?obj.services.filter(x=>x&&isStr(x.title)&&isStr(x.description)):[],true);
   obj.services.forEach(x=>{ const n=String(x.icon||'').trim().toLowerCase(); x.icon=ICON_PATHS[n]?n:FALLBACK_ICON; });
   obj.testimonials=Array.isArray(obj.testimonials)?obj.testimonials.filter(t=>t&&isStr(t.quote)).slice(0,3):[];
   obj.testimonials.forEach(t=>{ t.author_placeholder='[Replace with real client name]'; });
   obj.faqs=Array.isArray(obj.faqs)?obj.faqs.filter(f=>f&&isStr(f.question)&&isStr(f.answer)).slice(0,6):[];
-  obj.stats=Array.isArray(obj.stats)?obj.stats.filter(x=>x&&isStr(x.value)&&isStr(x.label)).slice(0,4):[];
-  obj.process=Array.isArray(obj.process)?obj.process.filter(x=>x&&isStr(x.title)&&isStr(x.description)).slice(0,5):[];
+  obj.stats=gridTrim(Array.isArray(obj.stats)?obj.stats.filter(x=>x&&isStr(x.value)&&isStr(x.label)):[],true);
+  obj.process=gridTrim(Array.isArray(obj.process)?obj.process.filter(x=>x&&isStr(x.title)&&isStr(x.description)):[],true);
   obj.areas=Array.isArray(obj.areas)?obj.areas.filter(isStr).map(a=>a.trim()).slice(0,12):[];
   obj.about=isStr(obj.about)?obj.about.trim():'';
   obj.seo_title=isStr(obj.seo_title)?obj.seo_title.trim():'';
@@ -2418,7 +2446,7 @@ function parsePageContent(raw){
   // hero and contact are structural furniture, not content. Count what the
   // page actually says.
   obj.contentSections=picked.filter(k=>k!=='hero'&&k!=='contact').length;
-  return obj;
+  return cleanCopy(obj);
 }
 
 /* ==========================================================================
@@ -2472,6 +2500,39 @@ function stripFences(raw){
   return s.trim();
 }
 const isStr=v=>typeof v==='string'&&v.trim().length>0;
+/* The em dash is the single loudest tell that copy came out of a model, and
+   almost nothing a local tradesperson writes contains one. The prompts forbid
+   it; this is the net under that, because a rule the model quietly ignores is
+   not a rule. Spaced en dashes go too, for the same reason. Unspaced en dashes
+   survive: "Mon–Fri" and "8am–5pm" are ranges, not dashes, and turning those
+   into commas would be worse than the problem. */
+function deDash(v){
+  if(typeof v!=='string') return v;
+  return v.replace(/\s*[—]\s*/g,', ')        // em dash, spaced or not
+          .replace(/\s+[–]\s+/g,', ')        // en dash used as a dash
+          .replace(/,\s*,/g,',')
+          .replace(/\s+([,.;:!?])/g,'$1')
+          .replace(/,\s*([.;:!?])/g,'$1')
+          .replace(/\s{2,}/g,' ')
+          .trim();
+}
+/* Walk everything the model returned. Cheaper and far more reliable than
+   remembering to call deDash at each of the forty-odd string sites. */
+function cleanCopy(o){
+  if(typeof o==='string') return deDash(o);
+  if(Array.isArray(o)) return o.map(cleanCopy);
+  if(o&&typeof o==='object'){ Object.keys(o).forEach(k=>{ o[k]=cleanCopy(o[k]); }); return o; }
+  return o;
+}
+/* Card grids read as broken with an orphan on the last row, so a grid is 3 or
+   6, never 4, 5 or 7. Trimming down is the only honest correction available:
+   padding up would mean inventing a service the business does not offer. */
+function gridTrim(arr,zeroOK){
+  if(!Array.isArray(arr)) return [];
+  if(arr.length>=6) return arr.slice(0,6);
+  if(arr.length>=3) return arr.slice(0,3);
+  return zeroOK?[]:arr;
+}
 const isHex=v=>typeof v==='string'&&/^#[0-9a-f]{6}$/i.test(v.trim());
 function parseAndValidate(raw){
   let obj;
@@ -2482,7 +2543,8 @@ function parseAndValidate(raw){
   if(!obj.hero||typeof obj.hero!=='object') bad('Missing "hero" object.');
   ['headline','subheadline','cta_text'].forEach(k=>{ if(!isStr(obj.hero[k])) bad(`Missing or empty "hero.${k}".`); });
   if(!Array.isArray(obj.services)) bad('Missing "services" array.');
-  if(obj.services.length<3||obj.services.length>5) bad(`"services" must contain 3-5 items (got ${obj.services.length}).`);
+  if(obj.services.length<3) bad(`"services" must contain at least 3 items (got ${obj.services.length}).`);
+  obj.services=gridTrim(obj.services);
   obj.services.forEach((s,i)=>{
     if(!s||typeof s!=='object') bad(`services[${i}] is not an object.`);
     if(!isStr(s.title)) bad(`Missing "services[${i}].title".`);
@@ -2501,8 +2563,8 @@ function parseAndValidate(raw){
   /* Optional sections are sanitised, never fatal. They postdate earlier saves,
      and one malformed extra should not discard an otherwise good generation. */
   obj.faqs=Array.isArray(obj.faqs)?obj.faqs.filter(f=>f&&isStr(f.question)&&isStr(f.answer)).slice(0,6):[];
-  obj.stats=Array.isArray(obj.stats)?obj.stats.filter(x=>x&&isStr(x.value)&&isStr(x.label)).slice(0,4):[];
-  obj.process=Array.isArray(obj.process)?obj.process.filter(x=>x&&isStr(x.title)&&isStr(x.description)).slice(0,5):[];
+  obj.stats=gridTrim(Array.isArray(obj.stats)?obj.stats.filter(x=>x&&isStr(x.value)&&isStr(x.label)):[],true);
+  obj.process=gridTrim(Array.isArray(obj.process)?obj.process.filter(x=>x&&isStr(x.title)&&isStr(x.description)):[],true);
   obj.areas=Array.isArray(obj.areas)?obj.areas.filter(isStr).map(a=>a.trim()).slice(0,12):[];
   if(!isStr(obj.contact_cta)) bad('Missing or empty "contact_cta".');
   if(!obj.palette||typeof obj.palette!=='object') bad('Missing "palette" object.');
@@ -2511,7 +2573,7 @@ function parseAndValidate(raw){
     obj.palette[k]=obj.palette[k].trim().toLowerCase();
   });
   if(typeof obj.seo_meta_description!=='string') bad('Missing "seo_meta_description".');
-  return obj;
+  return cleanCopy(obj);
 }
 
 /* ==========================================================================
@@ -3164,7 +3226,7 @@ function buildSite(state,mode,pageIdx){
 
   const processHTML=process.length?`
 <section id="process"><div class="w">
-  ${head('process','How it works','No surprises — here is exactly what happens.')}
+  ${head('process','How it works','No surprises. Here is exactly what happens.')}
   <div class="steps">${process.map((x,i)=>`
     <div class="step">${ed(`process.${i}.title`,'h3','',x.title)}${ed(`process.${i}.description`,'p','',x.description)}</div>`).join('')}
   </div>
@@ -3200,7 +3262,7 @@ function buildSite(state,mode,pageIdx){
   ${aboutImg.src
     ? `<div class="fig"${slot('about','Replace photo')}><img src="${aboutImg.src}" alt="${esc(aboutImg.alt||m.businessName+' team at work')}" loading="lazy" decoding="async"></div>`
     : `<!-- REMINDER: swap this placeholder for a real photo and write descriptive alt text. -->
-  <div class="fig" role="img" aria-label="Placeholder — replace with a photo of the team or recent work"${slot('about','Add a photo')}>${iconSVG('camera')}</div>`}
+  <div class="fig" role="img" aria-label="Placeholder, replace with a photo of the team or recent work"${slot('about','Add a photo')}>${iconSVG('camera')}</div>`}
 </div></section>`;
 
   const reviewsSection=!s.testimonials.length?'':`
@@ -3326,13 +3388,13 @@ function buildSite(state,mode,pageIdx){
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${s.seo_title?esc(s.seo_title):(pageIdx?esc(pageTitle(state,pageIdx))+' — '+esc(m.businessName):esc(m.businessName)+(m.location?' — '+esc(m.location):''))}</title>
+<title>${s.seo_title?esc(s.seo_title):(pageIdx?esc(pageTitle(state,pageIdx))+' | '+esc(m.businessName):esc(m.businessName)+(m.location?' | '+esc(m.location):''))}</title>
 <meta name="description" content="${esc(s.seo_meta_description||'')}">
 <meta name="theme-color" content="${t.primary}">
 <meta name="robots" content="index,follow,max-image-preview:large">
 <meta name="format-detection" content="telephone=yes">
 ${canonical?`<link rel="canonical" href="${esc(canonical.replace(/\/+$/,'')+(pageIdx?'/'+pageHref(state,pageIdx):'/'))}">`:'<!-- Add a canonical URL in the SEO panel once this page is hosted. -->'}
-<meta property="og:title" content="${pageIdx?esc(pageTitle(state,pageIdx))+' — '+esc(m.businessName):esc(m.businessName)+(m.location?' — '+esc(m.location):'')}">
+<meta property="og:title" content="${pageIdx?esc(pageTitle(state,pageIdx))+' | '+esc(m.businessName):esc(m.businessName)+(m.location?' | '+esc(m.location):'')}">
 <meta property="og:description" content="${esc(s.seo_meta_description||'')}">
 <meta property="og:type" content="website">
 <meta property="og:locale" content="${lang.replace('-','_')}">
@@ -3908,7 +3970,7 @@ async function renderProspectView(raw,review){
       const d=pv.contentDocument; if(!d) return;
       d.querySelectorAll('[data-page]').forEach(a=>a.addEventListener('click',e=>{ e.preventDefault(); paint(+a.dataset.page); }));
     };
-    document.title=(i?pageTitle(view,i)+' — ':'')+view.meta.businessName+(!i&&view.meta.location?' — '+view.meta.location:'');
+    document.title=(i?pageTitle(view,i)+' | ':'')+view.meta.businessName+(!i&&view.meta.location?' | '+view.meta.location:'');
     if(rev) markPages();
   };
 
