@@ -282,6 +282,20 @@ select{appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%
 .combo-group{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--txt-3);padding:8px 10px 4px}
 .combo-empty{padding:10px;font-size:12px;color:var(--txt-3)}
 .suggs{display:block;font-size:10.5px;color:var(--txt-3);margin-top:5px;letter-spacing:.02em}
+.gout{margin:10px 0;padding:12px;border:1px solid var(--stroke);border-radius:12px;background:var(--surface-2)}
+.gout h5{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--txt-3);margin-bottom:6px}
+.gout pre{white-space:pre-wrap;font:inherit;font-size:12.5px;line-height:1.6;color:var(--txt-2);margin-bottom:10px}
+.gout .gitem{padding:7px 0;border-bottom:1px solid var(--stroke);font-size:12.5px}
+.gout .gitem:last-child{border-bottom:0}
+.gout .gmeta{font-size:10.5px;color:var(--txt-3)}
+.cxgridpick{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.cxbtn{padding:9px 11px;border-radius:10px;border:1px solid var(--stroke);background:var(--surface);
+  text-align:left;font-size:12px;transition:all .16s var(--ease)}
+.cxbtn:hover{background:var(--fill)}
+.cxbtn.on{border-color:var(--accent);color:var(--accent);font-weight:600}
+.cxbtn b{display:block;font-size:12.5px;font-weight:600}
+.cxbtn span{display:block;font-size:10.5px;color:var(--txt-3);margin-top:2px;line-height:1.35}
+.cxbtn.on span{color:var(--accent);opacity:.8}
 .legalbox{margin-top:14px;padding:13px;border:1px solid var(--stroke);border-radius:12px;background:var(--surface-2)}
 .legalwarn{margin-top:9px;padding:8px 10px;border-radius:8px;background:color-mix(in srgb,var(--warn) 12%,transparent);
   color:var(--warn);line-height:1.55}
@@ -770,6 +784,29 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
       </div>
     </details>
 
+    <details class="sec" id="secContact2">
+      <summary>Closing section &amp; enquiry form <span class="tag" id="tagCx">gradient</span></summary>
+      <div class="body">
+        <div class="tiny">How the page ends is the part that converts. Twenty layouts, eight of them with a working enquiry form.</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin:10px 0">
+          <button class="mini" id="btnSuggestCx" type="button">✨ Suggest the best one</button>
+          <button class="mini" id="btnCycleCx" type="button">Try the next one</button>
+        </div>
+        <div id="cxWhy" class="tiny" style="margin-bottom:8px"></div>
+        <div class="cxgridpick" id="cxPick"></div>
+        <div class="field" style="margin-top:12px">
+          <label for="formAction">Where the form posts
+            <span class="help" data-tip="Leave blank and the form opens the visitor's email app with the details filled in, which works with no backend. Paste a Formspree, Web3Forms, Basin or Netlify endpoint to receive submissions properly.">?</span></label>
+          <input type="url" id="formAction" placeholder="https://formspree.io/f/… (optional)">
+          <div class="tiny" id="formNote"></div>
+        </div>
+        <div class="field">
+          <label>Form fields</label>
+          <div class="chips" id="formFields"></div>
+        </div>
+      </div>
+    </details>
+
     <details class="sec" id="secSections">
       <summary>Sections <span class="tag" id="tagSections">10</span></summary>
       <div class="body">
@@ -859,6 +896,34 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
       <div class="body">
         <div class="tiny">Switching theme after generating is instant and costs no API call.</div>
         <div class="themes" id="themeGrid"></div>
+      </div>
+    </details>
+
+    <details class="sec" id="secGrowth">
+      <summary>Growth kit <span class="tag" id="tagGrowth">new</span></summary>
+      <div class="body">
+        <div class="tiny">The assets you sell alongside the site. Everything here is generated from the same brief, so it stays consistent with the copy on the page.</div>
+
+        <div class="field" style="margin-top:12px">
+          <label>Generate</label>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button class="mini" id="btnGbp" type="button">Google Business Profile</button>
+            <button class="mini" id="btnAds" type="button">Google Ads copy</button>
+            <button class="mini" id="btnKw" type="button">Keyword plan</button>
+          </div>
+          <div id="growthStatus" class="tiny" style="margin-top:8px"></div>
+        </div>
+        <div id="growthOut"></div>
+
+        <div class="field">
+          <label for="gaId">Analytics &amp; tracking
+            <span class="help" data-tip="Injected into every exported page. Adding any of these means the export is no longer script-free, and a cookie or consent banner may be legally required where your client operates.">?</span></label>
+          <input type="text" id="gaId" placeholder="GA4 measurement ID, G-XXXXXXX">
+          <input type="text" id="gtmId" placeholder="Google Tag Manager, GTM-XXXXXX" style="margin-top:6px">
+          <input type="text" id="pixelId" placeholder="Meta Pixel ID" style="margin-top:6px">
+          <input type="text" id="gadsId" placeholder="Google Ads conversion, AW-XXXXXXX" style="margin-top:6px">
+          <div class="tiny" id="trackNote"></div>
+        </div>
       </div>
     </details>
 
@@ -1507,6 +1572,7 @@ const ICON_PATHS={
   'home':'<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/>',
   'shield-check':'<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="M9 12l2 2 4-4"/>',
   'clock':'<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+  'mail':'<rect x="2.5" y="4.5" width="19" height="15" rx="2"/><path d="M3 6.5l9 6.5 9-6.5"/>',
   'phone':'<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.69 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.33 1.85.56 2.81.69A2 2 0 0 1 22 16.92z"/>',
   'star':'<path d="M11.5 2.9a.6.6 0 0 1 1 0l2.4 5a.6.6 0 0 0 .5.3l5.4.8a.6.6 0 0 1 .3 1l-3.9 3.8a.6.6 0 0 0-.2.5l1 5.4a.6.6 0 0 1-.9.6l-4.8-2.5a.6.6 0 0 0-.6 0l-4.8 2.5a.6.6 0 0 1-.9-.6l1-5.4a.6.6 0 0 0-.2-.5L2.9 10a.6.6 0 0 1 .3-1l5.4-.8a.6.6 0 0 0 .5-.3z"/>',
   'leaf':'<path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>',
@@ -1554,7 +1620,7 @@ const blankPage=(title,st)=>({
   services:[],about:'',testimonials:[],faqs:[],stats:[],process:[],areas:[],
   contact_cta:'Get in touch and we will come straight back to you.',
   seo_meta_description:'',seo_title:'',keyword:'',page_intent:'',headings:{},
-  legal:false,legalBody:[],
+  legal:false,legalBody:[],contactLayout:'',
   media:blankMedia(),
   sections:{order:SECTION_ORDER.slice(),hidden:['stats','services','process','about','gallery','reviews','faq','areas']}
 });
@@ -1784,11 +1850,26 @@ function motionRuntime(level,t){
     rend.setPixelRatio(Math.min(devicePixelRatio,1.6)); rend.setSize(w,h,false);
     var scene=new THREE.Scene();
     var cam=new THREE.PerspectiveCamera(60,w/h,.1,100); cam.position.z=15;
-    var N=700,pos=new Float32Array(N*3);
+    var N=${t.dark?'700':'420'},pos=new Float32Array(N*3);
     for(var i=0;i<N;i++){ pos[i*3]=(Math.random()-.5)*44; pos[i*3+1]=(Math.random()-.5)*26; pos[i*3+2]=(Math.random()-.5)*24; }
     var geo=new THREE.BufferGeometry();
     geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
-    var mat=new THREE.PointsMaterial({color:${JSON.stringify(t.primary)},size:.13,transparent:true,opacity:.5,depthWrite:false});
+    /* THREE.PointsMaterial draws hard SQUARES by default. At this size on a
+       light theme that reads as specks of dirt scattered across the hero, not
+       as an atmosphere, which is exactly what it looked like. A soft round
+       sprite fixes it. Light themes also get a lower opacity, because a dark
+       brand colour at 50% over a pale background is far more visible than the
+       same value over near-black. */
+    var dot=document.createElement('canvas'); dot.width=dot.height=64;
+    var dc=dot.getContext('2d');
+    var grd=dc.createRadialGradient(32,32,0,32,32,32);
+    grd.addColorStop(0,'rgba(255,255,255,1)');
+    grd.addColorStop(0.45,'rgba(255,255,255,0.55)');
+    grd.addColorStop(1,'rgba(255,255,255,0)');
+    dc.fillStyle=grd; dc.beginPath(); dc.arc(32,32,32,0,Math.PI*2); dc.fill();
+    var mat=new THREE.PointsMaterial({color:${JSON.stringify(t.primary)},size:${t.dark?'0.22':'0.18'},
+      map:new THREE.CanvasTexture(dot),transparent:true,opacity:${t.dark?'0.45':'0.20'},
+      depthWrite:false,sizeAttenuation:true,alphaTest:0.01});
     var pts=new THREE.Points(geo,mat); scene.add(pts);
     var mx=0,my=0;
     addEventListener('pointermove',function(e){ mx=(e.clientX/innerWidth-.5); my=(e.clientY/innerHeight-.5); },{passive:true});
@@ -3149,6 +3230,57 @@ section{padding:${d}px 0}
 .legal h2:first-child{margin-top:0}
 .legal p{font-size:16.5px;line-height:1.72;margin-bottom:14px;color:${t.ink2}}
 .legal .lastmod{margin-top:34px;padding-top:18px;border-top:1px solid ${t.line};font-size:14px;opacity:.85}
+/* ---- closing section variants ---- */
+.cx{padding:76px 0}
+.cx h2{font-size:clamp(29px,3.8vw,42px);margin-bottom:12px}
+.cx > .w > div > p,.cx > .w > p{color:${t.ink2};font-size:18px;max-width:62ch;margin-bottom:26px}
+.cx-split > .w,.cx-inline > .w{display:grid;grid-template-columns:1fr 1fr;gap:52px;align-items:center}
+.cx-two .cxgrid{display:grid;grid-template-columns:.8fr 1.2fr;gap:44px;align-items:start;margin-top:8px}
+.cxpanel{padding:34px;border-radius:${t.radius};background:${t.panel};border:1px solid ${t.line}}
+.cxpanel.wide{max-width:760px;margin:0 auto}
+.cxbox{max-width:720px;margin:0 auto;padding:44px 38px;border-radius:${t.radius};background:${t.bg};
+  border:1px solid ${t.line};text-align:center;box-shadow:0 18px 50px ${rgba(t.ink,.07)}}
+.cxbox.tight{max-width:520px}
+.cxcard{max-width:720px;margin:26px auto 0;padding:34px;border-radius:${t.radius};background:${t.bg};border:1px solid ${t.line}}
+.cx-band{background:${t.panel};border-top:1px solid ${t.line};border-bottom:1px solid ${t.line};text-align:center}
+.cx-stack > .w{max-width:760px;text-align:center}
+.cx-stack .trust{justify-content:center;margin-bottom:26px}
+.cx-min > .w{max-width:640px}
+.cx-strip > .w,.cx-inline > .w{display:flex;gap:36px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.cx-strip{border-top:1px solid ${t.line};border-bottom:1px solid ${t.line};padding:52px 0}
+.cx-ed > .w{max-width:720px}
+.cxrule{width:56px;height:3px;background:${t.primary};margin-bottom:24px}
+.cx-phone .inner,.cx-urgent .inner{text-align:center}
+.bigtel{display:block;font-family:${t.displayFont},sans-serif;font-weight:${t.weight};
+  font-size:clamp(32px,6vw,58px);text-decoration:none;margin:6px 0 14px;letter-spacing:-.01em}
+.cx-urgent .inner{background:linear-gradient(135deg,${t.accent},${t.primary})}
+.cxtile{text-decoration:none;display:block}
+.cxtile h3{margin-bottom:4px}
+.cdetails{display:grid;grid-template-columns:auto 1fr;gap:10px 20px;font-size:16px;margin-bottom:24px}
+.cdetails dt{font-weight:600;color:${t.ink}}
+.cdetails dd{color:${t.ink2}}
+.cxareas{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.cxareas span{padding:6px 13px;border-radius:99px;border:1px solid ${t.line};background:${t.panel};font-size:14px}
+.cxhours{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-bottom:24px}
+.cxhours span{padding:8px 15px;border-radius:${t.radius};background:${t.panel};border:1px solid ${t.line};font-size:15px}
+/* ---- enquiry form ---- */
+.cform{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.cform .ff{margin:0}
+.cform .ff.wide{grid-column:1/-1}
+.cform .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.cform label{display:block;font-size:14px;font-weight:600;margin-bottom:6px;color:${t.ink}}
+.cform .rq{color:${t.accent}}
+.cform input,.cform select,.cform textarea{width:100%;padding:12px 14px;border-radius:${t.radius};
+  border:1px solid ${t.line};background:${t.bg};color:${t.ink};font:inherit;font-size:16px}
+.cform input:focus,.cform select:focus,.cform textarea:focus{outline:2px solid ${t.primary};outline-offset:1px;border-color:${t.primary}}
+.cform textarea{resize:vertical;min-height:104px}
+.cform button.b{width:100%;border:0;cursor:pointer;font-size:17px}
+.cform .fnote{font-size:13.5px;color:${t.ink2};text-align:center;margin:0}
+@media(max-width:760px){
+  .cx-split > .w,.cx-inline > .w,.cx-two .cxgrid{grid-template-columns:1fr;gap:30px}
+  .cform{grid-template-columns:1fr}
+  .cxpanel,.cxbox{padding:26px 20px}
+}
 .copy{border-top:1px solid ${t.line};margin-top:44px;padding-top:22px;font-size:14px;
   display:flex;gap:16px;flex-wrap:wrap;align-items:center;justify-content:space-between}
 .copyright-right{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
@@ -3462,18 +3594,119 @@ function buildSite(state,mode,pageIdx){
   </div>
 </section>`;
 
-  const contactSection=`
-<section id="contact" class="final"><div class="w"><div class="inner">
-  ${hdH('contact','Ready when you are')}
-  ${ed('contact_cta','p','',s.contact_cta)}
-  <div class="cta-row" style="justify-content:center">
+  const trustItems=[m.standout||'Local, reliable, on time',c.area?`Serving ${c.area}`:`Serving ${m.location||'your area'}`,'Free, no-obligation quotes']
+    .map(x=>`<span>${tick}${esc(x)}</span>`).join('');
+  const trust=trustItems;
+
+  /* ---- closing section: 20 layouts ---------------------------------------
+     One centred gradient panel was the only ending every site could have, and
+     on a long page it reads as the point where the design ran out. These are
+     real structural variants, not colour swaps, and eight of them carry a
+     working enquiry form.
+
+     Forms need somewhere to post. With no backend the honest options are a
+     mailto: form, which works everywhere and opens the visitor's mail client,
+     or a third-party endpoint the owner pastes in (Formspree, Web3Forms,
+     Netlify, Basin). Both are supported; mailto is the default so a form is
+     never a dead end. */
+  const formAction=(m.form&&m.form.action||'').trim();
+  const formMethod=formAction?'post':'post';
+  const mailtoForm=!formAction&&c.email;
+  const canForm=!!(formAction||c.email);
+  const F=(m.form&&m.form.fields)||['name','phone','email','message'];
+  const FIELD_META={
+    name:{label:'Your name',type:'text',auto:'name',req:true},
+    phone:{label:'Phone',type:'tel',auto:'tel',req:true},
+    email:{label:'Email',type:'email',auto:'email',req:false},
+    address:{label:'Property address',type:'text',auto:'street-address',req:false},
+    suburb:{label:'Suburb',type:'text',auto:'address-level2',req:false},
+    service:{label:'What do you need?',type:'select',req:false},
+    urgency:{label:'How soon?',type:'select',req:false},
+    budget:{label:'Rough budget',type:'select',req:false},
+    preferred:{label:'Best time to call',type:'select',req:false},
+    date:{label:'Preferred date',type:'date',req:false},
+    message:{label:'Tell us about the job',type:'textarea',req:false}
+  };
+  const SELECT_OPTS={
+    service:(s.services||[]).map(x=>x.title).slice(0,6).concat(['Something else']),
+    urgency:['Emergency, today','This week','Next few weeks','Just planning'],
+    budget:['Not sure yet','Under $1,000','$1,000 to $5,000','$5,000 to $20,000','$20,000+'],
+    preferred:['Morning','Afternoon','Evening','Any time']
+  };
+  const field=k=>{
+    const f=FIELD_META[k]; if(!f) return '';
+    const id='f_'+k, req=f.req?' required':'';
+    const lab=`<label for="${id}">${esc(f.label)}${f.req?' <span class="rq">*</span>':''}</label>`;
+    if(f.type==='textarea') return `<p class="ff wide">${lab}<textarea id="${id}" name="${k}" rows="4"${req}></textarea></p>`;
+    if(f.type==='select') return `<p class="ff">${lab}<select id="${id}" name="${k}"${req}>
+      <option value="">Please choose</option>${(SELECT_OPTS[k]||[]).map(o=>`<option>${esc(o)}</option>`).join('')}</select></p>`;
+    return `<p class="ff">${lab}<input id="${id}" name="${k}" type="${f.type}"${f.auto?` autocomplete="${f.auto}"`:''}${req}></p>`;
+  };
+  const formBody=(fields,btnLabel)=>!canForm?'':`
+  <form class="cform"${formAction?` action="${esc(formAction)}" method="${formMethod}"`
+      :` action="mailto:${esc(c.email)}" method="post" enctype="text/plain"`}>
+    ${fields.filter(k=>FIELD_META[k]).map(field).join('')}
+    ${formAction?`<input type="hidden" name="_subject" value="Website enquiry, ${esc(m.businessName)}">`:''}
+    <p class="ff hp" aria-hidden="true"><label>Leave this empty</label><input type="text" name="_gotcha" tabindex="-1" autocomplete="off"></p>
+    <p class="ff wide"><button type="submit" class="b">${esc(btnLabel||s.hero.cta_text)}</button></p>
+    ${mailtoForm?`<p class="ff wide fnote">This opens your email app with the details filled in.</p>`:''}
+  </form>`;
+  const callRow=(centre)=>`<div class="cta-row"${centre?' style="justify-content:center"':''}>
     <a href="${primaryHref}" class="b">${c.phone&&!c.book?`Call ${esc(c.phone)}`:esc(s.hero.cta_text)}</a>
     ${c.email?`<a href="mailto:${esc(c.email)}" class="b b2">Email us</a>`:''}
-  </div>
-</div></div></section>`;
+  </div>`;
+  const detailList=`<dl class="cdetails">
+    ${c.phone?`<dt>Phone</dt><dd><a href="${telHref(c.phone)}">${esc(c.phone)}</a></dd>`:''}
+    ${c.email?`<dt>Email</dt><dd><a href="mailto:${esc(c.email)}">${esc(c.email)}</a></dd>`:''}
+    ${c.hours?`<dt>Hours</dt><dd>${esc(c.hours)}</dd>`:''}
+    ${c.area?`<dt>Area</dt><dd>${esc(c.area)}</dd>`:''}
+  </dl>`;
+  const cH=hdH('contact','Ready when you are');
+  const cP=ed('contact_cta','p','',s.contact_cta);
+  const trustRow=`<div class="trust">${trustItems}</div>`;
+  const CONTACT_LAYOUTS={
+    gradient:   ()=>`<section id="contact" class="final"><div class="w"><div class="inner">${cH}${cP}${callRow(1)}</div></div></section>`,
+    split:      ()=>`<section id="contact" class="cx cx-split"><div class="w"><div>${cH}${cP}${detailList}</div><div class="cxpanel">${formBody(F)||callRow()}</div></div></section>`,
+    formfirst:  ()=>`<section id="contact" class="cx cx-split alt"><div class="w"><div class="cxpanel">${formBody(F)||callRow()}</div><div>${cH}${cP}${detailList}</div></div></section>`,
+    banded:     ()=>`<section id="contact" class="cx cx-band"><div class="w">${cH}${cP}<div class="cxcard">${formBody(F)||callRow(1)}</div></div></section>`,
+    stacked:    ()=>`<section id="contact" class="cx cx-stack"><div class="w">${cH}${cP}${formBody(F)||callRow(1)}</div></section>`,
+    boxed:      ()=>`<section id="contact" class="cx cx-boxed alt"><div class="w"><div class="cxbox">${cH}${cP}${formBody(F)||callRow(1)}</div></div></section>`,
+    minimal:    ()=>`<section id="contact" class="cx cx-min"><div class="w">${cH}${cP}${callRow()}</div></section>`,
+    bigphone:   ()=>`<section id="contact" class="cx cx-phone final"><div class="w"><div class="inner">${cH}
+                     ${c.phone?`<a class="bigtel" href="${telHref(c.phone)}">${esc(c.phone)}</a>`:''}${cP}${callRow(1)}</div></div></section>`,
+    cards:      ()=>`<section id="contact" class="cx cx-cards alt"><div class="w">${cH}${cP}
+                     <div class="grid">
+                       ${c.phone?`<a class="card cxtile" href="${telHref(c.phone)}"><div class="ico">${iconSVG('phone')}</div><h3>Call us</h3><p>${esc(c.phone)}</p></a>`:''}
+                       ${c.email?`<a class="card cxtile" href="mailto:${esc(c.email)}"><div class="ico">${iconSVG('mail')}</div><h3>Email us</h3><p>${esc(c.email)}</p></a>`:''}
+                       ${c.book?`<a class="card cxtile" href="${esc(c.book)}"><div class="ico">${iconSVG('calendar')}</div><h3>Book online</h3><p>Pick a time that suits</p></a>`
+                               :(c.hours?`<div class="card cxtile"><div class="ico">${iconSVG('clock')}</div><h3>Open</h3><p>${esc(c.hours)}</p></div>`:'')}
+                     </div></div></section>`,
+    strip:      ()=>`<section id="contact" class="cx cx-strip"><div class="w"><div>${cH}${cP}</div>${callRow()}</div></section>`,
+    quote:      ()=>`<section id="contact" class="cx cx-quote"><div class="w"><div class="cxpanel wide">${cH}${cP}
+                     ${formBody(['name','phone','service','urgency','address','message'],'Get my quote')||callRow(1)}</div></div></section>`,
+    callback:   ()=>`<section id="contact" class="cx cx-boxed"><div class="w"><div class="cxbox tight">${cH}${cP}
+                     ${formBody(['name','phone','preferred'],'Request a callback')||callRow(1)}</div></div></section>`,
+    booking:    ()=>`<section id="contact" class="cx cx-split"><div class="w"><div>${cH}${cP}${detailList}</div>
+                     <div class="cxpanel">${formBody(['name','phone','service','date'],'Request this time')||callRow()}</div></div></section>`,
+    trustclose: ()=>`<section id="contact" class="cx cx-stack alt"><div class="w">${cH}${cP}${trustRow}${callRow(1)}</div></section>`,
+    mapcard:    ()=>`<section id="contact" class="cx cx-split"><div class="w"><div class="cxpanel">${detailList}${callRow()}</div>
+                     <div>${cH}${cP}${c.area?`<p class="cxareas">${esc(c.area).split(',').map(x=>`<span>${esc(x.trim())}</span>`).join('')}</p>`:''}</div></div></section>`,
+    hours:      ()=>`<section id="contact" class="cx cx-boxed alt"><div class="w"><div class="cxbox">${cH}${cP}
+                     ${c.hours?`<div class="cxhours">${esc(c.hours).split(/[·|]/).map(x=>`<span>${esc(x.trim())}</span>`).join('')}</div>`:''}${callRow(1)}</div></div></section>`,
+    urgent:     ()=>`<section id="contact" class="cx cx-urgent final"><div class="w"><div class="inner">
+                     ${m.standout?`<div class="eyebrow">${esc(m.standout)}</div>`:''}${cH}${cP}
+                     ${c.phone?`<a class="bigtel" href="${telHref(c.phone)}">${esc(c.phone)}</a>`:''}${callRow(1)}</div></div></section>`,
+    twocol:     ()=>`<section id="contact" class="cx cx-two"><div class="w">${cH}${cP}
+                     <div class="cxgrid"><div>${detailList}</div><div>${formBody(['name','phone','message'])||callRow()}</div></div></section>`,
+    inline:     ()=>`<section id="contact" class="cx cx-inline alt"><div class="w"><div>${cH}${cP}</div>
+                     <div class="cxpanel">${formBody(['name','phone'],'Call me back')||callRow()}</div></div></section>`,
+    editorial:  ()=>`<section id="contact" class="cx cx-ed"><div class="w"><div class="cxrule"></div>${cH}${cP}${detailList}${callRow()}</div></section>`
+  };
+  const CONTACT_KEYS=Object.keys(CONTACT_LAYOUTS);
+  const wantLayout=(s.contactLayout||m.contactLayout||'gradient');
+  const contactSection=(CONTACT_LAYOUTS[wantLayout]||CONTACT_LAYOUTS.gradient)();
 
-  const trust=[m.standout||'Local, reliable, on time',c.area?`Serving ${c.area}`:`Serving ${m.location||'your area'}`,'Free, no-obligation quotes']
-    .map(x=>`<span>${tick}${esc(x)}</span>`).join('');
+
 
   const heroInner=`
     ${m.standout?`<div class="eyebrow">${esc(m.standout)}</div>`:''}
@@ -3555,6 +3788,26 @@ function buildSite(state,mode,pageIdx){
       {'@type':'ListItem',position:1,name:'Home',item:seoBase+'/'},
       {'@type':'ListItem',position:2,name:pageTitle(state,pageIdx),item:seoBase+'/'+pageHref(state,pageIdx)}
     ]}:null;
+  /* Analytics tags. Emitted only for IDs that match the real format, because a
+     mistyped ID is a silent no-op the owner will not notice for months. The
+     export stays completely script-free until one of these is set, which is
+     the whole reason it is opt-in. */
+  const tk=m.tracking||{};
+  const okId=(v,re)=>{ v=String(v||'').trim(); return re.test(v)?v:''; };
+  const ga4=okId(tk.ga4,/^G-[A-Z0-9]{6,}$/i), gtm=okId(tk.gtm,/^GTM-[A-Z0-9]{5,}$/i);
+  const pixel=okId(tk.pixel,/^\d{8,20}$/), gads=okId(tk.gads,/^AW-\d{6,}$/i);
+  const trackingTags=[
+    (ga4||gads)?`<script async src="https://www.googletagmanager.com/gtag/js?id=${esc(ga4||gads)}"><\/script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());${
+      ga4?`gtag('config','${esc(ga4)}');`:''}${gads?`gtag('config','${esc(gads)}');`:''}<\/script>`:'',
+    gtm?`<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});
+var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;
+j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','${esc(gtm)}');<\/script>`:'',
+    pixel?`<script>!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}
+(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','${esc(pixel)}');fbq('track','PageView');<\/script>`:''
+  ].filter(Boolean).join('\n');
   const socials=(seo.socials||'').split(/[\s,]+/).filter(u=>/^https?:\/\//.test(u));
   /* Social profiles were collected for the JSON-LD sameAs array and then never
      shown to a human, which is half a feature. The footer renders them as
@@ -3659,6 +3912,7 @@ ${t.googleHref?`<link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="${t.googleHref}">`:'<!-- System fonts only: this page makes zero external requests. -->'}
 <style>${siteCSS(t,editable).replace(/\/\*[\s\S]*?\*\//g,'').replace(/\n{2,}/g,'\n')}</style>
+${trackingTags}
 <script type="application/ld+json">${JSON.stringify(ld)}<\/script>
 ${faqLd?`<script type="application/ld+json">${JSON.stringify(faqLd)}<\/script>`:''}
 ${breadcrumbLd?`<script type="application/ld+json">${JSON.stringify(breadcrumbLd)}<\/script>`:''}
@@ -5078,6 +5332,10 @@ function migrate(s){
   if(!Array.isArray(s.media.gallery)) s.media.gallery=[];
   s.meta.seo=s.meta.seo||{};
   s.meta.links=s.meta.links||{primary:'',secondary:'',secondaryLabel:''};
+  s.meta.form=s.meta.form||{action:'',fields:['name','phone','email','message']};
+  if(!Array.isArray(s.meta.form.fields)||!s.meta.form.fields.length)
+    s.meta.form.fields=['name','phone','email','message'];
+  if(typeof s.meta.contactLayout!=='string') s.meta.contactLayout='gradient';
   s.meta.sections=s.meta.sections||{order:SECTION_ORDER.slice(),hidden:[]};
   if(!Array.isArray(s.meta.sections.order)||!s.meta.sections.order.length) s.meta.sections.order=SECTION_ORDER.slice();
   SECTION_ORDER.forEach(k=>{ if(!s.meta.sections.order.includes(k)) s.meta.sections.order.push(k); });
@@ -5102,6 +5360,7 @@ function migrate(s){
     if(!Array.isArray(pg.legalBody)) pg.legalBody=[];
     pg.legal=pg.legal===true;
     if(typeof pg.keyword!=='string') pg.keyword='';
+    if(typeof pg.contactLayout!=='string') pg.contactLayout='';
     const mm=blankMedia(); pg.media=Object.assign(mm,pg.media||{});
     Object.keys(mm).forEach(k=>{ if(k!=='gallery'&&(!pg.media[k]||typeof pg.media[k]!=='object')) pg.media[k]={src:'',alt:'',credit:null}; });
     if(!Array.isArray(pg.media.gallery)) pg.media.gallery=[];
@@ -5876,6 +6135,239 @@ $('btnFillPage').onclick=async()=>{
   }catch(e){ setPageStatus(e.message||'Could not write that page.',true); }
   finally{ btn.disabled=false; btn.textContent=was; }
 };
+
+/* ---- growth kit --------------------------------------------------------
+   The site is the deliverable the client sees; these are the ones that get
+   sold next. All three run off the same brief the page was written from, so
+   the profile description, the ad copy and the page copy do not contradict
+   each other, which is the usual failure when three different people write
+   them from three different notes. */
+const GROWTH={
+  gbp:{label:'Google Business Profile',btn:'btnGbp',
+    sys:b=>`You write Google Business Profile content for local businesses. Google's rules are strict and the fields are short.
+Return ONLY raw JSON: {"description":string,"categories":[string],"services":[{"name":string,"desc":string}],"posts":[{"title":string,"body":string,"cta":string}],"qa":[{"q":string,"a":string}],"attributes":[string]}
+- "description" is the business description, UNDER 750 characters, opening with what they do and where. No sales language, no ALL CAPS, no phone numbers or URLs, since Google rejects those.
+- "categories": one primary category first, then 2 to 4 secondary ones, using real Google Business Profile category names.
+- "services": 6 to 10, each with a name under 60 characters and a description under 300.
+- "posts": 4 ready-to-publish updates. "title" under 58 characters, "body" under 1,500, "cta" one of: Book, Order online, Buy, Learn more, Sign up, Call now.
+- "qa": 5 questions real customers ask, with answers the owner can publish as-is.
+- "attributes": profile attributes that plausibly apply, e.g. "Identifies as women-owned", "Online estimates", "Wheelchair accessible entrance". Only ones consistent with the brief.
+- Never invent a figure, a licence, a year or an award that is not in the brief.
+- NEVER use an em dash.`},
+  ads:{label:'Google Ads copy',btn:'btnAds',
+    sys:b=>`You write Google Ads responsive search ads for local service businesses.
+Return ONLY raw JSON: {"headlines":[string],"descriptions":[string],"sitelinks":[{"text":string,"desc1":string,"desc2":string}],"callouts":[string],"snippets":{"header":string,"values":[string]},"negatives":[string]}
+- "headlines": EXACTLY 15, each 30 characters or fewer. Count them. Mix the service, the location, the offer, the differentiator and one call to action. At least three must contain the location.
+- "descriptions": EXACTLY 4, each 90 characters or fewer.
+- "sitelinks": 4. "text" 25 characters or fewer, each description line 35 or fewer.
+- "callouts": 6, each 25 characters or fewer.
+- "snippets": a header from Google's fixed list (Services, Types, Brands, Insurance coverage, Styles) and 5 values, each 25 characters or fewer.
+- "negatives": 12 negative keywords that would waste this advertiser's money, e.g. jobs, DIY, free, courses, salary, wholesale.
+- Character limits are hard. An ad that exceeds them is rejected, so count every string before you return it.
+- Never claim a price, a guarantee or a superlative that is not in the brief.
+- NEVER use an em dash.`},
+  kw:{label:'Keyword plan',btn:'btnKw',
+    sys:b=>`You build a local SEO keyword plan.
+Return ONLY raw JSON: {"clusters":[{"topic":string,"intent":string,"primary":string,"secondary":[string],"page":string}],"local":[string],"questions":[string],"competitors":[string]}
+- "clusters": 6 to 8. "intent" is one of transactional, informational, local, commercial. "primary" is the head term, "secondary" is 4 to 6 long-tail variants, "page" says which page should target it, using the pages this site already has where possible.
+- "local": 10 location-modified terms using real nearby place names from the brief. Never invent a place name.
+- "questions": 10 questions people actually type or say, phrased as they would say them.
+- "competitors": 5 realistic search terms where this business competes for attention rather than for the click.
+- No search volumes and no difficulty scores. You cannot know them, and inventing them would make the plan worse than useless.
+- NEVER use an em dash.`}
+};
+let growthData={};
+function growthRender(kind,d){
+  const esc2=x=>esc(String(x==null?'':x));
+  const box=(h,inner)=>`<div class="gout"><h5>${h}</h5>${inner}</div>`;
+  let html='';
+  if(kind==='gbp'){
+    html+=box(`Business description (${(d.description||'').length}/750)`,`<pre>${esc2(d.description)}</pre>`);
+    html+=box('Categories',(d.categories||[]).map((x,i)=>`<div class="gitem">${esc2(x)}${i===0?' <span class="gmeta">primary</span>':''}</div>`).join(''));
+    html+=box(`Services (${(d.services||[]).length})`,(d.services||[]).map(x=>`<div class="gitem"><b>${esc2(x.name)}</b><div class="gmeta">${esc2(x.desc)}</div></div>`).join(''));
+    html+=box('Posts',(d.posts||[]).map(x=>`<div class="gitem"><b>${esc2(x.title)}</b><div class="gmeta">${esc2(x.body)}</div><div class="gmeta">CTA: ${esc2(x.cta)}</div></div>`).join(''));
+    html+=box('Questions to publish',(d.qa||[]).map(x=>`<div class="gitem"><b>${esc2(x.q)}</b><div class="gmeta">${esc2(x.a)}</div></div>`).join(''));
+    html+=box('Attributes',(d.attributes||[]).map(x=>`<div class="gitem">${esc2(x)}</div>`).join(''));
+  }
+  if(kind==='ads'){
+    const over=(a,n)=>a.filter(x=>String(x).length>n);
+    const h=d.headlines||[], ds=d.descriptions||[];
+    html+=box(`Headlines (${h.length}, limit 30 chars)`,h.map(x=>
+      `<div class="gitem">${esc2(x)} <span class="gmeta">${String(x).length}${String(x).length>30?' OVER':''}</span></div>`).join(''));
+    html+=box(`Descriptions (${ds.length}, limit 90)`,ds.map(x=>
+      `<div class="gitem">${esc2(x)} <span class="gmeta">${String(x).length}${String(x).length>90?' OVER':''}</span></div>`).join(''));
+    html+=box('Sitelinks',(d.sitelinks||[]).map(x=>`<div class="gitem"><b>${esc2(x.text)}</b><div class="gmeta">${esc2(x.desc1)} / ${esc2(x.desc2)}</div></div>`).join(''));
+    html+=box('Callouts',(d.callouts||[]).map(x=>`<div class="gitem">${esc2(x)}</div>`).join(''));
+    if(d.snippets) html+=box('Structured snippet: '+esc2(d.snippets.header),(d.snippets.values||[]).map(x=>`<div class="gitem">${esc2(x)}</div>`).join(''));
+    html+=box('Negative keywords',(d.negatives||[]).map(x=>`<div class="gitem">${esc2(x)}</div>`).join(''));
+    const bad=over(h,30).length+over(ds,90).length;
+    if(bad) html=box('Check before uploading',`<pre>${bad} item${bad===1?'':'s'} exceed Google's character limit and are marked OVER below. Shorten them or Google will reject the ad.</pre>`)+html;
+  }
+  if(kind==='kw'){
+    html+=box('Clusters',(d.clusters||[]).map(x=>`<div class="gitem"><b>${esc2(x.primary)}</b> <span class="gmeta">${esc2(x.intent)} · ${esc2(x.page)}</span>
+      <div class="gmeta">${(x.secondary||[]).map(esc2).join(' · ')}</div></div>`).join(''));
+    html+=box('Location terms',(d.local||[]).map(x=>`<div class="gitem">${esc2(x)}</div>`).join(''));
+    html+=box('Questions to answer',(d.questions||[]).map(x=>`<div class="gitem">${esc2(x)}</div>`).join(''));
+    html+=box('Where you compete for attention',(d.competitors||[]).map(x=>`<div class="gitem">${esc2(x)}</div>`).join(''));
+  }
+  html+=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+    <button class="mini" id="btnCopyGrowth" type="button">Copy as text</button>
+    <button class="mini" id="btnDlGrowth" type="button">Download .json</button></div>`;
+  $('growthOut').innerHTML=html;
+  $('btnCopyGrowth').onclick=async()=>{
+    const txt=$('growthOut').innerText.replace(/\nCopy as text\nDownload \.json\n?$/,'').trim();
+    try{ await navigator.clipboard.writeText(txt); $('btnCopyGrowth').textContent='Copied'; }
+    catch{ $('btnCopyGrowth').textContent='Copy failed'; }
+    setTimeout(()=>{$('btnCopyGrowth').textContent='Copy as text';},1600);
+  };
+  $('btnDlGrowth').onclick=()=>{
+    const slug=slugify(siteState.meta.businessName,'business');
+    saveBlob(new Blob([JSON.stringify(d,null,2)],{type:'application/json'}),`${slug}-${kind}.json`);
+  };
+}
+Object.entries(GROWTH).forEach(([kind,g])=>{
+  $(g.btn).onclick=async()=>{
+    if(!siteState){ $('growthStatus').textContent='Generate a site first.'; return; }
+    if(!getKey()){ $('growthStatus').textContent='Add an API key under Settings first.'; return; }
+    const btn=$(g.btn), was=btn.textContent;
+    btn.disabled=true; btn.textContent='Writing…';
+    $('growthStatus').textContent=`Writing the ${g.label.toLowerCase()}…`;
+    const b=briefFromMeta();
+    const pages=Array.from({length:pageCount(siteState)},(_,i)=>pageTitle(siteState,i)).join(', ');
+    try{
+      const raw=await callClaude(g.sys(b),`${userPrompt(b,null,null)}\n\nPages on this site: ${pages}.\n\nReturn the JSON now.`);
+      const d=cleanCopy(JSON.parse(stripFences(raw)));
+      growthData[kind]=d; growthRender(kind,d);
+      $('growthStatus').textContent=`${g.label} ready. Read it before you publish anything.`;
+    }catch(e){ $('growthStatus').textContent=e.message||`Could not write the ${g.label.toLowerCase()}.`; }
+    finally{ btn.disabled=false; btn.textContent=was; }
+  };
+});
+['gaId','gtmId','pixelId','gadsId'].forEach(id=>{
+  const key={gaId:'ga4',gtmId:'gtm',pixelId:'pixel',gadsId:'gads'}[id];
+  $(id).addEventListener('input',()=>{
+    if(!siteState) return;
+    siteState.meta.tracking=siteState.meta.tracking||{};
+    siteState.meta.tracking[key]=$(id).value.trim();
+    const n=Object.values(siteState.meta.tracking).filter(Boolean).length;
+    $('trackNote').textContent=n
+      ? `${n} tag${n===1?'':'s'} will be added to every exported page. The export is no longer script-free, and your client may need a consent banner.`
+      : 'No tags. The export stays script-free.';
+    renderPreview(); renderChecks(); schedulePersist();
+  });
+});
+
+/* ---- closing section picker ------------------------------------------- */
+const CX_META={
+  gradient:  ['Gradient panel','The default. Centred, high contrast, works anywhere.'],
+  split:     ['Split with form','Copy and details left, enquiry form right.'],
+  formfirst: ['Form first','Form on the left, so it is the first thing read.'],
+  banded:    ['Banded card','Full-width band with the form in a raised card.'],
+  stacked:   ['Centred stack','Heading, sentence, then the form straight down the middle.'],
+  boxed:     ['Floating box','One shadowed box on a tinted band.'],
+  minimal:   ['Minimal','Left aligned, two buttons, nothing else.'],
+  bigphone:  ['Big phone number','The number set huge. For phone-led trades.'],
+  cards:     ['Three tiles','Call, email and book as three tappable cards.'],
+  strip:     ['Thin strip','A single quiet line between sections.'],
+  quote:     ['Quote request','Longer form: service, urgency, address, detail.'],
+  callback:  ['Callback request','Three fields only. The lowest-friction ask there is.'],
+  booking:   ['Book a time','Service and preferred date alongside the details.'],
+  trustclose:['Trust close','Repeats the proof points before the ask.'],
+  mapcard:   ['Coverage close','Details panel beside the list of areas served.'],
+  hours:     ['Opening hours','Hours broken into chips, then the buttons.'],
+  urgent:    ['Emergency','Loud gradient and the number. For callout trades.'],
+  twocol:    ['Details and form','Contact details left, short form right.'],
+  inline:    ['Inline callback','Copy left, two-field callback form right.'],
+  editorial: ['Editorial rule','A quiet rule, then copy and details. For premium brands.']
+};
+const CX_KEYS=Object.keys(CX_META);
+const cxNow=()=>(siteState&&siteState.meta.contactLayout)||'gradient';
+function setContactLayout(k,why){
+  if(!siteState||!CX_META[k]) return;
+  siteState.meta.contactLayout=k;
+  renderCxPick(); renderPreview(); renderChecks(); pushHistory(siteState);
+  lastShareURL=''; lastReviewURL='';
+  if(why!==undefined) $('cxWhy').textContent=why;
+}
+function renderCxPick(){
+  const host=$('cxPick'); if(!host) return;
+  const cur=cxNow();
+  $('tagCx').textContent=CX_META[cur]?CX_META[cur][0]:'gradient';
+  host.innerHTML=CX_KEYS.map(k=>
+    `<button type="button" class="cxbtn${k===cur?' on':''}" data-cx="${k}"><b>${esc(CX_META[k][0])}</b><span>${esc(CX_META[k][1])}</span></button>`).join('');
+  host.querySelectorAll('[data-cx]').forEach(b=>b.onclick=()=>setContactLayout(b.dataset.cx,''));
+}
+renderCxPick();
+$('btnCycleCx').onclick=()=>{
+  if(!siteState) return;
+  const i=CX_KEYS.indexOf(cxNow());
+  setContactLayout(CX_KEYS[(i+1)%CX_KEYS.length],'');
+};
+$('btnSuggestCx').onclick=async()=>{
+  if(!siteState){ $('cxWhy').textContent='Generate a site first.'; return; }
+  const btn=$('btnSuggestCx'), was=btn.textContent;
+  const c=siteState.meta.contact||{};
+  /* A sensible answer without spending a call: phone-led trades want the
+     number big, anything with a booking link wants the tiles, premium brands
+     want the quiet one. */
+  const fallback=(()=>{
+    const t=siteState.meta.type;
+    if(/24|emergency|urgent/i.test(siteState.meta.standout||'')) return ['urgent','An emergency line belongs in the loudest thing on the page.'];
+    if(c.book) return ['cards','There is a booking link, so give it a tile of its own.'];
+    if(['tradie','auto','cleaning'].includes(t)&&c.phone) return ['bigphone','Phone-led trade: the number is the call to action.'];
+    if(['legal','corporate','coach'].includes(t)) return ['split','Considered purchase, so the form does the work while the details sit beside it.'];
+    if(['medical','fitness'].includes(t)) return ['booking','People book these, so ask for a service and a time.'];
+    if(['realestate','hospitality'].includes(t)) return ['editorial','A quieter close suits the brand.'];
+    return ['quote','A quote request captures more than a phone number alone.'];
+  })();
+  if(!getKey()){ setContactLayout(fallback[0],fallback[1]+' (Add an API key to have Claude choose.)'); return; }
+  btn.disabled=true; btn.textContent='Thinking…';
+  $('cxWhy').textContent='Asking Claude how this page should end…';
+  const b=briefFromMeta();
+  const sys=`You choose how a small local business website should END, which is the section that actually converts.
+Return ONLY raw JSON: {"layout":string,"fields":[string],"why":string}
+- "layout" must be exactly one of: ${CX_KEYS.join(', ')}.
+${CX_KEYS.map(k=>`  ${k}: ${CX_META[k][1]}`).join('\n')}
+- "fields" is the enquiry form's fields, an ordered subset of: ${Object.keys({name:1,phone:1,email:1,address:1,suburb:1,service:1,urgency:1,budget:1,preferred:1,date:1,message:1}).join(', ')}. Three to six. Every extra field costs enquiries, so only ask for what this business genuinely needs before it can respond.
+- "why" is one sentence about this business, in plain language, not about design.
+Available to this business: ${c.phone?'phone':'no phone'}, ${c.email?'email':'no email'}, ${c.book?'a booking link':'no booking link'}. Never choose a layout that depends on something they do not have.
+NEVER use an em dash.`;
+  try{
+    const raw=await callClaude(sys,`${userPrompt(b,null,null)}\n\nReturn the JSON now.`);
+    const d=cleanCopy(JSON.parse(stripFences(raw)));
+    const layout=CX_META[d.layout]?d.layout:fallback[0];
+    const fields=(Array.isArray(d.fields)?d.fields:[]).filter(k=>FORM_FIELD_KEYS.includes(k)).slice(0,7);
+    if(fields.length>=2){ siteState.meta.form.fields=fields; renderFormFields(); }
+    setContactLayout(layout,isStr(d.why)?d.why:fallback[1]);
+  }catch(e){ setContactLayout(fallback[0],fallback[1]+' (Claude could not be reached.)'); }
+  finally{ btn.disabled=false; btn.textContent=was; }
+};
+const FORM_FIELD_KEYS=['name','phone','email','address','suburb','service','urgency','budget','preferred','date','message'];
+const FORM_FIELD_LABEL={name:'Name',phone:'Phone',email:'Email',address:'Address',suburb:'Suburb',
+  service:'Service',urgency:'Urgency',budget:'Budget',preferred:'Best time',date:'Date',message:'Message'};
+function renderFormFields(){
+  const host=$('formFields'); if(!host) return;
+  const on=new Set(((siteState&&siteState.meta.form&&siteState.meta.form.fields)||[]));
+  host.innerHTML=FORM_FIELD_KEYS.map(k=>
+    `<button type="button" class="chip${on.has(k)?' on':''}" data-ff="${k}">${FORM_FIELD_LABEL[k]}</button>`).join('');
+  host.querySelectorAll('[data-ff]').forEach(b=>b.onclick=()=>{
+    if(!siteState) return;
+    const f=siteState.meta.form.fields;
+    const i=f.indexOf(b.dataset.ff);
+    if(i>-1){ if(f.length<=2) return; f.splice(i,1); } else f.push(b.dataset.ff);
+    renderFormFields(); renderPreview(); pushHistory(siteState); lastShareURL='';
+  });
+}
+renderFormFields();
+$('formAction').addEventListener('input',()=>{
+  if(!siteState) return;
+  const v=$('formAction').value.trim();
+  siteState.meta.form.action=v;
+  $('formNote').textContent=v
+    ? (/^https:\/\//.test(v)?'Submissions go to that endpoint.':'That is not an https URL, so it will be ignored.')
+    : 'No endpoint set, so the form opens the visitor’s email app with the details filled in.';
+  renderPreview(); schedulePersist();
+});
 
 /* ---- policy pages ------------------------------------------------------
    A privacy policy is a page, so it is stored as one. That means it exports
