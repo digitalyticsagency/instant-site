@@ -524,8 +524,16 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
 .help{display:inline-grid;place-items:center;width:14px;height:14px;border-radius:50%;background:var(--fill-2);
   color:var(--txt-3);font-size:9.5px;font-weight:700;cursor:help;position:relative;flex:none;user-select:none}
 .help:hover,.help:focus-visible{background:var(--accent);color:var(--on-accent)}
-.help::after{content:attr(data-tip);position:absolute;left:50%;bottom:calc(100% + 8px);transform:translateX(-50%);
-  width:250px;padding:9px 11px;border-radius:10px;background:var(--txt);color:var(--bg);font-size:11.5px;font-weight:400;
+/* The tooltip is anchored to the FIELD, not to the little dot. Anchored to the
+   dot it could not fit: the panel is 400px, the tooltip 250px, and a dot sitting
+   after a label leaves under 210px of clearance on either side, so centring
+   overflowed right and right-anchoring overflowed left. Both got sliced by the
+   panel's overflow-x:hidden and read as a stray dark box. Against the field it
+   spans the column and always fits. */
+.sec .body .field,.sec .body .row,.sec .body .two > .field{position:relative}
+.help{position:static}
+.help::after{content:attr(data-tip);position:absolute;
+  left:0;right:0;bottom:calc(100% + 6px);transform:none;width:auto;padding:9px 11px;border-radius:10px;background:var(--txt);color:var(--bg);font-size:11.5px;font-weight:400;
   line-height:1.5;letter-spacing:-.005em;text-align:left;opacity:0;pointer-events:none;transition:opacity .16s var(--ease);
   z-index:60;box-shadow:var(--shadow-lg)}
 .help:hover::after,.help:focus-visible::after{opacity:1}
@@ -707,8 +715,9 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
           </div>
           <div class="field"><label>Language</label><div class="chips" id="localeChips"></div></div>
         </div>
-        <div style="display:flex;gap:6px;align-items:center">
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
           <button class="mini" id="btnDemo" type="button">Fill example</button>
+          <button class="mini" id="btnAiExample" type="button">✨ Invent one</button>
           <span class="tiny" id="demoWhich"></span>
         </div>
       </div>
@@ -833,7 +842,8 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
             <b style="font-size:13px">No photos of your own?</b>
             <span class="tiny" id="stockTarget"></span>
           </div>
-          <div class="tiny" style="margin-bottom:8px">Search free, commercially-usable photos from <a href="https://openverse.org" target="_blank" rel="noopener">Openverse</a>. Credit is captured automatically and printed in the exported footer, which most of these licences require. Stock photos top out at 1024px — good enough for a hero, though your own photos will be sharper.</div>
+          <div class="chips" id="stockSources" style="margin-bottom:8px"></div>
+          <div class="tiny" id="stockSourceNote" style="margin-bottom:8px"></div>
           <div style="display:flex;gap:6px">
             <input type="text" id="stockQ" placeholder="e.g. electrician, van, workshop" maxlength="60" style="flex:1">
             <button class="mini" id="stockGo" type="button">Search</button>
@@ -845,7 +855,7 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
     </details>
 
     <details class="sec" open>
-      <summary>Theme <span class="tag" id="tagTheme">14</span></summary>
+      <summary>Theme <span class="tag" id="tagTheme">36</span></summary>
       <div class="body">
         <div class="tiny">Switching theme after generating is instant and costs no API call.</div>
         <div class="themes" id="themeGrid"></div>
@@ -862,6 +872,13 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
             <button class="mini" id="btnReveal" type="button">Show</button>
           </div>
           <div class="tiny">Stored only in this browser under <code>instantsite_api_key</code>, sent only to <code>api.anthropic.com</code>. Get one at <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>. Anyone with access to this browser profile can read it — don't use a shared machine.</div>
+        </div>
+        <div class="field">
+          <label for="pexelsKey">Photo library keys <span class="opt">optional</span>
+            <span class="help" data-tip="Openverse and Wikimedia need no key. Pexels and Unsplash look far better and need no attribution, but require a free API key. Stored in this browser only, and sent only to that library.">?</span></label>
+          <input type="password" id="pexelsKey" placeholder="Pexels API key" autocomplete="off" spellcheck="false">
+          <input type="password" id="unsplashKey" placeholder="Unsplash Access Key" autocomplete="off" spellcheck="false" style="margin-top:6px">
+          <div class="tiny">Free keys from <a href="https://www.pexels.com/api/" target="_blank" rel="noopener">pexels.com/api</a> and <a href="https://unsplash.com/developers" target="_blank" rel="noopener">unsplash.com/developers</a>. Both optional, photo search works without them.</div>
         </div>
         <div class="row">
           <div class="lbl"><b>Appearance</b>Follows your system by default.</div>
@@ -1658,7 +1675,22 @@ function motionRuntime(level,t){
                  '.head h2,.hero .sub,.fx-c';
   function show(el){
     if(typeof gsap!=='undefined'){ try{ gsap.killTweensOf(el); }catch(e){} }
-    el.style.opacity='1'; el.style.transform='none'; el.style.clipPath='none';
+    // filter was missing here, which is how the blur-focus effect stranded
+    // readable-but-blurred headings: the sweep restored opacity and left the
+    // blur in place. Anything a reveal can set, the rescue has to clear.
+    el.style.opacity='1'; el.style.transform='none';
+    el.style.clipPath='none'; el.style.filter='none';
+  }
+  // A blurred element can be fully opaque, so opacity alone does not find it.
+  function stuck(el){
+    var cs=getComputedStyle(el);
+    if(parseFloat(cs.opacity)<0.99) return true;
+    // No regex here on purpose: this string is emitted through a template
+    // literal, which ate the backslashes and produced an invalid pattern that
+    // threw on every sweep. Plain string tests survive the trip.
+    var f=cs.filter||'';
+    var i=f.indexOf('blur(');
+    return i>-1&&f.slice(i+5,i+6)!=='0';
   }
   /* An element is only rescued once it has had a fair chance: every reveal
      here finishes inside 1.6s, and triggers fire at ~90% of the viewport, so
@@ -1676,7 +1708,7 @@ function motionRuntime(level,t){
     var list=document.querySelectorAll(REVEAL_SEL);
     for(var i=0;i<list.length;i++){
       var el=list[i];
-      if(parseFloat(getComputedStyle(el).opacity)>=0.99){ SEEN&&SEEN['delete'](el); continue; }
+      if(!stuck(el)){ SEEN&&SEEN['delete'](el); continue; }
       var r=el.getBoundingClientRect();
       if(!frozen&&(r.bottom<=0||r.top>=vh)){ SEEN&&SEEN['delete'](el); continue; }
       if(frozen){ show(el); continue; }
@@ -1985,17 +2017,22 @@ function motionRuntime(level,t){
   ready(function(){
     // defer scripts have run by DOMContentLoaded, but guard anyway.
     setTimeout(function(){
-      var l=(LV==='smooth'||LV==='gsap'||LV==='webgl')?smooth():null;
-      if(LV==='gsap'||LV==='webgl') effects(l);
-      if(LV==='webgl') webgl();
-      // Each is independently guarded, so one failing cannot stop the rest.
+      /* Every stage is isolated. The individual effects were already guarded,
+         but smooth() and effects() were not: a throw in the Lenis setup took
+         out everything after it, including the watchdog that exists precisely
+         to clean up after a broken motion layer. A safety net cannot be
+         downstream of the thing it protects. */
+      var l=null;
+      if(LV==='smooth'||LV==='gsap'||LV==='webgl'){ try{ l=smooth(); }catch(e){} }
+      if(LV==='gsap'||LV==='webgl'){ try{ effects(l); }catch(e){} }
+      if(LV==='webgl'){ try{ webgl(); }catch(e){} }
       var fns={progress:fxProgress,cursor:fxCursor,magnetic:fxMagnetic,tilt:fxTilt,marquee:fxMarquee,
                splittext:fxSplit,fadeup:fxFadeUp,parallax:fxParallax,reveal:fxReveal,pin:fxPin,
                blurin:fxBlurIn,scalein:fxScaleIn,flip:fxFlip,wave:fxWave,stepline:fxStepline,
                hscroll:fxHScroll,typeout:fxTypeout,ripple:fxRipple,spotlight:fxSpotlight,condense:fxCondense};
       FX.forEach(function(k){ try{ fns[k]&&fns[k](); }catch(e){} });
-      if(typeof ScrollTrigger!=='undefined') ScrollTrigger.refresh();
-      watchdog();
+      try{ if(typeof ScrollTrigger!=='undefined') ScrollTrigger.refresh(); }catch(e){}
+      try{ watchdog(); }catch(e){}
     },0);
   });
 })();`;
@@ -2679,6 +2716,97 @@ const LICENSE_LABEL={by:'CC BY',"by-sa":'CC BY-SA',"by-nc":'CC BY-NC',"by-nd":'C
 // 20 is the hard ceiling for anonymous requests — asking for more returns 401,
 // not 400, which is easy to misread as an auth problem.
 const OV_PAGE_SIZE=20;
+/* --------------------------------------------------------------------------
+   Openverse alone was the quality ceiling: its thumb proxy tops out at 1024px,
+   which is thin for a hero on a retina screen. Three more sources now sit
+   behind the same interface.
+
+   Wikimedia Commons needs no key either, sends `access-control-allow-origin:*`
+   (verified), and routinely returns 2000-3000px originals. Same licence rules
+   as Openverse, so credits still ride through to the footer.
+
+   Pexels and Unsplash are the ones that actually look like stock photography,
+   and neither requires attribution. Both need an API key, and both send
+   `access-control-allow-origin:*` on the browser call (verified against a live
+   request), so they work from here with the user's own key, exactly like the
+   Anthropic one. They are opt-in and the app works fully without them.
+   -------------------------------------------------------------------------- */
+const LS_IMGKEYS='instantsite_imgkeys';
+let imgKeys={pexels:'',unsplash:''};
+try{ Object.assign(imgKeys,JSON.parse(localStorage.getItem(LS_IMGKEYS)||'{}')); }catch{}
+function saveImgKeys(){ try{ localStorage.setItem(LS_IMGKEYS,JSON.stringify(imgKeys)); }catch{} }
+const STOCK_SOURCES={
+  openverse:{label:'Openverse',note:'No key. Broad but low resolution, credit required.',key:null},
+  wikimedia:{label:'Wikimedia',note:'No key. High resolution, credit required.',key:null},
+  pexels:{label:'Pexels',note:'Needs a free API key. Best quality, no credit required.',key:'pexels'},
+  unsplash:{label:'Unsplash',note:'Needs a free API key. Best quality, no credit required.',key:'unsplash'}
+};
+let stockSource='openverse';
+
+async function wikimediaSearch(query,page){
+  const off=((page||1)-1)*20;
+  const url='https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*'
+    +'&generator=search&gsrnamespace=6&gsrlimit=20&gsroffset='+off
+    +'&gsrsearch='+encodeURIComponent('filetype:bitmap '+query)
+    +'&prop=imageinfo&iiprop=url|size|extmetadata&iiurlwidth=1600';
+  let res;
+  try{ res=await fetch(url); }catch(e){ throw new Error('Could not reach Wikimedia Commons.'); }
+  if(!res.ok) throw new Error(`Wikimedia search failed (HTTP ${res.status}).`);
+  const d=await res.json();
+  const pages=((d.query||{}).pages)||{};
+  return Object.values(pages).map(pg=>{
+    const ii=(pg.imageinfo||[])[0]; if(!ii) return null;
+    const em=ii.extmetadata||{};
+    const val=k=>((em[k]||{}).value||'').replace(/<[^>]*>/g,'').trim();
+    const lic=val('LicenseShortName').toLowerCase();
+    // Anything without a clear commercial licence is dropped rather than shown
+    // and hoped for: these pages get sold to real businesses.
+    if(/noncommercial|non-commercial|\bnc\b|fair use/.test(lic)) return null;
+    return {id:'wm:'+pg.pageid, thumb:ii.thumburl||ii.url,
+      full:ii.url, title:String(pg.title||'').replace(/^File:/,'').replace(/\.[a-z]+$/i,''),
+      creator:val('Artist')||'Wikimedia Commons', creatorUrl:ii.descriptionurl||'',
+      license:lic||'', licenseVersion:'', sourceUrl:ii.descriptionurl||'',
+      attribution:'', w:ii.width||0, h:ii.height||0};
+  }).filter(Boolean);
+}
+async function pexelsSearch(query,page){
+  if(!imgKeys.pexels) throw new Error('Add a Pexels API key under Settings to search Pexels.');
+  let res;
+  try{ res=await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=20&page=${page||1}`,
+    {headers:{Authorization:imgKeys.pexels}}); }
+  catch(e){ throw new Error('Could not reach Pexels.'); }
+  if(res.status===401) throw new Error('Pexels rejected that API key.');
+  if(!res.ok) throw new Error(`Pexels search failed (HTTP ${res.status}).`);
+  const d=await res.json();
+  return (d.photos||[]).map(ph=>({
+    id:'px:'+ph.id, thumb:ph.src.large, full:ph.src.large2x||ph.src.large,
+    title:ph.alt||'Pexels photo', creator:ph.photographer||'Pexels',
+    creatorUrl:ph.photographer_url||'', license:'pexels', licenseVersion:'',
+    sourceUrl:ph.url||'', attribution:'', w:ph.width||0, h:ph.height||0, noCredit:true}));
+}
+async function unsplashSearch(query,page){
+  if(!imgKeys.unsplash) throw new Error('Add an Unsplash Access Key under Settings to search Unsplash.');
+  let res;
+  try{ res=await fetch(`https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=20&page=${page||1}&orientation=landscape`,
+    {headers:{Authorization:'Client-ID '+imgKeys.unsplash}}); }
+  catch(e){ throw new Error('Could not reach Unsplash.'); }
+  if(res.status===401) throw new Error('Unsplash rejected that Access Key.');
+  if(!res.ok) throw new Error(`Unsplash search failed (HTTP ${res.status}).`);
+  const d=await res.json();
+  return (d.results||[]).map(ph=>({
+    id:'us:'+ph.id, thumb:ph.urls.regular, full:ph.urls.full||ph.urls.regular,
+    title:ph.alt_description||ph.description||'Unsplash photo',
+    creator:(ph.user&&ph.user.name)||'Unsplash', creatorUrl:(ph.user&&ph.user.links&&ph.user.links.html)||'',
+    license:'unsplash', licenseVersion:'', sourceUrl:ph.links&&ph.links.html||'',
+    attribution:'', w:ph.width||0, h:ph.height||0, noCredit:true}));
+}
+async function searchStock(query,page){
+  if(stockSource==='wikimedia') return wikimediaSearch(query,page);
+  if(stockSource==='pexels')    return pexelsSearch(query,page);
+  if(stockSource==='unsplash')  return unsplashSearch(query,page);
+  return stockSearch(query,page);
+}
+
 async function stockSearch(query,page){
   const url=`${OV_API}?q=${encodeURIComponent(query)}&license_type=commercial&page_size=${OV_PAGE_SIZE}&page=${page||1}&mature=false`;
   let res;
@@ -3417,6 +3545,16 @@ function buildSite(state,mode,pageIdx){
   }).join(' · ')}</span>`:'';
 
   const seo=m.seo||{};
+  /* A sub-page with no breadcrumb trail is a page Google has to guess the
+     hierarchy of. Only emitted when there is a real canonical to build
+     absolute URLs from, since relative breadcrumb URLs are worse than none. */
+  const seoBase=(seo.canonical||'').trim().replace(/\/+$/,'');
+  const breadcrumbLd=(pageIdx&&seoBase)?{
+    '@context':'https://schema.org','@type':'BreadcrumbList',
+    itemListElement:[
+      {'@type':'ListItem',position:1,name:'Home',item:seoBase+'/'},
+      {'@type':'ListItem',position:2,name:pageTitle(state,pageIdx),item:seoBase+'/'+pageHref(state,pageIdx)}
+    ]}:null;
   const socials=(seo.socials||'').split(/[\s,]+/).filter(u=>/^https?:\/\//.test(u));
   /* Social profiles were collected for the JSON-LD sameAs array and then never
      shown to a human, which is half a feature. The footer renders them as
@@ -3506,7 +3644,14 @@ ${canonical?`<link rel="canonical" href="${esc(canonical.replace(/\/+$/,'')+(pag
 <meta property="og:locale" content="${lang.replace('-','_')}">
 ${canonical?`<meta property="og:url" content="${esc(canonical.replace(/\/+$/,'')+(pageIdx?'/'+pageHref(state,pageIdx):'/'))}">`:''}
 ${ogImage?`<meta property="og:image" content="${esc(ogImage)}">
-<meta name="twitter:card" content="summary_large_image">`:'<meta name="twitter:card" content="summary">'}
+<meta property="og:image:alt" content="${esc(m.businessName+(m.location?' in '+m.location:''))}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="${esc(ogImage)}">`:'<meta name="twitter:card" content="summary">'}
+<meta property="og:site_name" content="${esc(m.businessName)}">
+${socials.filter(u=>/twitter|x\.com/.test(u)).slice(0,1).map(u=>
+  `<meta name="twitter:site" content="@${esc((u.split('/').filter(Boolean).pop()||'').replace(/^@/,''))}">`).join('')}
 <meta name="twitter:title" content="${esc(m.businessName)}">
 <meta name="twitter:description" content="${esc(s.seo_meta_description)}">
 ${heroImg.src&&!heroImg.src.startsWith('data:')?`<link rel="preload" as="image" href="${esc(heroImg.src)}" fetchpriority="high">`:''}
@@ -3516,6 +3661,7 @@ ${t.googleHref?`<link rel="preconnect" href="https://fonts.googleapis.com">
 <style>${siteCSS(t,editable).replace(/\/\*[\s\S]*?\*\//g,'').replace(/\n{2,}/g,'\n')}</style>
 <script type="application/ld+json">${JSON.stringify(ld)}<\/script>
 ${faqLd?`<script type="application/ld+json">${JSON.stringify(faqLd)}<\/script>`:''}
+${breadcrumbLd?`<script type="application/ld+json">${JSON.stringify(breadcrumbLd)}<\/script>`:''}
 </head>
 <body>
 <nav class="nav"><div class="w">
@@ -3956,6 +4102,8 @@ function renderThemeGrid(){
       <div class="theme-meta"><div class="theme-name">${t.label}</div><div class="theme-for">${t.for}</div></div></button>`;
   }).join('');
   $('themeGrid').querySelectorAll('.theme').forEach(b=>b.onclick=()=>setTheme(b.dataset.t));
+  // Derived, never hardcoded: the count drifted to 14 while the library grew to 36.
+  const tt=$('tagTheme'); if(tt) tt.textContent=`${THEME_IDS.length} themes`;
 }
 
 /* ==========================================================================
@@ -4823,17 +4971,52 @@ function saveBlob(blob,filename){
   a.href=url; a.download=filename; document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(url),1500);
 }
+/* robots.txt and sitemap.xml. Both need absolute URLs, so both are only
+   written once a canonical domain is set in the SEO panel: a sitemap full of
+   relative paths is not a sitemap, and shipping a broken one is worse than
+   shipping none. */
+function seoFiles(state){
+  const base=((state.meta.seo||{}).canonical||'').trim().replace(/\/+$/,'');
+  if(!/^https?:\/\//.test(base)) return [];
+  const today=new Date().toISOString().slice(0,10);
+  const urls=Array.from({length:pageCount(state)},(_,i)=>i).map(i=>{
+    const p=pageOf(state,i);
+    return {loc:base+'/'+(i?pageHref(state,i):''),
+            pri:i===0?'1.0':(p.legal?'0.3':'0.8'),
+            freq:i===0?'weekly':(p.legal?'yearly':'monthly')};
+  });
+  const sitemap=`<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls.map(u=>`  <url>
+    <loc>${esc(u.loc)}</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>${u.freq}</changefreq>
+    <priority>${u.pri}</priority>
+  </url>`).join('\n')}
+</urlset>
+`;
+  const robots=`User-agent: *
+Allow: /
+
+Sitemap: ${base}/sitemap.xml
+`;
+  return [{name:'sitemap.xml',text:sitemap},{name:'robots.txt',text:robots}];
+}
+
 async function download(){
   if(!siteState) return;
   const slug=(siteState.meta.businessName||'website').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,50)||'website';
   const n=pageCount(siteState);
-  if(n===1){ saveBlob(new Blob([exportHTML(0)],{type:'text/html'}),`${slug}.html`); return; }
   const btn=$('btnDownload'), label=btn.querySelector('span'), was=label.textContent;
+  const extras=seoFiles(siteState);
+  // A single page with nothing else to ship still exports as one bare file;
+  // that is the whole point of it. Add a sitemap and it becomes a folder.
+  if(n===1&&!extras.length){ saveBlob(new Blob([exportHTML(0)],{type:'text/html'}),`${slug}.html`); return; }
   label.textContent='Zipping…'; btn.disabled=true;
   try{
-    const files=Array.from({length:n},(_,i)=>({name:pageHref(siteState,i),text:exportHTML(i)}));
+    const files=Array.from({length:n},(_,i)=>({name:pageHref(siteState,i),text:exportHTML(i)})).concat(extras);
     saveBlob(await makeZip(files),`${slug}.zip`);
-    label.textContent=`${n} pages`;
+    label.textContent=`${files.length} files`;
   }catch(e){
     console.warn('ZIP failed',e); label.textContent='Failed';
   }finally{
@@ -5075,12 +5258,20 @@ function loadBriefFromSite(){
   refreshStatus();
 }
 $('btnGen').onclick=()=>generate(readBrief());
+/* Cycling the whole library meant picking a vertical and then having the very
+   next click throw it away. If a type is selected, the cycle stays inside it
+   and only the other fields change. */
+const examplesFor=t=>{ const m=EXAMPLES.filter(e=>e.type===t); return m.length?m:EXAMPLES; };
 $('btnDemo').onclick=()=>{
-  exampleIdx=(exampleIdx+1)%EXAMPLES.length;
-  const e=EXAMPLES[exampleIdx];
+  const want=$('bizType').value;
+  const pool=examplesFor(want);
+  const locked=pool!==EXAMPLES;
+  const cur=pool.indexOf(EXAMPLES[exampleIdx]);
+  const e=pool[(cur+1+pool.length)%pool.length];
+  exampleIdx=EXAMPLES.indexOf(e);
   $('bizName').value=e.name;
-  $('bizType').value=e.type; $('bizType').onchange();
-  $('bizTypeOther').value=e.other||'';
+  if(!locked){ $('bizType').value=e.type; $('bizType').onchange(); }
+  $('bizTypeOther').value=locked?$('bizTypeOther').value:(e.other||'');
   $('location').value=e.loc; $('standout').value=e.stand;
   $('desc').value=e.desc; $('descCount').textContent=e.desc.length;
   $('bizKeyword').value=e.kw||''; $('bizEst').value=e.est||''; $('bizTeam').value=e.team||'';
@@ -5089,9 +5280,70 @@ $('btnDemo').onclick=()=>{
   $('cArea').value=e.area||''; $('cHours').value=e.hrs||''; $('cBook').value='';
   if(e.tone){ rememberTone(e.tone); setTone(e.tone); }
   syncOtherField();
-  $('demoWhich').textContent=`${exampleIdx+1} of ${EXAMPLES.length} — click again for another`;
+  const pos=pool.indexOf(e)+1;
+  $('demoWhich').textContent=locked
+    ? `${pos} of ${pool.length} ${PACKS[want].label} examples`
+    : `${pos} of ${pool.length}, click again for another`;
   saveBrief(); refreshStatus();
 };
+
+/* The static library is fixed and finite. Rather than ship fifty hand-written
+   examples per vertical, which would roughly double the size of this file with
+   copy nobody reads twice, this invents a fresh one on demand for whichever
+   type is selected. Infinite variety, no weight. */
+$('btnAiExample').onclick=async()=>{
+  const btn=$('btnAiExample'), was=btn.textContent;
+  const type=$('bizType').value, label=PACKS[type].label;
+  if(!getKey()){ $('demoWhich').textContent='Add an API key under Settings to invent one.'; return; }
+  btn.disabled=true; btn.textContent='Inventing…';
+  $('demoWhich').textContent=`Inventing a ${label} example…`;
+  const locale=curChip('localeChips')||'nz';
+  const taken=EXAMPLES.filter(e=>e.type===type).map(e=>`${e.name} (${e.loc})`).join('; ');
+  const sys=`You invent realistic sample businesses for a website builder's demo data. They must read like a real operator wrote the brief, not like marketing copy.
+
+Return ONLY raw JSON:
+{"name":string,"other":string,"loc":string,"stand":string,"desc":string,"ph":string,"em":string,"area":string,"hrs":string,"kw":string,"est":string,"team":string,"cert":string,"price":"$"|"$$"|"$$$"|"$$$$","guar":string,"tone":string}
+
+- The business must be a ${label}. Pick a specific niche inside that category, not the most obvious one.
+- "loc" is a real town or suburb in ${LOCALES[locale].label==='US'?'the United States':'New Zealand or Australia'}, and "area" lists 4 or 5 real neighbouring places.
+- "desc" is 2 to 4 sentences of what they actually do, with concrete specifics: methods, materials, timeframes, what is included. No marketing adjectives.
+- "stand" is one genuine differentiator, 3 to 6 words, the kind a competitor could not copy onto their own site unchanged.
+- "est", "team", "cert" and "guar" must be internally consistent with each other and with the description.
+- "ph" and "em" are obviously fictional. Use 555 in the phone number.
+- "tone" is one or two words describing how this operator speaks.
+- "other" is a short category name ONLY if the type is Other, otherwise "".
+- NEVER use an em dash or a spaced en dash.
+${taken?`- Do not reuse or closely resemble any of these, which already exist: ${taken}.`:''}`;
+  try{
+    const raw=await callClaude(sys,`Invent one ${label} business. Return the JSON now.`);
+    const e=cleanCopy(JSON.parse(stripFences(raw)));
+    if(!isStr(e.name)||!isStr(e.desc)) throw new ApiError('Incomplete example came back.',raw);
+    $('bizName').value=e.name;
+    $('bizTypeOther').value=type==='other'?(e.other||''):'';
+    $('location').value=e.loc||''; $('standout').value=e.stand||'';
+    $('desc').value=(e.desc||'').slice(0,600); $('descCount').textContent=$('desc').value.length;
+    $('bizKeyword').value=e.kw||''; $('bizEst').value=e.est||''; $('bizTeam').value=e.team||'';
+    $('bizPrice').value=['$','$$','$$$','$$$$'].includes(e.price)?e.price:'';
+    $('bizCert').value=(e.cert||'').slice(0,120); $('bizGuar').value=(e.guar||'').slice(0,100);
+    $('cPhone').value=e.ph||''; $('cEmail').value=e.em||'';
+    $('cArea').value=e.area||''; $('cHours').value=e.hrs||''; $('cBook').value='';
+    if(isStr(e.tone)){ rememberTone(e.tone); setTone(e.tone); }
+    syncOtherField(); saveBrief(); refreshStatus();
+    $('demoWhich').textContent=`Invented: ${e.name}`;
+  }catch(err){ $('demoWhich').textContent=err.message||'Could not invent one.'; }
+  finally{ btn.disabled=false; btn.textContent=was; }
+};
+// Keep the counter honest when the vertical changes.
+$('bizType').addEventListener('change',()=>{
+  const t=$('bizType').value, n=EXAMPLES.filter(e=>e.type===t).length;
+  $('demoWhich').textContent=n?`${n} ${PACKS[t].label} examples ready`:'No stock example for this type, use Invent one';
+});
+
+['pexelsKey','unsplashKey'].forEach(id=>{
+  const k=id.replace('Key','');
+  $(id).value=imgKeys[k]||'';
+  $(id).addEventListener('input',()=>{ imgKeys[k]=$(id).value.trim(); saveImgKeys(); renderStockSources(); });
+});
 
 function selectTab(which){
   if(!TABS[which]) which='preview';
@@ -5905,7 +6157,7 @@ async function runStockSearch(){
        results" when really it was "no results big enough". */
     let usable=[],scanned=0;
     for(let page=1;page<=3&&usable.length<12;page++){
-      const batch=await stockSearch(q,page);
+      const batch=await searchStock(q,page);
       if(!batch.length) break;
       scanned+=batch.length;
       usable=usable.concat(batch.filter(r=>r.w>=minW));
@@ -5920,20 +6172,26 @@ async function runStockSearch(){
     $('stockResults').innerHTML=usable.map((r,i)=>
       `<button type="button" class="stockitem" data-i="${i}" title="${esc(creditLabel(r))} — ${r.w}×${r.h}">
          <img src="${esc(r.thumb)}" alt="${esc(r.title)}" loading="lazy">
-         <span class="lic">${esc(LICENSE_LABEL[r.license]||r.license.toUpperCase())}</span>
+         <span class="lic">${esc(r.noCredit?STOCK_SOURCES[stockSource].label:(LICENSE_LABEL[r.license]||r.license.toUpperCase()))}</span>
          <span class="dim">${r.w}×${r.h}</span>
        </button>`).join('');
     $('stockResults').querySelectorAll('.stockitem').forEach(b=>b.onclick=()=>useStock(stockResults[+b.dataset.i]));
   }catch(e){ $('stockStatus').textContent=e.message; $('stockStatus').className='tiny statusBad'; }
 }
+// Openverse serves originals through its own proxy; the others hand back a
+// direct CORS-enabled URL, so only Openverse needs rewriting.
+const fullSizeURL=r=>r.full?r.full:ovFullSize(r.id);
 async function useStock(r){
   if(!siteState){ setMediaStatus('Generate a site first.',true); return; }
   setMediaStatus(`Fetching photo for ${MEDIA_SLOTS[stockSlot].label.toLowerCase()}…`);
-  const credit={title:r.title,creator:r.creator,creatorUrl:r.creatorUrl,license:r.license,
+  // Pexels and Unsplash do not require attribution, so nothing is forced into
+  // the client's footer. Openverse and Wikimedia results still carry theirs,
+  // because for those it is a condition of use rather than a courtesy.
+  const credit=r.noCredit?null:{title:r.title,creator:r.creator,creatorUrl:r.creatorUrl,license:r.license,
                 licenseVersion:r.licenseVersion,sourceUrl:r.sourceUrl,text:r.attribution};
   if(stockSlot==='gallery'){
     try{
-      const res=await fetch(ovFullSize(r.id),{mode:'cors'});
+      const res=await fetch(fullSizeURL(r),{mode:'cors'});
       if(!res.ok) throw new Error('That photo could not be loaded.');
       const blob=await res.blob();
       await applyGalleryImage(new File([blob],'stock.jpg',{type:blob.type}),credit);
@@ -5941,19 +6199,37 @@ async function useStock(r){
     return;
   }
   try{
-    const {src,w,h}=await processRemoteImage(ovFullSize(r.id),stockSlot);
+    const {src,w,h}=await processRemoteImage(fullSizeURL(r),stockSlot);
     const M=curPage(); M.media=M.media||blankMedia();
     M.media[stockSlot]={
       src, alt:r.title||'',
-      credit:{title:r.title,creator:r.creator,creatorUrl:r.creatorUrl,license:r.license,
+      credit:r.noCredit?null:{title:r.title,creator:r.creator,creatorUrl:r.creatorUrl,license:r.license,
               licenseVersion:r.licenseVersion,sourceUrl:r.sourceUrl,text:r.attribution}
     };
     renderPreview(); renderMediaPanel(); renderChecks(); renderTips();
     const ok=pushHistory(siteState);
-    setMediaStatus(ok?`${MEDIA_SLOTS[stockSlot].label} set — ${w}×${h}, credited to ${r.creator}.`
+    setMediaStatus(ok?`${MEDIA_SLOTS[stockSlot].label} set, ${w}×${h}${r.noCredit?` from ${STOCK_SOURCES[stockSource].label}, no credit needed`:`, credited to ${r.creator}`}.`
                      :`Photo added but storage is full — download the HTML to keep it.`,!ok);
   }catch(e){ setMediaStatus(e.message||'Could not use that photo.',true); }
 }
+function renderStockSources(){
+  const host=$('stockSources'); if(!host) return;
+  host.innerHTML=Object.entries(STOCK_SOURCES).map(([k,v])=>{
+    const locked=v.key&&!imgKeys[v.key];
+    return `<button type="button" class="chip${k===stockSource?' on':''}" data-src="${k}"${locked?' title="Needs an API key under Settings"':''}>${v.label}${locked?' 🔑':''}</button>`;
+  }).join('');
+  host.querySelectorAll('[data-src]').forEach(b=>b.onclick=()=>{
+    stockSource=b.dataset.src; renderStockSources();
+    if(stockResults.length) runStockSearch();
+  });
+  const v=STOCK_SOURCES[stockSource];
+  const locked=v.key&&!imgKeys[v.key];
+  $('stockSourceNote').innerHTML=esc(v.note)
+    +(locked?' <b>No key set yet, add one under Settings.</b>':'')
+    +(v.key?' No attribution required, so nothing is added to your footer.'
+           :' Credit is captured automatically and printed in the exported footer, which these licences require.');
+}
+renderStockSources();
 $('stockGo').onclick=runStockSearch;
 $('stockQ').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); runStockSearch(); } });
 
