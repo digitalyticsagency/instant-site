@@ -264,6 +264,23 @@ select{appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%
 .chip:hover{background:var(--fill)}
 .chip.on{background:var(--accent-fill);border-color:var(--accent-fill);color:var(--on-accent)}
 .counter{font-size:11px;color:var(--txt-3);text-align:right}
+/* searchable combobox — presets plus anything the user types */
+.combo{position:relative}
+.combo input{width:100%;padding-right:34px}
+.combo-x{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:24px;height:24px;
+  border-radius:50%;font-size:16px;line-height:1;color:var(--txt-3);display:none}
+.combo-x:hover{background:var(--fill);color:var(--txt-1)}
+.combo.filled .combo-x{display:block}
+.combo-list{position:absolute;left:0;right:0;top:calc(100% + 6px);max-height:230px;overflow-y:auto;
+  background:var(--surface);border:1px solid var(--stroke);border-radius:12px;box-shadow:var(--shadow-lg);
+  z-index:60;display:none;padding:5px}
+.combo.open .combo-list{display:block}
+.combo-list button{display:block;width:100%;text-align:left;padding:7px 10px;border-radius:8px;font-size:13px}
+.combo-list button:hover,.combo-list button.hi{background:var(--fill)}
+.combo-list button.on{color:var(--accent);font-weight:600}
+.combo-list button.new{color:var(--accent)}
+.combo-group{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--txt-3);padding:8px 10px 4px}
+.combo-empty{padding:10px;font-size:12px;color:var(--txt-3)}
 
 /* theme cards */
 .themes{display:grid;grid-template-columns:1fr 1fr;gap:9px}
@@ -578,6 +595,10 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
         <b>Static HTML</b>
         <span id="dlHtmlNote">One self-contained file. Host it anywhere.</span>
       </button>
+      <button type="button" data-dl="review">
+        <b>Client review link</b>
+        <span>A link your client pages through, then approves or sends back changes.</span>
+      </button>
       <button type="button" data-dl="wp">
         <b>WordPress theme</b>
         <span>Installable .zip — PHP templates, editable in Appearance → Customize.</span>
@@ -670,7 +691,16 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
         <div class="field"><label for="bizGuar">Guarantee <span class="opt">optional</span></label>
           <input type="text" id="bizGuar" placeholder="12-month workmanship guarantee" maxlength="100"></div>
         <div class="two">
-          <div class="field"><label>Tone</label><div class="chips" id="toneChips"></div></div>
+          <div class="field"><label for="toneInput">Tone</label>
+            <div class="combo" id="toneCombo">
+              <input type="text" id="toneInput" autocomplete="off" role="combobox"
+                     aria-expanded="false" aria-controls="toneList" aria-autocomplete="list"
+                     placeholder="Search or type any tone" maxlength="60">
+              <button type="button" class="combo-x" id="toneClear" title="Clear" aria-label="Clear tone">&times;</button>
+              <div class="combo-list" id="toneList" role="listbox"></div>
+            </div>
+            <div class="tiny" id="toneHint">Pick one, or type your own — anything you write is used verbatim.</div>
+          </div>
           <div class="field"><label>Language</label><div class="chips" id="localeChips"></div></div>
         </div>
         <div style="display:flex;gap:6px;align-items:center">
@@ -936,6 +966,21 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
           </div>
 
           <div class="sharebox">
+            <b style="font-size:13.5px">Client review &amp; sign-off</b>
+            <div class="tiny" style="margin-top:6px;line-height:1.7">A second kind of link. The client gets the same site plus a review bar: they page through it, then <b>Approve</b> or send back changes. Their decision arrives as a pre-written email — there is no server, so nothing is recorded here.</div>
+            <label for="approveTo" style="margin-top:12px">Send decisions to</label>
+            <input type="email" id="approveTo" placeholder="you@youragency.com" autocomplete="email">
+            <label for="reviewUrl" style="margin-top:10px">Review link</label>
+            <textarea id="reviewUrl" readonly rows="3" spellcheck="false" placeholder="Create a review link…"></textarea>
+            <div id="reviewMeta" class="tiny" style="margin-top:8px"></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+              <button class="mini" id="btnMakeReview" type="button">Create review link</button>
+              <button class="mini" id="btnCopyReview" type="button">Copy link</button>
+              <button class="mini" id="btnOpenReview" type="button">Open as the client</button>
+            </div>
+          </div>
+
+          <div class="sharebox">
             <b style="font-size:13.5px">Want a real URL instead?</b>
             <div class="tiny" style="margin-top:6px;line-height:1.7">
               The link above is perfect for "have a look at this" — but for a site the client actually owns, use <b>Download</b> and host the file.
@@ -1069,13 +1114,131 @@ const THEMES={
     ink:'#eef1f4',ink2:'#9aa3ad',bg:'#14181d',panel:'#1d2229',line:'#2e353e',primary:'#4ea3ff',accent:'#ff7a29',
     display:"'Barlow Condensed'",body:"'Barlow'",google:'Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600',
     sysDisplay:"'Helvetica Neue',Arial",sysBody:"system-ui,-apple-system,Segoe UI",
-    radius:'4px',hero:'banner',services:'list',quotes:'cards',caps:true,weight:700,callBar:true,dark:true,density:78}
+    radius:'4px',hero:'banner',services:'list',quotes:'cards',caps:true,weight:700,callBar:true,dark:true,density:78}  ,
+  /* ---- second wave: 20 more, tuned to segments the first 16 missed ---- */
+  wellness:{label:'Wellness Calm',for:'Yoga, massage, physio, day spa',
+    ink:'#1c2422',ink2:'#5a6a66',bg:'#f4f8f6',panel:'#ffffff',line:'#dae7e2',primary:'#2b6b5d',accent:'#8a5a2b',
+    display:"'Cormorant Garamond'",body:"'Jost'",google:'Cormorant+Garamond:wght@500;600;700&family=Jost:wght@400;500;600',
+    sysDisplay:"Georgia,'Times New Roman',serif",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'20px',hero:'center',services:'cards',quotes:'featured',caps:false,weight:600,callBar:false,dark:false,density:96},
+  saas:{label:'Product Modern',for:'Software, agencies, digital products',
+    ink:'#101318',ink2:'#565f6d',bg:'#ffffff',panel:'#f6f7f9',line:'#e5e8ed',primary:'#4338ca',accent:'#0e7490',
+    display:"'Plus Jakarta Sans'",body:"'Plus Jakarta Sans'",google:'Plus+Jakarta+Sans:wght@400;500;600;800',
+    sysDisplay:"system-ui,-apple-system,Segoe UI",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'14px',hero:'split',services:'cards',quotes:'cards',caps:false,weight:800,callBar:false,dark:false,density:86},
+  midnight:{label:'Midnight Pro',for:'Security, IT, night-shift and 24/7 trades',
+    ink:'#e9edf5',ink2:'#98a2b4',bg:'#0a0d14',panel:'#131824',line:'#232a3a',primary:'#5b9dff',accent:'#28c2a0',
+    display:"'Space Grotesk'",body:"'Inter'",google:'Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600',
+    sysDisplay:"system-ui,-apple-system,Segoe UI",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'10px',hero:'banner',services:'cards',quotes:'cards',caps:false,weight:700,callBar:true,dark:true,density:84},
+  artisan:{label:'Artisan Craft',for:'Joiners, potters, bakers, makers',
+    ink:'#241c14',ink2:'#63564a',bg:'#faf4ea',panel:'#f2e8d9',line:'#e2d4bf',primary:'#8a4a1e',accent:'#3d6152',
+    display:"'Bitter'",body:"'Karla'",google:'Bitter:wght@600;700&family=Karla:wght@400;500;600',
+    sysDisplay:"Georgia,'Times New Roman',serif",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'5px',hero:'split',services:'numbered',quotes:'featured',caps:false,weight:700,callBar:false,dark:false,density:94},
+  coastal:{label:'Coastal Light',for:'Marine, holiday lets, surf and dive',
+    ink:'#12232b',ink2:'#4f6b76',bg:'#f2fafc',panel:'#ffffff',line:'#d3e8ee',primary:'#0d6d8c',accent:'#b25a12',
+    display:"'Outfit'",body:"'Outfit'",google:'Outfit:wght@400;500;600;700',
+    sysDisplay:"system-ui,-apple-system,Segoe UI",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'16px',hero:'banner',services:'cards',quotes:'cards',caps:false,weight:700,callBar:false,dark:false,density:88},
+  boutique:{label:'Boutique Retail',for:'Salons, florists, gift and lifestyle shops',
+    ink:'#241a20',ink2:'#6a5560',bg:'#fdf7f9',panel:'#f7ecf0',line:'#ecd9e1',primary:'#9c2d5e',accent:'#4b5f3a',
+    display:"'Marcellus'",body:"'Mulish'",google:'Marcellus&family=Mulish:wght@400;500;600;700',
+    sysDisplay:"Georgia,'Times New Roman',serif",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'2px',hero:'center',services:'cards',quotes:'featured',caps:false,weight:400,callBar:false,dark:false,density:98},
+  civic:{label:'Civic Trust',for:'Councils, charities, community services',
+    ink:'#15191e',ink2:'#525b66',bg:'#ffffff',panel:'#f4f6f8',line:'#dfe4ea',primary:'#1d4f91',accent:'#8a4f00',
+    display:"'Source Serif 4'",body:"'Source Sans 3'",google:'Source+Serif+4:wght@600;700&family=Source+Sans+3:wght@400;500;600',
+    sysDisplay:"Georgia,'Times New Roman',serif",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'6px',hero:'split',services:'list',quotes:'cards',caps:false,weight:700,callBar:false,dark:false,density:90},
+  neon:{label:'Neon Night',for:'Bars, gyms, gaming, late-night venues',
+    ink:'#f2f0f7',ink2:'#a09cb0',bg:'#0c0913',panel:'#171223',line:'#282034',primary:'#b98bff',accent:'#34d3a6',
+    display:"'Sora'",body:"'Inter'",google:'Sora:wght@600;800&family=Inter:wght@400;500;600',
+    sysDisplay:"system-ui,-apple-system,Segoe UI",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'14px',hero:'banner',services:'cards',quotes:'featured',caps:true,weight:800,callBar:false,dark:true,density:82},
+  agri:{label:'Rural & Agri',for:'Farm services, fencing, earthworks, rural supply',
+    ink:'#18201a',ink2:'#556052',bg:'#f7f8f2',panel:'#eef0e4',line:'#dcdfcd',primary:'#3f6b21',accent:'#8a4a12',
+    display:"'Roboto Condensed'",body:"'Roboto'",google:'Roboto+Condensed:wght@600;700&family=Roboto:wght@400;500;600',
+    sysDisplay:"'Helvetica Neue',Arial",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'4px',hero:'split',services:'list',quotes:'cards',caps:true,weight:700,callBar:true,dark:false,density:78},
+  finance:{label:'Finance Sharp',for:'Mortgage brokers, insurance, wealth advice',
+    ink:'#0f141a',ink2:'#4f5966',bg:'#ffffff',panel:'#f5f7fa',line:'#e2e7ee',primary:'#0f5132',accent:'#1a4f8a',
+    display:"'Libre Franklin'",body:"'Libre Franklin'",google:'Libre+Franklin:wght@400;500;600;700',
+    sysDisplay:"system-ui,-apple-system,Segoe UI",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'4px',hero:'split',services:'list',quotes:'cards',caps:false,weight:700,callBar:false,dark:false,density:84},
+  kids:{label:'Kids & Family',for:'Childcare, tutoring, party and play',
+    ink:'#1e1a2b',ink2:'#5d5670',bg:'#fffaf2',panel:'#ffffff',line:'#f0e2d0',primary:'#c2410c',accent:'#5b21b6',
+    display:"'Baloo 2'",body:"'Nunito Sans'",google:'Baloo+2:wght@600;700;800&family=Nunito+Sans:wght@400;500;600',
+    sysDisplay:"'Trebuchet MS',system-ui",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'22px',hero:'center',services:'cards',quotes:'cards',caps:false,weight:800,callBar:true,dark:false,density:86},
+  swiss:{label:'Swiss Grid',for:'Architects, industrial design, engineering',
+    ink:'#111111',ink2:'#555555',bg:'#ffffff',panel:'#f2f2f2',line:'#dcdcdc',primary:'#c8102e',accent:'#0a0a0a',
+    display:"'Archivo'",body:"'Archivo'",google:'Archivo:wght@400;500;600;700',
+    sysDisplay:"'Helvetica Neue',Arial",sysBody:"'Helvetica Neue',Arial",
+    radius:'0px',hero:'split',services:'list',quotes:'cards',caps:true,weight:700,callBar:false,dark:false,density:82},
+  botanic:{label:'Botanic Green',for:'Landscapers, nurseries, garden design',
+    ink:'#15201a',ink2:'#4d6156',bg:'#f4f9f4',panel:'#ffffff',line:'#d6e7d8',primary:'#1f6b3a',accent:'#8a5a12',
+    display:"'Fraunces'",body:"'Work Sans'",google:'Fraunces:opsz,wght@9..144,500;9..144,700&family=Work+Sans:wght@400;500;600',
+    sysDisplay:"Georgia,'Times New Roman',serif",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'14px',hero:'banner',services:'cards',quotes:'featured',caps:false,weight:700,callBar:false,dark:false,density:92},
+  slate:{label:'Slate Corporate',for:'Manufacturing, logistics, wholesale',
+    ink:'#e8ecf1',ink2:'#98a3b0',bg:'#161a1f',panel:'#1f242b',line:'#2f3640',primary:'#5aa9e6',accent:'#e8913a',
+    display:"'Inter'",body:"'Inter'",google:'Inter:wght@400;500;600;800',
+    sysDisplay:"system-ui,-apple-system,Segoe UI",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'6px',hero:'split',services:'list',quotes:'cards',caps:false,weight:800,callBar:false,dark:true,density:80},
+  vintage:{label:'Vintage Sign',for:'Barbers, tattoo, breweries, classic trades',
+    ink:'#f5efe2',ink2:'#b3a68f',bg:'#1b1712',panel:'#241f18',line:'#3a3226',primary:'#e0a458',accent:'#8fbf9f',
+    display:"'Alfa Slab One'",body:"'Lato'",google:'Alfa+Slab+One&family=Lato:wght@400;700',
+    sysDisplay:"Georgia,'Times New Roman',serif",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'3px',hero:'banner',services:'numbered',quotes:'featured',caps:true,weight:400,callBar:true,dark:true,density:88},
+  clinic:{label:'Clinic Bright',for:'Physio, optometry, podiatry, allied health',
+    ink:'#101a20',ink2:'#4c6270',bg:'#f6fbfd',panel:'#ffffff',line:'#d8e9f0',primary:'#08657f',accent:'#7a3e8a',
+    display:"'Manrope'",body:"'Manrope'",google:'Manrope:wght@400;500;600;800',
+    sysDisplay:"system-ui,-apple-system,Segoe UI",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'16px',hero:'split',services:'cards',quotes:'cards',caps:false,weight:800,callBar:true,dark:false,density:86},
+  luxe:{label:'Luxe Noir',for:'Jewellery, luxury travel, private clients',
+    ink:'#f0ece4',ink2:'#a89f90',bg:'#100e0c',panel:'#1a1714',line:'#2b2723',primary:'#c9a227',accent:'#9db8c9',
+    display:"'Cormorant Garamond'",body:"'Jost'",google:'Cormorant+Garamond:wght@500;600;700&family=Jost:wght@300;400;500',
+    sysDisplay:"Georgia,'Times New Roman',serif",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'0px',hero:'center',services:'numbered',quotes:'featured',caps:true,weight:600,callBar:false,dark:true,density:104},
+  brutal:{label:'Brutalist Loud',for:'Studios and offers that want to shout',
+    ink:'#0a0a0a',ink2:'#4a4a4a',bg:'#f5f000',panel:'#ffffff',line:'#0a0a0a',primary:'#0a0a0a',accent:'#c8102e',
+    display:"'Archivo Black'",body:"'Archivo'",google:'Archivo+Black&family=Archivo:wght@400;500;600;700',
+    sysDisplay:"'Helvetica Neue',Arial",sysBody:"'Helvetica Neue',Arial",
+    radius:'0px',hero:'split',services:'cards',quotes:'cards',caps:true,weight:400,callBar:true,dark:false,density:74},
+  paper:{label:'Paper Journal',for:'Writers, researchers, long-form services',
+    ink:'#1c1a17',ink2:'#5d574e',bg:'#fbfaf7',panel:'#f3f1eb',line:'#e4e0d6',primary:'#7a3b12',accent:'#2f5d50',
+    display:"'Lora'",body:"'Lora'",google:'Lora:ital,wght@0,400;0,500;0,600;1,400',
+    sysDisplay:"Georgia,'Iowan Old Style',serif",sysBody:"Georgia,'Iowan Old Style',serif",
+    radius:'2px',hero:'center',services:'numbered',quotes:'featured',caps:false,weight:600,callBar:false,dark:false,density:110,story:true},
+  aurora:{label:'Aurora Gradient',for:'Creative agencies, launches, events',
+    ink:'#f3f1f8',ink2:'#a5a0b5',bg:'#0e0b16',panel:'#1a1526',line:'#2a2338',primary:'#7db9ff',accent:'#f0a3c8',
+    display:"'Syne'",body:"'Inter'",google:'Syne:wght@600;800&family=Inter:wght@400;500;600',
+    sysDisplay:"system-ui,-apple-system,Segoe UI",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'18px',hero:'banner',services:'cards',quotes:'featured',caps:false,weight:800,callBar:false,dark:true,density:90,story:true}
 };
 const THEME_IDS=Object.keys(THEMES);
 const DEFAULT_THEME='trades';
-const TONES=['Professional','Friendly','Bold','Minimal',
-  'Warm','Authoritative','Straight-talking','Premium','Reassuring','Energetic',
-  'Technical','Conversational','Empathetic','Witty','Playful'];
+/* Presets are a starting point, not a menu — any free text is accepted and
+   passed to the model verbatim, and anything the user types is remembered. */
+const TONE_GROUPS={
+  'Everyday':['Professional','Friendly','Conversational','Warm','Straight-talking','Down-to-earth','Neighbourly','Plain-spoken'],
+  'Confident':['Bold','Authoritative','Expert','Direct','No-nonsense','Assertive','Punchy','Uncompromising'],
+  'Premium':['Premium','Refined','Understated','Boutique','Quietly confident','Considered','Timeless','Editorial'],
+  'Caring':['Reassuring','Empathetic','Patient','Gentle','Supportive','Family-first','Calm','Non-judgemental'],
+  'Energetic':['Energetic','Upbeat','Enthusiastic','Playful','Witty','Cheerful','Can-do','High-tempo'],
+  'Precise':['Technical','Minimal','Factual','Methodical','Detail-led','Evidence-based','Clinical','Matter-of-fact'],
+  'Persuasive':['Urgent','Offer-led','Benefit-led','Results-focused','Value-driven','Problem-solving']
+};
+const TONES=Object.values(TONE_GROUPS).flat();
+const LS_TONES='instantsite_tones';
+function customTones(){ try{ const a=JSON.parse(localStorage.getItem(LS_TONES)||'[]'); return Array.isArray(a)?a:[]; }catch{ return []; } }
+function rememberTone(t){
+  t=String(t||'').trim(); if(!t||TONES.some(x=>x.toLowerCase()===t.toLowerCase())) return;
+  const list=customTones().filter(x=>x.toLowerCase()!==t.toLowerCase());
+  list.unshift(t);
+  try{ localStorage.setItem(LS_TONES,JSON.stringify(list.slice(0,40))); }catch{}
+}
 
 /* ==========================================================================
    EXAMPLE BRIEFS
@@ -1254,7 +1417,18 @@ const FX={
   cursor:   {label:'Custom cursor', need:'smooth', note:'Trailing dot cursor — desktop only'},
   pin:      {label:'Pinned about',  need:'gsap',   note:'About text holds while the photo scrolls'},
   reveal:   {label:'Mask reveal',   need:'gsap',   note:'Images wipe into view behind a mask'},
-  progress: {label:'Scroll progress',need:'smooth',note:'Thin bar across the top showing position'}
+  progress: {label:'Scroll progress',need:'smooth',note:'Thin bar across the top showing position'},
+  /* ---- second wave ---- */
+  blurin:   {label:'Blur focus',    need:'gsap',   note:'Headings pull into focus from a blur'},
+  scalein:  {label:'Scale in',      need:'gsap',   note:'Cards grow into place from 92%'},
+  flip:     {label:'Card flip',     need:'gsap',   note:'Service cards turn in on their edge'},
+  wave:     {label:'Heading wave',  need:'gsap',   note:'Section headings rise letter by letter'},
+  stepline: {label:'Step line',     need:'gsap',   note:'A line draws down through the numbered steps'},
+  hscroll:  {label:'Sideways gallery',need:'gsap', note:'Recent work scrolls sideways as you scroll down'},
+  typeout:  {label:'Typewriter',    need:'smooth', note:'Hero standfirst types itself out'},
+  ripple:   {label:'Button ripple', need:'smooth', note:'Ink ripple spreads from where you click'},
+  spotlight:{label:'Cursor spotlight',need:'smooth',note:'A soft light follows the cursor across the hero'},
+  condense: {label:'Condensing nav',need:'smooth', note:'The header tightens once you scroll past the hero'}
 };
 const FX_KEYS=Object.keys(FX);
 const fxOn=k=>{ const lv=jsLevelNow(); if(lv==='off') return false;
@@ -1313,6 +1487,67 @@ function motionRuntime(level,t){
     return l;
   }
 
+  /* --------------------------------------------------------------------
+     SAFETY NET. Every reveal below animates FROM opacity:0, and GSAP applies
+     that "from" state the instant the tween is built — the content is only
+     restored when the ticker actually advances. Two ordinary situations stop
+     it advancing: a tab opened in the background (rAF is suspended, so the
+     ticker never ticks), and a ScrollTrigger that never fires. Either one
+     leaves the text permanently invisible. Measured on a real export loaded
+     in a background tab: 26 of 26 animated elements at opacity 0 — the whole
+     page blank, headline included.
+
+     So the animation is never the only thing standing between the reader and
+     the words. setTimeout still fires in a background tab where rAF does not,
+     which is what makes this recoverable.
+     -------------------------------------------------------------------- */
+  var REVEAL_SEL='.card,.rows .row,.num .item,.q,.gal figure,.areas span,'+
+                 '.head > *,section p,section li,.trust span,.fx-w > span,.fig,'+
+                 '.head h2,.hero .sub,.fx-c';
+  function show(el){
+    if(typeof gsap!=='undefined'){ try{ gsap.killTweensOf(el); }catch(e){} }
+    el.style.opacity='1'; el.style.transform='none'; el.style.clipPath='none';
+  }
+  /* An element is only rescued once it has had a fair chance: every reveal
+     here finishes inside 1.6s, and triggers fire at ~90% of the viewport, so
+     anything still fully transparent 2.5 visible-seconds after coming into
+     view is not going to arrive on its own. Time only accrues while the tab is
+     visible — a backgrounded tab is supposed to be frozen. */
+  var SEEN=(typeof WeakMap!=='undefined')?new WeakMap():null, clean=0;
+  var lastTick=-1, stall=0;
+  function sweep(){
+    if(document.visibilityState!=='visible') return;
+    var t=(typeof gsap!=='undefined')?gsap.globalTimeline.time():-1;
+    if(t===lastTick) stall++; else { stall=0; lastTick=t; }
+    var frozen=stall>=3;              // 3 visible seconds without a tick
+    var now=Date.now(), vh=innerHeight||0, pending=0;
+    var list=document.querySelectorAll(REVEAL_SEL);
+    for(var i=0;i<list.length;i++){
+      var el=list[i];
+      if(parseFloat(getComputedStyle(el).opacity)>=0.99){ SEEN&&SEEN['delete'](el); continue; }
+      var r=el.getBoundingClientRect();
+      if(!frozen&&(r.bottom<=0||r.top>=vh)){ SEEN&&SEEN['delete'](el); continue; }
+      if(frozen){ show(el); continue; }
+      var t0=SEEN?SEEN.get(el):0;
+      if(!t0){ SEEN&&SEEN.set(el,now); pending++; continue; }
+      if(now-t0>2500) show(el); else pending++;
+    }
+    // Stop once the page has settled, rather than polling for the whole visit.
+    if(!pending&&!frozen){ if(++clean>=8&&sweep._iv){ clearInterval(sweep._iv); sweep._iv=0; } }
+    else clean=0;
+  }
+  function watchdog(){
+    sweep._iv=setInterval(sweep,1000);
+    document.addEventListener('visibilitychange',function(){
+      if(document.visibilityState!=='visible') return;
+      stall=0; clean=0;
+      if(typeof ScrollTrigger!=='undefined'){ try{ ScrollTrigger.refresh(); }catch(e){} }
+      if(!sweep._iv) sweep._iv=setInterval(sweep,1000);
+    });
+    addEventListener('scroll',function(){ clean=0;
+      if(!sweep._iv) sweep._iv=setInterval(sweep,1000); },{passive:true});
+  }
+
   function effects(lenis){
     if(typeof gsap==='undefined'||typeof ScrollTrigger==='undefined') return;
     gsap.registerPlugin(ScrollTrigger);
@@ -1324,12 +1559,12 @@ function motionRuntime(level,t){
     document.documentElement.classList.add('js-motion');
 
     gsap.utils.toArray('.card,.rows .row,.num .item,.q,.gal figure,.areas span').forEach(function(el,i){
-      gsap.from(el,{opacity:0,y:34,duration:.8,ease:'power3.out',
-        scrollTrigger:{trigger:el,start:'top 88%'},delay:(i%4)*0.06});
+      gsap.from(el,{opacity:0,y:34,duration:.8,ease:'power3.out',clearProps:'opacity,transform',
+        scrollTrigger:{trigger:el,start:'top 88%',once:true},delay:(i%4)*0.06});
     });
     gsap.utils.toArray('.head').forEach(function(el){
-      gsap.from(el.children,{opacity:0,y:22,duration:.7,stagger:.09,ease:'power3.out',
-        scrollTrigger:{trigger:el,start:'top 90%'}});
+      gsap.from(el.children,{opacity:0,y:22,duration:.7,stagger:.09,ease:'power3.out',clearProps:'opacity,transform',
+        scrollTrigger:{trigger:el,start:'top 90%',once:true}});
     });
     // Count up plain quantities only. Ratios like "24/7" would read as "0/7"
     // mid-animation, and years like "Since 2009" would tick up from zero —
@@ -1459,13 +1694,14 @@ function motionRuntime(level,t){
     h1.innerHTML=words.map(function(w){
       return '<span class="fx-w"><span>'+w.replace(/[&<>]/g,'')+'</span></span>';
     }).join(' ');
-    gsap.from(h1.querySelectorAll('.fx-w > span'),{yPercent:110,opacity:0,duration:.8,stagger:.05,ease:'power3.out',delay:.1});
+    gsap.from(h1.querySelectorAll('.fx-w > span'),{yPercent:110,opacity:0,duration:.8,stagger:.05,
+      ease:'power3.out',delay:.1,clearProps:'opacity,transform'});
   }
   function fxFadeUp(){
     if(typeof gsap==='undefined') return;
     gsap.utils.toArray('section p, section li, .trust span').forEach(function(el){
-      gsap.from(el,{opacity:0,y:16,duration:.6,ease:'power2.out',
-        scrollTrigger:{trigger:el,start:'top 92%'}});
+      gsap.from(el,{opacity:0,y:16,duration:.6,ease:'power2.out',clearProps:'opacity,transform',
+        scrollTrigger:{trigger:el,start:'top 92%',once:true}});
     });
   }
   function fxParallax(){
@@ -1479,8 +1715,112 @@ function motionRuntime(level,t){
     if(typeof gsap==='undefined') return;
     gsap.utils.toArray('.fig,.gal figure').forEach(function(el){
       gsap.fromTo(el,{clipPath:'inset(0 0 100% 0)'},{clipPath:'inset(0 0 0% 0)',duration:1,ease:'power3.out',
-        scrollTrigger:{trigger:el,start:'top 86%'}});
+        clearProps:'clipPath',scrollTrigger:{trigger:el,start:'top 86%',once:true}});
     });
+  }
+  function fxBlurIn(){
+    if(typeof gsap==='undefined') return;
+    gsap.utils.toArray('.head h2,.hero .sub').forEach(function(el){
+      gsap.from(el,{filter:'blur(12px)',opacity:0,duration:.9,ease:'power2.out',clearProps:'filter,opacity',
+        scrollTrigger:{trigger:el,start:'top 92%',once:true}});
+    });
+  }
+  function fxScaleIn(){
+    if(typeof gsap==='undefined') return;
+    gsap.utils.toArray('.card,.q,.num .item').forEach(function(el,i){
+      gsap.from(el,{scale:.92,opacity:0,duration:.7,ease:'back.out(1.4)',clearProps:'transform,opacity',
+        delay:(i%3)*.07,scrollTrigger:{trigger:el,start:'top 90%',once:true}});
+    });
+  }
+  function fxFlip(){
+    if(typeof gsap==='undefined') return;
+    gsap.utils.toArray('#services .card,#services .row').forEach(function(el,i){
+      gsap.from(el,{rotationY:-58,transformPerspective:900,opacity:0,duration:.8,ease:'power3.out',
+        clearProps:'transform,opacity',delay:(i%3)*.09,
+        scrollTrigger:{trigger:el,start:'top 88%',once:true}});
+    });
+  }
+  function fxWave(){
+    if(typeof gsap==='undefined') return;
+    gsap.utils.toArray('.head h2').forEach(function(el){
+      if(el.dataset.wave) return; el.dataset.wave='1';
+      var txt=el.textContent||'';
+      el.innerHTML=txt.split('').map(function(c){
+        return c===' '?' ':'<span class="fx-c" style="display:inline-block">'+c.replace(/[&<>]/g,'')+'</span>';
+      }).join('');
+      gsap.from(el.querySelectorAll('.fx-c'),{y:'0.5em',opacity:0,duration:.5,stagger:.018,ease:'power2.out',
+        clearProps:'transform,opacity',scrollTrigger:{trigger:el,start:'top 92%',once:true}});
+    });
+  }
+  function fxStepline(){
+    if(typeof gsap==='undefined') return;
+    var host=document.querySelector('#process .rows,#process .num'); if(!host) return;
+    getComputedStyle(host).position==='static'&&(host.style.position='relative');
+    var line=document.createElement('div'); line.className='fx-stepline';
+    line.style.height=host.offsetHeight+'px'; host.appendChild(line);
+    gsap.to(line,{scaleY:1,ease:'none',
+      scrollTrigger:{trigger:host,start:'top 70%',end:'bottom 70%',scrub:.4}});
+  }
+  function fxHScroll(){
+    if(typeof gsap==='undefined'||innerWidth<900) return;
+    var sec=document.getElementById('gallery'); if(!sec) return;
+    var gal=sec.querySelector('.gal'); if(!gal||gal.children.length<3) return;
+    var strip=document.createElement('div'); strip.className='fx-hstrip';
+    gal.parentNode.insertBefore(strip,gal); strip.appendChild(gal);
+    var dist=gal.scrollWidth-strip.clientWidth;
+    if(dist<80){ strip.parentNode.insertBefore(gal,strip); strip.remove(); return; }
+    gsap.to(gal,{x:-dist,ease:'none',
+      scrollTrigger:{trigger:sec,start:'top top',end:'+='+dist,scrub:.6,pin:true,invalidateOnRefresh:true}});
+  }
+  function fxTypeout(){
+    var el=document.querySelector('.hero .sub'); if(!el||el.dataset.typed) return;
+    var full=(el.textContent||'').trim(); if(full.length<8||full.length>240) return;
+    el.dataset.typed='1';
+    // Keep the real sentence in the DOM for crawlers and screen readers; the
+    // visible layer is a copy, so a stalled animation can never eat the copy.
+    el.setAttribute('aria-label',full);
+    var live=document.createElement('span'); live.setAttribute('aria-hidden','true');
+    var caret=document.createElement('i'); caret.className='fx-caret'; caret.textContent='|';
+    el.textContent=''; el.appendChild(live); el.appendChild(caret);
+    var i=0, done=false;
+    function finish(){ if(done) return; done=true; live.textContent=full; caret.remove(); }
+    var iv=setInterval(function(){
+      if(document.visibilityState!=='visible') return;
+      live.textContent=full.slice(0,++i);
+      if(i>=full.length){ clearInterval(iv); finish(); }
+    },18);
+    setTimeout(finish,9000);                 // never leave the sentence half-written
+  }
+  function fxRipple(){
+    document.querySelectorAll('.b,.card').forEach(function(el){
+      if(getComputedStyle(el).position==='static') el.style.position='relative';
+      el.style.overflow='hidden';
+      el.addEventListener('pointerdown',function(e){
+        var r=el.getBoundingClientRect(), d=Math.max(r.width,r.height);
+        var s=document.createElement('span'); s.className='fx-ripple';
+        s.style.width=s.style.height=d+'px';
+        s.style.left=(e.clientX-r.left-d/2)+'px'; s.style.top=(e.clientY-r.top-d/2)+'px';
+        el.appendChild(s); setTimeout(function(){ s.remove(); },650);
+      });
+    });
+  }
+  function fxSpotlight(){
+    if(!fine) return;
+    var hero=document.querySelector('.hero'); if(!hero) return;
+    if(getComputedStyle(hero).position==='static') hero.style.position='relative';
+    var sp=document.createElement('div'); sp.className='fx-spot'; hero.appendChild(sp);
+    hero.addEventListener('pointermove',function(e){
+      var r=hero.getBoundingClientRect();
+      sp.style.setProperty('--sx',((e.clientX-r.left)/r.width*100)+'%');
+      sp.style.setProperty('--sy',((e.clientY-r.top)/r.height*100)+'%');
+    },{passive:true});
+  }
+  function fxCondense(){
+    var h=document.querySelector('header'); if(!h) return;
+    var on=false;
+    var upd=function(){ var want=scrollY>140;
+      if(want!==on){ on=want; h.classList.toggle('fx-condensed',on); } };
+    addEventListener('scroll',upd,{passive:true}); upd();
   }
   function fxPin(){
     if(typeof gsap==='undefined'||innerWidth<900) return;
@@ -1498,9 +1838,12 @@ function motionRuntime(level,t){
       if(LV==='webgl') webgl();
       // Each is independently guarded, so one failing cannot stop the rest.
       var fns={progress:fxProgress,cursor:fxCursor,magnetic:fxMagnetic,tilt:fxTilt,marquee:fxMarquee,
-               splittext:fxSplit,fadeup:fxFadeUp,parallax:fxParallax,reveal:fxReveal,pin:fxPin};
+               splittext:fxSplit,fadeup:fxFadeUp,parallax:fxParallax,reveal:fxReveal,pin:fxPin,
+               blurin:fxBlurIn,scalein:fxScaleIn,flip:fxFlip,wave:fxWave,stepline:fxStepline,
+               hscroll:fxHScroll,typeout:fxTypeout,ripple:fxRipple,spotlight:fxSpotlight,condense:fxCondense};
       FX.forEach(function(k){ try{ fns[k]&&fns[k](); }catch(e){} });
       if(typeof ScrollTrigger!=='undefined') ScrollTrigger.refresh();
+      watchdog();
     },0);
   });
 })();`;
@@ -1603,14 +1946,14 @@ function savePrefs(){ localStorage.setItem(LS_PREF,JSON.stringify(prefs)); }
 const BRIEF_FIELDS=['bizName','bizType','bizTypeOther','location','standout','desc','bizKeyword','bizEst','bizTeam','bizPrice','bizCert','bizGuar','cPhone','cEmail','cArea','cHours','cBook'];
 function saveBrief(){
   const o={}; BRIEF_FIELDS.forEach(f=>o[f]=$(f).value);
-  o.tone=curChip('toneChips'); o.locale=curChip('localeChips');
+  o.tone=toneValue(); o.locale=curChip('localeChips');
   try{ localStorage.setItem(LS_BRIEF,JSON.stringify(o)); }catch{}
 }
 function loadBrief(){
   try{
     const o=JSON.parse(localStorage.getItem(LS_BRIEF)||'{}');
     BRIEF_FIELDS.forEach(f=>{ if(typeof o[f]==='string') $(f).value=o[f]; });
-    if(o.tone) selChip('toneChips',o.tone);
+    if(o.tone) setTone(o.tone);
     if(o.locale) selChip('localeChips',o.locale);
   }catch{}
 }
@@ -1789,12 +2132,14 @@ STEP 2 — CHOOSE ONLY THE SECTIONS THAT SERVE THAT JOB.
 ${PAGE_SECTION_MENU}
 
 Section rules — these matter more than any other rule here:
-- Pick 4 to 6 sections TOTAL, including the two mandatory ones. Fewer, deeper sections beat a full set of thin ones.
+- Pick 3 to 5 CONTENT sections IN ADDITION to the two mandatory ones, so "sections" holds 5 to 7 entries in total. Three content sections is the floor, not the target — a page with one or two is not a page.
+- Every content section you list MUST come back with real content in its array. Listing "faq" and returning an empty "faqs" is a failure; if you are not going to write it, do not list it.
 - Order them so the page answers its own question in the first screen, then supports the answer.
 - OMIT any section that would restate what another page already says. A page that repeats the home page's trust band, steps, suburb list and objections is duplicate content — it will not rank and it gives an answer engine nothing new to quote.
 - Only include "stats", "process" or "areas" on an interior page if THIS page's topic genuinely needs them and the content would differ from the home page's. Usually it does not. Do not reach for them to pad the page out.
 - Only include "reviews" if you can write quotes that are specifically about THIS page's topic rather than the business in general.
 - Return content arrays ONLY for the sections you chose. For every section you did not choose, return an empty array (or "" for "about"). Do not write content you are not going to show.
+- Before you answer, count your content sections. If the count is under 3, go back and find another angle on this page's topic that earns its own section — a comparison, a step-by-step, the questions it raises, who it suits — rather than padding an existing one.
 
 STEP 3 — WRITE FOR SEARCH ENGINES AND ANSWER ENGINES.
 This page has to win a classic search result AND be quotable by an AI assistant answering a question out loud. That means:
@@ -1896,6 +2241,9 @@ function parsePageContent(raw){
   if(picked.length<3) picked=SECTION_ORDER.filter(k=>has[k]);
   obj.sections={ order:[...picked,...SECTION_ORDER.filter(k=>!picked.includes(k))],
                  hidden:SECTION_ORDER.filter(k=>!picked.includes(k)) };
+  // hero and contact are structural furniture, not content. Count what the
+  // page actually says.
+  obj.contentSections=picked.filter(k=>k!=='hero'&&k!=='contact').length;
   return obj;
 }
 
@@ -2255,7 +2603,22 @@ ${jsSmoothOn()?`
 .fx-marquee-run{display:inline-block;padding-left:100%;font-family:${t.displayFont},sans-serif;font-weight:${t.weight};
   font-size:clamp(18px,2.4vw,26px);color:${t.primary};opacity:.85;animation:fxmarq 38s linear infinite;${t.caps?'text-transform:uppercase;letter-spacing:.05em;':''}}
 @keyframes fxmarq{from{transform:translateX(0)}to{transform:translateX(-50%)}}
-.fx-w{display:inline-block;overflow:hidden;vertical-align:bottom}
+.fx-ripple{position:absolute;border-radius:50%;transform:scale(0);opacity:.45;background:currentColor;
+  pointer-events:none;animation:fxrip .6s ease-out forwards}
+@keyframes fxrip{to{transform:scale(2.4);opacity:0}}
+.fx-spot{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .3s;
+  background:radial-gradient(220px circle at var(--sx,50%) var(--sy,50%),rgba(255,255,255,.16),transparent 70%)}
+.hero:hover .fx-spot{opacity:1}
+.fx-caret{display:inline-block;width:.6ch;animation:fxcaret 1s steps(2) infinite}
+@keyframes fxcaret{50%{opacity:0}}
+header.fx-condensed{padding-top:6px;padding-bottom:6px}
+header.fx-condensed .nav-inner{transform:scale(.94);transform-origin:left center}
+.fx-hstrip{overflow:hidden}
+.fx-hstrip > .gal{display:flex;flex-wrap:nowrap;width:max-content;gap:16px}
+.fx-hstrip > .gal figure{flex:0 0 clamp(240px,32vw,420px)}
+.fx-stepline{position:absolute;left:0;top:0;width:2px;background:currentColor;opacity:.35;
+  transform:scaleY(0);transform-origin:top}
+.fx-w{display:inline-block;overflow:hidden;vertical-align:bottom;padding:.14em .06em .22em;margin:-.14em -.06em -.22em}
 .fx-w > span{display:inline-block}
 @media(prefers-reduced-motion:reduce){.fx-marquee-run{animation:none}.fx-cursor,.fx-progress{display:none}}`:''}
 /* When GSAP drives the reveals it owns opacity/transform outright — leaving the
@@ -3079,7 +3442,7 @@ function readBrief(){
     location:$('location').value.trim(),desc:$('desc').value.trim(),standout:$('standout').value.trim(),
     keyword:$('bizKeyword').value.trim(),est:$('bizEst').value.trim(),team:$('bizTeam').value.trim(),
     price:$('bizPrice').value,cert:$('bizCert').value.trim(),guarantee:$('bizGuar').value.trim(),
-    tone:curChip('toneChips'),locale:curChip('localeChips'),theme:prefs.theme,
+    tone:toneValue(),locale:curChip('localeChips'),theme:prefs.theme,
     phone:$('cPhone').value.trim(),email:$('cEmail').value.trim(),area:$('cArea').value.trim(),
     hours:$('cHours').value.trim(),book:$('cBook').value.trim()};
 }
@@ -3240,6 +3603,16 @@ function shareState(withImages){
   }
   return {v:4,s:clone,wl:wl.on?{on:true,name:wl.name}:null};
 }
+/* A review link is the same payload as a share link, plus who the decision
+   should go back to. It opens the site in a sign-off view instead of a plain
+   preview. Still no server: the client's decision leaves as an email they
+   send themselves, which is the only honest option without a backend. */
+const REVIEW_PREFIX='#a=';
+async function buildReviewURL(withImages,to){
+  const payload=JSON.stringify(Object.assign(shareState(withImages),
+    {rev:{to:String(to||'').trim(),agency:wl.on?wl.name:'',at:Date.now()}}));
+  return location.origin+location.pathname+REVIEW_PREFIX+(await packShare(payload));
+}
 async function buildShareURL(withImages){
   const payload=JSON.stringify(shareState(withImages));
   const packed=await packShare(payload);
@@ -3248,7 +3621,7 @@ async function buildShareURL(withImages){
 }
 
 /* Prospect view: the page a shared link opens. Read-only, full viewport. */
-async function renderProspectView(raw){
+async function renderProspectView(raw,review){
   let data;
   try{ data=JSON.parse(await unpackShare(raw)); }
   catch(e){
@@ -3262,16 +3635,41 @@ async function renderProspectView(raw){
   st.media=st.media||blankMedia();
   if(!Array.isArray(st.faqs)) st.faqs=[];
   const agency=data.wl&&data.wl.name?data.wl.name:'';
+  const rev=review?(data.rev||{}):null;
   document.documentElement.style.overflow='auto';
   document.body.style.overflow='auto';
+  const BAR='position:fixed;z-index:9;background:rgba(20,20,22,.9);backdrop-filter:blur(14px);color:#fff;'+
+            'font:500 12.5px/1.5 var(--sans);box-shadow:0 8px 26px rgba(0,0,0,.34)';
+  const PILL='color:#fff;background:rgba(255,255,255,.18);padding:7px 13px;border-radius:999px;text-decoration:none;border:0;cursor:pointer;font:inherit';
   document.body.innerHTML=`
-    <iframe id="pv" title="${esc(st.meta.businessName)}" style="position:fixed;inset:0;width:100%;height:100%;border:0"></iframe>
-    <div id="pvbar" style="position:fixed;right:14px;bottom:14px;z-index:9;display:flex;gap:8px;align-items:center;
-      background:rgba(20,20,22,.86);backdrop-filter:blur(14px);color:#fff;padding:8px 10px 8px 14px;border-radius:999px;
-      font:500 12.5px/1 var(--sans);box-shadow:0 8px 26px rgba(0,0,0,.3)">
+    <iframe id="pv" title="${esc(st.meta.businessName)}" style="position:fixed;inset:0;width:100%;height:100%;border:0"></iframe>`
+    +(rev?`
+    <div id="pvbar" style="${BAR};left:0;right:0;bottom:0;padding:10px 14px;display:flex;gap:10px;
+      align-items:center;flex-wrap:wrap;justify-content:center">
+      <span style="opacity:.85;margin-right:2px">${agency?esc(agency):'Your new website'} — please review${st.pages&&st.pages.length?' all '+(st.pages.length+1)+' pages':''}</span>
+      <span id="pvpages" style="display:flex;gap:6px;flex-wrap:wrap"></span>
+      <button id="pvOk" style="${PILL};background:#30d158;color:#08210f;font-weight:700">Approve this site</button>
+      <button id="pvNo" style="${PILL}">Request changes</button>
+    </div>
+    <div id="pvsheet" style="${BAR};inset:auto 0 0 0;padding:18px 16px 20px;display:none">
+      <div style="max-width:620px;margin:0 auto">
+        <div id="pvsheetTitle" style="font-size:15px;font-weight:600;margin-bottom:10px"></div>
+        <textarea id="pvNotes" rows="4" placeholder="What would you like changed? Be as specific as you like — mention the page and the section."
+          style="width:100%;padding:11px 13px;border-radius:12px;border:1px solid rgba(255,255,255,.22);
+          background:rgba(255,255,255,.08);color:#fff;font:inherit;resize:vertical"></textarea>
+        <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+          <button id="pvSend" style="${PILL};background:#0a84ff;font-weight:600">Send</button>
+          <button id="pvCopy" style="${PILL}">Copy instead</button>
+          <button id="pvCancel" style="${PILL};background:transparent;border:1px solid rgba(255,255,255,.25)">Cancel</button>
+        </div>
+        <div id="pvDone" class="tiny" style="margin-top:10px;opacity:.85"></div>
+      </div>
+    </div>`:`
+    <div id="pvbar" style="${BAR};right:14px;bottom:14px;display:flex;gap:8px;align-items:center;
+      padding:8px 10px 8px 14px;border-radius:999px">
       <span style="opacity:.85">${agency?esc(agency)+' — preview':'Website preview'}</span>
-      <a href="${location.origin+location.pathname}" style="color:#fff;background:rgba(255,255,255,.18);padding:6px 12px;border-radius:999px;text-decoration:none">Make your own</a>
-    </div>`;
+      <a href="${location.origin+location.pathname}" style="${PILL}">Make your own</a>
+    </div>`);
   /* Shared links carry every page, so the prospect view needs its own page
      switching — the .html filenames only exist inside the exported ZIP. */
   const view=migrate(st);
@@ -3284,7 +3682,67 @@ async function renderProspectView(raw){
       d.querySelectorAll('[data-page]').forEach(a=>a.addEventListener('click',e=>{ e.preventDefault(); paint(+a.dataset.page); }));
     };
     document.title=(i?pageTitle(view,i)+' — ':'')+view.meta.businessName+(!i&&view.meta.location?' — '+view.meta.location:'');
+    if(rev) markPages();
   };
+
+  /* ---- sign-off ------------------------------------------------------
+     No backend exists, so the decision cannot be recorded here. It leaves as
+     an email the client sends themselves, with a clipboard copy as the
+     fallback for anyone without a mail client wired up. Saying so plainly
+     beats a fake "submitted" tick. */
+  let seen=null;
+  function markPages(){
+    const host=document.getElementById('pvpages'); if(!host) return;
+    if(!seen) seen=new Set();
+    seen.add(shown);
+    host.innerHTML=Array.from({length:pageCount(view)},(_,i)=>
+      `<button data-p="${i}" style="border:0;cursor:pointer;font:inherit;padding:6px 11px;border-radius:999px;
+        background:${i===shown?'rgba(255,255,255,.28)':'rgba(255,255,255,.1)'};color:#fff">
+        ${seen.has(i)?'✓ ':''}${esc(pageTitle(view,i))}</button>`).join('');
+    host.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>paint(+b.dataset.p));
+  }
+  if(rev){
+    const sheet=document.getElementById('pvsheet');
+    const summary=ok=>{
+      const unseen=Array.from({length:pageCount(view)},(_,i)=>i).filter(i=>!seen.has(i)).map(i=>pageTitle(view,i));
+      const notes=(document.getElementById('pvNotes').value||'').trim();
+      return `${ok?'APPROVED':'CHANGES REQUESTED'} — ${view.meta.businessName}\n`
+        +`Reviewed: ${Array.from(seen).map(i=>pageTitle(view,i)).join(', ')||'none'}\n`
+        +(unseen.length?`Not opened: ${unseen.join(', ')}\n`:'')
+        +`Date: ${new Date().toLocaleString()}\n`
+        +(notes?`\nNotes:\n${notes}\n`:'')
+        +`\nReview link:\n${location.href}`;
+    };
+    let approving=true;
+    const open=ok=>{ approving=ok;
+      document.getElementById('pvsheetTitle').textContent=ok
+        ?'Approve this site — add a note if you like'
+        :'What needs to change?';
+      document.getElementById('pvNotes').placeholder=ok
+        ?'Anything you want noted alongside the approval (optional).'
+        :'Be as specific as you like — mention the page and the section.';
+      document.getElementById('pvDone').textContent='';
+      sheet.style.display='block'; document.getElementById('pvNotes').focus(); };
+    document.getElementById('pvOk').onclick=()=>open(true);
+    document.getElementById('pvNo').onclick=()=>open(false);
+    document.getElementById('pvCancel').onclick=()=>{ sheet.style.display='none'; };
+    document.getElementById('pvSend').onclick=()=>{
+      const body=summary(approving);
+      const subj=`${approving?'Approved':'Changes requested'}: ${view.meta.businessName} website`;
+      if(rev.to){
+        location.href=`mailto:${encodeURIComponent(rev.to)}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`;
+        document.getElementById('pvDone').textContent='Your email app should have opened. Nothing is sent until you press send there.';
+      }else{
+        navigator.clipboard&&navigator.clipboard.writeText(body);
+        document.getElementById('pvDone').textContent='No return address was set on this link, so your decision has been copied to the clipboard — paste it into a reply.';
+      }
+    };
+    document.getElementById('pvCopy').onclick=async()=>{
+      try{ await navigator.clipboard.writeText(summary(approving));
+        document.getElementById('pvDone').textContent='Copied. Paste it into an email or message.'; }
+      catch{ document.getElementById('pvDone').textContent='Could not reach the clipboard — select the text above and copy it manually.'; }
+    };
+  }
   paint(0);
 }
 
@@ -4024,10 +4482,63 @@ function applyBranding(){
    17. WIRE-UP
    ========================================================================== */
 $('bizType').innerHTML=Object.entries(PACKS).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join('');
-$('toneChips').innerHTML=TONES.map((t,i)=>`<button type="button" class="chip ${i===0?'on':''}" data-v="${t}">${t}</button>`).join('');
+/* ---- tone combobox ---------------------------------------------------
+   Presets are searchable; anything typed is accepted verbatim and kept for
+   next time. There is no fixed list of valid tones. */
+const toneValue=()=>$('toneInput').value.trim()||TONES[0];
+function setTone(v,close){
+  $('toneInput').value=v;
+  $('toneCombo').classList.toggle('filled',!!v);
+  if(close!==false) $('toneCombo').classList.remove('open');
+  $('toneInput').setAttribute('aria-expanded',String($('toneCombo').classList.contains('open')));
+  saveBrief();
+}
+function renderTones(){
+  const q=$('toneInput').value.trim().toLowerCase(), cur=$('toneInput').value.trim().toLowerCase();
+  const mine=customTones();
+  const groups=Object.entries(TONE_GROUPS);
+  let html='', hits=0;
+  const row=t=>{ hits++; return `<button type="button" data-t="${esc(t)}"${t.toLowerCase()===cur?' class="on"':''}>${esc(t)}</button>`; };
+  const mineHits=mine.filter(t=>!q||t.toLowerCase().includes(q));
+  if(mineHits.length) html+=`<div class="combo-group">Yours</div>`+mineHits.map(row).join('');
+  groups.forEach(([g,list])=>{
+    const f=list.filter(t=>!q||t.toLowerCase().includes(q));
+    if(f.length) html+=`<div class="combo-group">${g}</div>`+f.map(row).join('');
+  });
+  const exact=[...mine,...TONES].some(t=>t.toLowerCase()===q);
+  if(q&&!exact) html=`<button type="button" class="new" data-t="${esc($('toneInput').value.trim())}">Use “${esc($('toneInput').value.trim())}” as a custom tone</button>`+html;
+  if(!html) html=`<div class="combo-empty">Type any tone you like — it will be used exactly as written.</div>`;
+  $('toneList').innerHTML=html;
+  $('toneList').querySelectorAll('[data-t]').forEach(btn=>btn.onclick=()=>{
+    rememberTone(btn.dataset.t); setTone(btn.dataset.t);
+  });
+}
+$('toneInput').value=TONES[0]; $('toneCombo').classList.add('filled');
+$('toneInput').addEventListener('focus',()=>{ $('toneCombo').classList.add('open');
+  $('toneInput').setAttribute('aria-expanded','true'); renderTones(); });
+$('toneInput').addEventListener('input',()=>{ $('toneCombo').classList.add('open');
+  $('toneCombo').classList.toggle('filled',!!$('toneInput').value); renderTones(); saveBrief(); });
+$('toneInput').addEventListener('keydown',e=>{
+  const items=[...$('toneList').querySelectorAll('[data-t]')];
+  const i=items.findIndex(x=>x.classList.contains('hi'));
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){
+    e.preventDefault(); if(!items.length) return;
+    const n=e.key==='ArrowDown'?Math.min(items.length-1,i+1):Math.max(0,i-1);
+    items.forEach(x=>x.classList.remove('hi')); items[n].classList.add('hi');
+    items[n].scrollIntoView({block:'nearest'});
+  } else if(e.key==='Enter'){
+    e.preventDefault();
+    const pick=i>-1?items[i].dataset.t:$('toneInput').value.trim();
+    if(pick){ rememberTone(pick); setTone(pick); }
+  } else if(e.key==='Escape'){ $('toneCombo').classList.remove('open'); }
+});
+$('toneClear').onclick=()=>{ setTone('',false); $('toneInput').focus(); renderTones(); };
+document.addEventListener('click',e=>{ if(!e.target.closest('#toneCombo')){
+  const v=$('toneInput').value.trim(); if(v) rememberTone(v);
+  $('toneCombo').classList.remove('open'); $('toneInput').setAttribute('aria-expanded','false'); } });
 $('localeChips').innerHTML=Object.entries(LOCALES).map(([k,v],i)=>`<button type="button" class="chip ${i===0?'on':''}" data-v="${k}">${v.label}</button>`).join('');
 function wireChips(id){ document.querySelectorAll(`#${id} .chip`).forEach(c=>c.onclick=()=>{ document.querySelectorAll(`#${id} .chip`).forEach(x=>x.classList.remove('on')); c.classList.add('on'); saveBrief(); }); }
-wireChips('toneChips'); wireChips('localeChips');
+wireChips('localeChips');
 
 function syncOtherField(){ $('otherWrap').classList.toggle('hidden',$('bizType').value!=='other'); }
 $('bizType').onchange=()=>{
@@ -4083,7 +4594,7 @@ function loadBriefFromSite(){
   $('bizTypeOther').value=m.typeOther||''; syncOtherField();
   $('cPhone').value=c.phone||''; $('cEmail').value=c.email||'';
   $('cArea').value=c.area||''; $('cHours').value=c.hours||''; $('cBook').value=c.book||'';
-  if(m.tone) selChip('toneChips',m.tone);
+  if(m.tone){ rememberTone(m.tone); setTone(m.tone); }
   if(m.locale) selChip('localeChips',m.locale);
   refreshStatus();
 }
@@ -4100,7 +4611,7 @@ $('btnDemo').onclick=()=>{
   $('bizPrice').value=e.price||''; $('bizCert').value=e.cert||''; $('bizGuar').value=e.guar||'';
   $('cPhone').value=e.ph||''; $('cEmail').value=e.em||'';
   $('cArea').value=e.area||''; $('cHours').value=e.hrs||''; $('cBook').value='';
-  if(e.tone) selChip('toneChips',e.tone);
+  if(e.tone){ rememberTone(e.tone); setTone(e.tone); }
   syncOtherField();
   $('demoWhich').textContent=`${exampleIdx+1} of ${EXAMPLES.length} — click again for another`;
   saveBrief(); refreshStatus();
@@ -4134,8 +4645,44 @@ document.addEventListener('click',e=>{ if(!e.target.closest('.dlwrap')) closeDl(
 document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeDl(); });
 dlMenu.querySelectorAll('[data-dl]').forEach(b=>b.onclick=()=>{
   closeDl();
-  if(b.dataset.dl==='wp') downloadWordPress(); else download();
+  if(b.dataset.dl==='wp') downloadWordPress();
+  else if(b.dataset.dl==='review') makeReviewLink(true);
+  else download();
 });
+
+let lastReviewURL='';
+async function makeReviewLink(alsoOpenPanel){
+  if(!siteState) return;
+  const to=$('approveTo').value.trim();
+  $('btnMakeReview').disabled=true; $('reviewMeta').textContent='Building…';
+  try{
+    const url=await buildReviewURL(shareIncludesImages,to);
+    lastReviewURL=url; $('reviewUrl').value=url;
+    const kb=(new Blob([url]).size/1024).toFixed(1);
+    $('reviewMeta').textContent=`${kb} KB link${to?` — decisions go to ${to}`:' — no return address set, the client will copy their decision instead'}.`
+      +(url.length>8000?' Long links can be truncated by some chat apps; turn photos off if it fails to open.':'');
+    try{ prefs.approveTo=to; savePrefs(); }catch{}
+    if(alsoOpenPanel){
+      try{ await navigator.clipboard.writeText(url); $('reviewMeta').textContent='Copied. '+$('reviewMeta').textContent; }catch{}
+      selectTab('share');
+    }
+  }catch(e){ $('reviewMeta').textContent='Could not build the link: '+(e.message||e); }
+  finally{ $('btnMakeReview').disabled=false; }
+}
+$('btnMakeReview').onclick=()=>makeReviewLink(false);
+$('btnCopyReview').onclick=async()=>{
+  if(!lastReviewURL) await makeReviewLink(false);
+  if(!lastReviewURL) return;
+  try{ await navigator.clipboard.writeText(lastReviewURL); $('btnCopyReview').textContent='Copied'; }
+  catch{ $('btnCopyReview').textContent='Copy failed'; }
+  setTimeout(()=>{ $('btnCopyReview').textContent='Copy link'; },1600);
+};
+$('btnOpenReview').onclick=async()=>{
+  if(!lastReviewURL) await makeReviewLink(false);
+  if(lastReviewURL) window.open(lastReviewURL,'_blank','noopener');
+};
+if(prefs.approveTo) $('approveTo').value=prefs.approveTo;
+$('approveTo').addEventListener('input',()=>{ lastReviewURL=''; $('reviewUrl').value=''; $('reviewMeta').textContent=''; });
 
 async function downloadWordPress(){
   if(!siteState) return;
@@ -4470,8 +5017,23 @@ $('btnFillPage').onclick=async()=>{
   b.page=title;
   b.pageKeyword=P.keyword||$('newPageName').dataset.keyword||'';
   try{
-    const raw=await callClaude(pageSystemPrompt(b),pageUserPrompt(b,siteDigest(siteState,currentPage)));
-    const parsed=parsePageContent(raw);
+    const digest=siteDigest(siteState,currentPage);
+    let parsed=parsePageContent(await callClaude(pageSystemPrompt(b),pageUserPrompt(b,digest)));
+    /* The floor is 3 content sections. A model that comes back with one has
+       not written a page, it has written a paragraph — so ask again, once,
+       naming what it actually returned. One extra call is worth far less than
+       a page the user has to throw away. */
+    if(parsed.contentSections<3){
+      btn.textContent='Going deeper…';
+      setPageStatus(`Only ${parsed.contentSections} section${parsed.contentSections===1?'':'s'} came back — asking for a fuller page…`);
+      const retry=pageUserPrompt(b,digest)+
+        `\n\nYOUR PREVIOUS ATTEMPT RETURNED ONLY ${parsed.contentSections} CONTENT SECTION(S). That is not a page.`+
+        `\nWrite it again with 3 to 5 content sections, each with genuine content in its array, and each earning its place on THIS page's topic.`;
+      try{
+        const second=parsePageContent(await callClaude(pageSystemPrompt(b),retry));
+        if(second.contentSections>parsed.contentSections) parsed=second;
+      }catch(e){ /* keep the first attempt rather than losing both */ }
+    }
     ['hero','services','about','testimonials','faqs','stats','process','areas',
      'contact_cta','seo_title','seo_meta_description','page_intent']
       .forEach(k=>{ if(parsed[k]!==undefined) P[k]=parsed[k]; });
@@ -4482,7 +5044,9 @@ $('btnFillPage').onclick=async()=>{
     renderPreview(); renderSections(); renderChecks(); renderTips(); loadLinkFields(); pushHistory(siteState);
     lastShareURL='';
     const on=P.sections.order.filter(k=>!P.sections.hidden.includes(k));
-    setPageStatus(`"${title}" written — ${INTENT_LABEL[P.page_intent]||'page'}, ${on.length} sections: ${on.map(k=>SECTION_META[k].label).join(', ')}.`);
+    const thin=parsed.contentSections<3;
+    setPageStatus(`"${title}" written — ${INTENT_LABEL[P.page_intent]||'page'}, ${on.length} sections: ${on.map(k=>SECTION_META[k].label).join(', ')}.`
+      +(thin?` Only ${parsed.contentSections} of the 3 content sections came back — press "Write this page" again for another pass.`:''),thin);
   }catch(e){ setPageStatus(e.message||'Could not write that page.',true); }
   finally{ btn.disabled=false; btn.textContent=was; }
 };
@@ -4827,7 +5391,9 @@ if(window.innerWidth<=1240) $('btnRail').classList.remove('on'); else $('btnRail
 /* A shared link opens straight into the read-only prospect view. The visitor
    is not the owner: they should never see the editor or an API-key prompt, so
    the dashboard is never booted at all in that case. */
-if(location.hash.startsWith(SHARE_PREFIX)){
+if(location.hash.startsWith(REVIEW_PREFIX)){
+  renderProspectView(location.hash.slice(REVIEW_PREFIX.length),true);
+}else if(location.hash.startsWith(SHARE_PREFIX)){
   renderProspectView(location.hash.slice(SHARE_PREFIX.length));
 }else{
   bootDashboard();
@@ -4836,6 +5402,7 @@ if(location.hash.startsWith(SHARE_PREFIX)){
    boot never re-runs, so the page would appear to ignore the link entirely.
    Reload so the branch above evaluates against the new hash. */
 window.addEventListener('hashchange',()=>{
-  if(location.hash.startsWith(SHARE_PREFIX)&&!document.getElementById('pv')) location.reload();
+  if((location.hash.startsWith(SHARE_PREFIX)||location.hash.startsWith(REVIEW_PREFIX))
+     &&!document.getElementById('pv')) location.reload();
 });
 </script>
