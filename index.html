@@ -282,6 +282,9 @@ select{appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%
 .combo-group{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--txt-3);padding:8px 10px 4px}
 .combo-empty{padding:10px;font-size:12px;color:var(--txt-3)}
 .suggs{display:block;font-size:10.5px;color:var(--txt-3);margin-top:5px;letter-spacing:.02em}
+.pbox{margin-top:10px;padding:13px;border:1px solid var(--stroke);border-radius:12px;background:var(--surface-2)}
+.warnline{margin-top:6px;padding:8px 10px;border-radius:8px;line-height:1.55;
+  background:color-mix(in srgb,var(--warn) 12%,transparent);color:var(--warn)}
 .gout{margin:10px 0;padding:12px;border:1px solid var(--stroke);border-radius:12px;background:var(--surface-2)}
 .gout h5{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--txt-3);margin-bottom:6px}
 .gout pre{white-space:pre-wrap;font:inherit;font-size:12.5px;line-height:1.6;color:var(--txt-2);margin-bottom:10px}
@@ -732,7 +735,33 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
           <button class="mini" id="btnDemo" type="button">Fill example</button>
           <button class="mini" id="btnAiExample" type="button">✨ Invent one</button>
+          <button class="mini" id="btnProspect" type="button">🔎 Prospect</button>
           <span class="tiny" id="demoWhich"></span>
+        </div>
+        <div id="prospectBox" class="hidden">
+          <div class="pbox">
+            <b style="font-size:13px">Find businesses with a Google profile and no website</b>
+            <div class="tiny warnline">This does not search the internet. Claude has no live web access from here, so anything it "found" would be invented, and invented names, addresses and phone numbers are worse than none. Instead it builds the search plan, and then analyses the real listings you paste in.</div>
+            <div class="tabs" id="pMode" style="margin:10px 0">
+              <button data-pm="plan" class="on">Build a search plan</button><button data-pm="analyse">Analyse a listing</button>
+            </div>
+            <div id="pPlan">
+              <div class="two">
+                <div class="field"><label for="pTrade">Trade or category</label><input type="text" id="pTrade" placeholder="Roofers" maxlength="60"></div>
+                <div class="field"><label for="pArea">Area</label><input type="text" id="pArea" placeholder="Rotorua, Bay of Plenty" maxlength="80"></div>
+              </div>
+              <button class="mini" id="btnPlan" type="button">Build the plan</button>
+            </div>
+            <div id="pAnalyse" class="hidden">
+              <div class="field">
+                <label for="pPaste">Paste the listing</label>
+                <textarea id="pPaste" rows="6" placeholder="Copy straight off Google Maps and paste it here. Name, category, address, phone, rating, review count, hours, and whether a website is listed."></textarea>
+              </div>
+              <button class="mini" id="btnAnalyse" type="button">Analyse and fill the brief</button>
+            </div>
+            <div id="pStatus" class="tiny" style="margin-top:8px"></div>
+            <div id="pOut"></div>
+          </div>
         </div>
       </div>
     </details>
@@ -800,8 +829,14 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
           <input type="url" id="formAction" placeholder="https://formspree.io/f/… (optional)">
           <div class="tiny" id="formNote"></div>
         </div>
+        <div class="row">
+          <div class="lbl"><b>Form columns</b>Two columns fit more above the fold. Auto uses two on desktop and one on a phone.</div>
+          <div class="tabs" id="formColsSeg">
+            <button data-fc="auto">Auto</button><button data-fc="1">One</button><button data-fc="2">Two</button>
+          </div>
+        </div>
         <div class="field">
-          <label>Form fields</label>
+          <label>Form fields <span class="opt" id="formFieldCount"></span></label>
           <div class="chips" id="formFields"></div>
         </div>
       </div>
@@ -910,6 +945,11 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
             <button class="mini" id="btnGbp" type="button">Google Business Profile</button>
             <button class="mini" id="btnAds" type="button">Google Ads copy</button>
             <button class="mini" id="btnKw" type="button">Keyword plan</button>
+            <button class="mini" id="btnSocial" type="button">Social calendar</button>
+            <button class="mini" id="btnEmail" type="button">Follow-up sequence</button>
+            <button class="mini" id="btnReviews" type="button">Review engine</button>
+            <button class="mini" id="btnAudit" type="button">Local SEO audit</button>
+            <button class="mini" id="btnProposal" type="button">Proposal &amp; pricing</button>
           </div>
           <div id="growthStatus" class="tiny" style="margin-top:8px"></div>
         </div>
@@ -1131,6 +1171,27 @@ const PACKS={
   legal:{label:'Legal / Accounting',theme:'legal',promptHint:'Emphasize discretion, credentials and clear fee conversations. CTA toward an initial consultation. Never give specific legal or financial advice.'},
   auto:{label:'Automotive / Mechanical',theme:'auto',promptHint:'Emphasize diagnostics done properly, turnaround time, warranty on workmanship and no-surprise quoting.'},
   corporate:{label:'Finance / Insurance / B2B',theme:'corporate',promptHint:'Emphasize track record, process and risk reduction. Professional, measured tone with a CTA toward a scoping call.'},
+  /* ---- second wave: 20 more verticals ---- */
+  landscaping:{label:'Landscaping / Garden',theme:'botanic',promptHint:'Emphasize design sense alongside the practical work, plant choices suited to the local climate, and how a project runs from concept to planting. CTA toward an on-site consult.'},
+  pest:{label:'Pest Control',theme:'fresh',promptHint:'Emphasize licensed handlers, safety around children and pets, targeted treatment over blanket spraying, and a documented follow-up. CTA toward an inspection.'},
+  security:{label:'Security / Alarms / CCTV',theme:'midnight',promptHint:'Emphasize monitoring, response times, licensing and discretion. Concrete about what is installed and what it costs to run. CTA toward a site assessment.'},
+  it:{label:'IT Support / MSP',theme:'saas',promptHint:'Emphasize response SLAs, what is covered by a plan versus billed hourly, backups and cyber hygiene. Plain language, no jargon. CTA toward an IT health check.'},
+  marketing:{label:'Marketing / Creative Agency',theme:'aurora',promptHint:'Emphasize the work and the results, not the process poetry. Be specific about deliverables and timelines. CTA toward a strategy call.'},
+  education:{label:'Tutoring / Training',theme:'kids',promptHint:'Emphasize the tutor’s qualifications, how progress is measured and reported to parents, and group size. CTA toward a free assessment.'},
+  childcare:{label:'Childcare / Early Learning',theme:'kids',promptHint:'Emphasize ratios, qualifications, safety, daily routine and how parents are kept informed. Warm but factual. CTA toward a visit. Never imply a licence or rating you were not given.'},
+  petcare:{label:'Pet Services / Grooming',theme:'fresh',promptHint:'Emphasize handling of anxious animals, what happens during a visit and how long it takes. CTA toward a booking.'},
+  vet:{label:'Veterinary',theme:'clinic',promptHint:'Emphasize the range of animals treated, after-hours arrangements and estimates before procedures. Never make clinical claims.'},
+  beauty:{label:'Salon / Beauty / Spa',theme:'boutique',promptHint:'Emphasize the treatment experience, the products used and the practitioner’s training. CTA toward an online booking.'},
+  events:{label:'Events / Weddings',theme:'property',promptHint:'Emphasize capacity, what is included, what is not, and how a date is held. CTA toward a viewing or an availability check.'},
+  removals:{label:'Removals / Storage',theme:'agri',promptHint:'Emphasize insurance cover, how quotes are calculated, packing options and what happens on the day. CTA toward a moving quote.'},
+  construction:{label:'Construction / Civil',theme:'slate',promptHint:'Emphasize licensing, health and safety, project management and how variations are handled. CTA toward a project conversation.'},
+  architecture:{label:'Architecture / Design',theme:'swiss',promptHint:'Emphasize the process from brief to consent, fee structure and the kind of work they take on. Restrained, considered tone. CTA toward an initial discussion.'},
+  agriculture:{label:'Agriculture / Rural',theme:'agri',promptHint:'Emphasize seasonal timing, equipment, coverage across a district and practical experience. Plain-spoken. CTA toward a paddock visit or quote.'},
+  marine:{label:'Marine / Boating',theme:'coastal',promptHint:'Emphasize certifications, servicing schedules, haul-out and where the work is carried out. CTA toward a service booking.'},
+  energy:{label:'Solar / Energy',theme:'botanic',promptHint:'Emphasize system sizing, what payback actually depends on, install standards and warranties. Never promise a savings figure that was not supplied.'},
+  funeral:{label:'Funeral / Memorial',theme:'paper',promptHint:'Emphasize care, choice and clear costs. Gentle, unhurried, never salesy. CTA toward a private conversation, available any hour.'},
+  ecommerce:{label:'Retail / Online Store',theme:'boutique',promptHint:'Emphasize what is sold, delivery and returns, and why buy here rather than a marketplace. CTA toward browsing or an enquiry.'},
+  nonprofit:{label:'Charity / Community',theme:'civic',promptHint:'Emphasize the work done, who it reaches and where the money goes. CTA toward donating, volunteering or getting help.'},
   other:{label:'Other',theme:'pro',promptHint:''}
 };
 
@@ -3264,7 +3325,11 @@ section{padding:${d}px 0}
 .cxhours{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-bottom:24px}
 .cxhours span{padding:8px 15px;border-radius:${t.radius};background:${t.panel};border:1px solid ${t.line};font-size:15px}
 /* ---- enquiry form ---- */
-.cform{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.cform{display:grid;grid-template-columns:1fr;gap:16px}
+.cform.cols2{grid-template-columns:1fr 1fr}
+/* Two columns only where there is genuinely room. A 460px panel with two
+   columns gives 200px inputs, which is worse than one clean column. */
+@media(min-width:900px){.cform.colsauto{grid-template-columns:1fr 1fr}}
 .cform .ff{margin:0}
 .cform .ff.wide{grid-column:1/-1}
 .cform .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
@@ -3278,7 +3343,7 @@ section{padding:${d}px 0}
 .cform .fnote{font-size:13.5px;color:${t.ink2};text-align:center;margin:0}
 @media(max-width:760px){
   .cx-split > .w,.cx-inline > .w,.cx-two .cxgrid{grid-template-columns:1fr;gap:30px}
-  .cform{grid-template-columns:1fr}
+  .cform,.cform.cols2,.cform.colsauto{grid-template-columns:1fr}
   .cxpanel,.cxbox{padding:26px 20px}
 }
 .copy{border-top:1px solid ${t.line};margin-top:44px;padding-top:22px;font-size:14px;
@@ -3642,8 +3707,9 @@ function buildSite(state,mode,pageIdx){
       <option value="">Please choose</option>${(SELECT_OPTS[k]||[]).map(o=>`<option>${esc(o)}</option>`).join('')}</select></p>`;
     return `<p class="ff">${lab}<input id="${id}" name="${k}" type="${f.type}"${f.auto?` autocomplete="${f.auto}"`:''}${req}></p>`;
   };
+  const formCols=(m.form&&m.form.cols)||'auto';
   const formBody=(fields,btnLabel)=>!canForm?'':`
-  <form class="cform"${formAction?` action="${esc(formAction)}" method="${formMethod}"`
+  <form class="cform ${formCols==='2'?'cols2':formCols==='1'?'cols1':'colsauto'}"${formAction?` action="${esc(formAction)}" method="${formMethod}"`
       :` action="mailto:${esc(c.email)}" method="post" enctype="text/plain"`}>
     ${fields.filter(k=>FIELD_META[k]).map(field).join('')}
     ${formAction?`<input type="hidden" name="_subject" value="Website enquiry, ${esc(m.businessName)}">`:''}
@@ -5332,7 +5398,8 @@ function migrate(s){
   if(!Array.isArray(s.media.gallery)) s.media.gallery=[];
   s.meta.seo=s.meta.seo||{};
   s.meta.links=s.meta.links||{primary:'',secondary:'',secondaryLabel:''};
-  s.meta.form=s.meta.form||{action:'',fields:['name','phone','email','message']};
+  s.meta.form=s.meta.form||{action:'',fields:['name','phone','email','message'],cols:'auto'};
+  if(!['1','2','auto'].includes(s.meta.form.cols)) s.meta.form.cols='auto';
   if(!Array.isArray(s.meta.form.fields)||!s.meta.form.fields.length)
     s.meta.form.fields=['name','phone','email','message'];
   if(typeof s.meta.contactLayout!=='string') s.meta.contactLayout='gradient';
@@ -6136,6 +6203,128 @@ $('btnFillPage').onclick=async()=>{
   finally{ btn.disabled=false; btn.textContent=was; }
 };
 
+/* ---- prospecting --------------------------------------------------------
+   The ask was for this to go and find real businesses that have a Google
+   Business Profile but no website. It cannot: there is no web access from a
+   static file with a single Anthropic key, and a model asked to "find real
+   businesses" returns plausible fabrications. Fabricated names, addresses and
+   phone numbers are actively worse than nothing here, because the user would
+   ring them.
+
+   So the work is split at the honest seam. Claude builds the search plan and
+   the qualification criteria, the user runs it on Google Maps, and Claude then
+   analyses the real listings they paste back, scores the opportunity and fills
+   the brief so a demo site is one click away. Real data in, analysis out. */
+$('btnProspect').onclick=()=>{
+  const box=$('prospectBox');
+  box.classList.toggle('hidden');
+  if(!box.classList.contains('hidden')){
+    if(!$('pTrade').value) $('pTrade').value=PACKS[$('bizType').value].label.split(' / ')[0];
+    if(!$('pArea').value) $('pArea').value=$('location').value||'';
+  }
+};
+document.querySelectorAll('#pMode [data-pm]').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#pMode [data-pm]').forEach(x=>x.classList.toggle('on',x===b));
+  $('pPlan').classList.toggle('hidden',b.dataset.pm!=='plan');
+  $('pAnalyse').classList.toggle('hidden',b.dataset.pm!=='analyse');
+  $('pOut').innerHTML=''; $('pStatus').textContent='';
+});
+$('btnPlan').onclick=async()=>{
+  if(!getKey()){ $('pStatus').textContent='Add an API key under Settings first.'; return; }
+  const trade=$('pTrade').value.trim(), area=$('pArea').value.trim();
+  if(!trade||!area){ $('pStatus').textContent='Fill in both the trade and the area.'; return; }
+  const btn=$('btnPlan'), was=btn.textContent; btn.disabled=true; btn.textContent='Thinking…';
+  $('pStatus').textContent='Building the plan…';
+  const sys=`You brief someone who sells websites to small local businesses. They are looking for operators who have a Google Business Profile but no website, which is the clearest possible buying signal.
+
+Return ONLY raw JSON:
+{"queries":[string],"niches":[string],"qualify":[{"signal":string,"why":string}],"disqualify":[string],"opener":string,"objection":{"objection":string,"answer":string},"value":string}
+
+- "queries": 10 searches to run on Google Maps, using real place names and suburbs in the stated area. Vary the trade wording the way customers actually search, and include a few adjacent categories the seller may not have thought of.
+- "niches": 6 nearby categories in the same area that typically have a profile and no site.
+- "qualify": 6 signals visible on a Maps listing that mean this one is worth approaching, each with one sentence on why it matters. Think about review counts, photo counts, whether the phone is a mobile, how recently they replied to reviews, claimed versus unclaimed.
+- "disqualify": 5 signals that mean walk away, so time is not wasted.
+- "opener": one opening line for a cold call or message, under 40 words, that leads with something specific to them rather than with the seller.
+- "objection": the single most common objection this trade raises, and a straight answer to it.
+- "value": one sentence on what a website is actually worth to this kind of operator, framed in their terms, not in marketing terms.
+- Never invent a specific business name, address or phone number. This is a method, not a list.
+- NEVER use an em dash.`;
+  try{
+    const raw=await callClaude(sys,`Trade: ${trade}\nArea: ${area}\n\nReturn the JSON now.`);
+    const d=cleanCopy(JSON.parse(stripFences(raw)));
+    const esc2=x=>esc(String(x==null?'':x));
+    const box=(h,inner)=>`<div class="gout"><h5>${h}</h5>${inner}</div>`;
+    $('pOut').innerHTML=
+      box('Searches to run on Google Maps',(d.queries||[]).map(q=>
+        `<div class="gitem"><a href="https://www.google.com/maps/search/${encodeURIComponent(q)}" target="_blank" rel="noopener">${esc2(q)} ↗</a></div>`).join(''))
+      +box('Adjacent categories',(d.niches||[]).map(x=>`<div class="gitem">${esc2(x)}</div>`).join(''))
+      +box('Worth approaching if',(d.qualify||[]).map(x=>`<div class="gitem"><b>${esc2(x.signal)}</b><div class="gmeta">${esc2(x.why)}</div></div>`).join(''))
+      +box('Walk away if',(d.disqualify||[]).map(x=>`<div class="gitem">${esc2(x)}</div>`).join(''))
+      +box('Opening line',`<pre>${esc2(d.opener)}</pre>`)
+      +box('Their most common objection',`<pre><b>${esc2((d.objection||{}).objection)}</b>\n\n${esc2((d.objection||{}).answer)}</pre>`)
+      +box('What it is worth to them',`<pre>${esc2(d.value)}</pre>`);
+    $('pStatus').textContent='Plan ready. Run the searches, then switch to "Analyse a listing" and paste one in.';
+  }catch(e){ $('pStatus').textContent=e.message||'Could not build the plan.'; }
+  finally{ btn.disabled=false; btn.textContent=was; }
+};
+$('btnAnalyse').onclick=async()=>{
+  if(!getKey()){ $('pStatus').textContent='Add an API key under Settings first.'; return; }
+  const paste=$('pPaste').value.trim();
+  if(paste.length<20){ $('pStatus').textContent='Paste the listing details first.'; return; }
+  const btn=$('btnAnalyse'), was=btn.textContent; btn.disabled=true; btn.textContent='Analysing…';
+  $('pStatus').textContent='Analysing the listing…';
+  const locale=curChip('localeChips')||'nz';
+  const sys=`You analyse a single Google Business Profile listing on behalf of someone who sells websites to small local businesses, and you fill in a brief so a demo site can be built for them.
+
+Return ONLY raw JSON:
+{"name":string,"type":string,"loc":string,"stand":string,"desc":string,"ph":string,"em":string,"area":string,"hrs":string,"kw":string,"est":string,"team":string,"cert":string,"price":"","guar":"","tone":string,
+ "score":number,"verdict":string,"signals":[string],"gaps":[string],"pitch":string,"opener":string,"missing":[string]}
+
+- Fields from "name" through "tone" fill the website brief. "type" must be exactly one of: ${Object.keys(PACKS).join(', ')}.
+- COPY the name, phone, address and hours EXACTLY as pasted. Do not correct, complete or improve them. If a field is not in the paste, return "" for it and list it under "missing". Never guess a phone number or an email address.
+- "desc" is 2 to 4 sentences describing what this business does, inferred ONLY from the category, the services visible in the listing and the reviews. Write it as the brief for their website, and keep it to what the listing actually supports.
+- "score" is 0 to 100: how good a prospect this is for a website. High means an active business with real customers and no site.
+- "verdict" is one sentence on whether to approach them and why.
+- "signals" is 3 to 5 things in the paste that support the score, quoting what you saw.
+- "gaps" is 3 to 5 things they are losing by having no website, specific to this business.
+- "pitch" is 2 sentences you would actually say to this owner.
+- "opener" is the first line of a call or message, under 30 words, leading with something specific to them.
+- "missing" lists the fields that were not in the paste and need checking before the demo goes out.
+- Write in ${LOCALES[locale].label} English. NEVER use an em dash.
+- If the paste does not look like a business listing, return "score":0 and say so in "verdict".`;
+  try{
+    const raw=await callClaude(sys,`Listing pasted from Google Maps:\n\n${paste}\n\nReturn the JSON now.`);
+    const d=cleanCopy(JSON.parse(stripFences(raw)));
+    const esc2=x=>esc(String(x==null?'':x));
+    const box=(h,inner)=>`<div class="gout"><h5>${h}</h5>${inner}</div>`;
+    const score=Math.max(0,Math.min(100,+d.score||0));
+    $('pOut').innerHTML=
+      box(`Prospect score: ${score}/100`,`<pre>${esc2(d.verdict)}</pre>`)
+      +box('Signals in the listing',(d.signals||[]).map(x=>`<div class="gitem">${esc2(x)}</div>`).join(''))
+      +box('What they are losing',(d.gaps||[]).map(x=>`<div class="gitem">${esc2(x)}</div>`).join(''))
+      +box('Opening line',`<pre>${esc2(d.opener)}</pre>`)
+      +box('The pitch',`<pre>${esc2(d.pitch)}</pre>`)
+      +((d.missing||[]).length?box('Check before you send the demo',
+        (d.missing||[]).map(x=>`<div class="gitem">${esc2(x)}</div>`).join('')):'');
+    if(score>0&&isStr(d.name)){
+      $('bizName').value=d.name;
+      if(PACKS[d.type]){ $('bizType').value=d.type; $('bizType').onchange(); }
+      $('location').value=d.loc||''; $('standout').value=d.stand||'';
+      $('desc').value=(d.desc||'').slice(0,600); $('descCount').textContent=$('desc').value.length;
+      $('bizKeyword').value=d.kw||''; $('bizEst').value=d.est||''; $('bizTeam').value=d.team||'';
+      $('bizCert').value=(d.cert||'').slice(0,120);
+      $('cPhone').value=d.ph||''; $('cEmail').value=d.em||'';
+      $('cArea').value=d.area||''; $('cHours').value=d.hrs||'';
+      if(isStr(d.tone)){ rememberTone(d.tone); setTone(d.tone); }
+      syncOtherField(); saveBrief(); refreshStatus();
+      $('pStatus').textContent=`Brief filled from the listing. Check anything listed as missing, then hit Generate to build their demo.`;
+    }else{
+      $('pStatus').textContent='That did not read as a business listing, so the brief was left alone.';
+    }
+  }catch(e){ $('pStatus').textContent=e.message||'Could not analyse that.'; }
+  finally{ btn.disabled=false; btn.textContent=was; }
+};
+
 /* ---- growth kit --------------------------------------------------------
    The site is the deliverable the client sees; these are the ones that get
    sold next. All three run off the same brief the page was written from, so
@@ -6165,6 +6354,52 @@ Return ONLY raw JSON: {"headlines":[string],"descriptions":[string],"sitelinks":
 - "negatives": 12 negative keywords that would waste this advertiser's money, e.g. jobs, DIY, free, courses, salary, wholesale.
 - Character limits are hard. An ad that exceeds them is rejected, so count every string before you return it.
 - Never claim a price, a guarantee or a superlative that is not in the brief.
+- NEVER use an em dash.`},
+  social:{label:'Social calendar',btn:'btnSocial',
+    sys:b=>`You plan four weeks of social content for a small local business that has no marketing team and about twenty minutes a week.
+Return ONLY raw JSON: {"pillars":[{"name":string,"why":string}],"posts":[{"week":number,"day":string,"platform":string,"hook":string,"body":string,"cta":string,"shot":string}],"hashtags":[string],"cadence":string}
+- "pillars": 4 content themes this business can sustain, each with one sentence on why it earns attention.
+- "posts": EXACTLY 16, four per week. "platform" is Facebook, Instagram or Google Business Profile, weighted to where this trade's customers actually are. "hook" is the first line, under 15 words. "body" is 2 to 4 sentences. "shot" describes the photo or video the owner needs to take, specifically enough that they could take it on a phone today.
+- Every post must be something this business could genuinely post. No stock-photo abstractions, no national holidays they have nothing to do with.
+- "hashtags": 12 that are actually used locally, not aspirational reach tags.
+- "cadence": one sentence on the realistic minimum to keep this up.
+- NEVER use an em dash.`},
+  email:{label:'Follow-up sequence',btn:'btnEmail',
+    sys:b=>`You write the follow-up sequence a small local business sends after someone enquires but does not book. Most of these businesses send nothing at all, which is where their lost revenue is.
+Return ONLY raw JSON: {"sequence":[{"step":number,"timing":string,"channel":string,"subject":string,"body":string,"purpose":string}],"sms":[{"timing":string,"text":string}],"rules":[string]}
+- "sequence": 5 steps. "channel" is Email or SMS. "timing" is relative, e.g. "20 minutes after the enquiry". "body" is short, written by the owner not by a marketer, and each one must give a reason to reply that is not just "checking in".
+- "sms": 3 messages, each under 160 characters including the opt-out.
+- "rules": 5 practical rules for running this without annoying people, including when to stop.
+- Never promise a price, a discount or a timeframe that was not in the brief.
+- NEVER use an em dash.`},
+  reviews:{label:'Review engine',btn:'btnReviews',
+    sys:b=>`You set up a review generation system for a small local business. Reviews are the single biggest lever on local ranking and on conversion, and most operators ask badly or not at all.
+Return ONLY raw JSON: {"ask":{"when":string,"how":string,"script":string},"sms":string,"email":{"subject":string,"body":string},"replies":[{"stars":number,"situation":string,"reply":string}],"recovery":string,"cadence":string,"warnings":[string]}
+- "ask": the moment to ask, the channel, and the exact words to say out loud. The moment matters more than the wording.
+- "sms" and "email": the request message. Under 160 characters for the SMS.
+- "replies": 5 reply templates covering five stars, four, three, two and one. The low-star ones must take responsibility without admitting liability, and move the conversation offline.
+- "recovery": what to do when a review is unfair or fake.
+- "warnings": what not to do, including incentivising reviews, gating, and bulk requests, which breach Google's policies and can get a profile suspended.
+- NEVER use an em dash.`},
+  audit:{label:'Local SEO audit',btn:'btnAudit',
+    sys:b=>`You produce a local SEO audit checklist for a specific small business, of the kind an agency charges for.
+Return ONLY raw JSON: {"sections":[{"area":string,"items":[{"check":string,"why":string,"effort":"quick"|"medium"|"project"}]}],"priority":[string],"quickwins":[string],"measure":[string]}
+- "sections": 6 areas, covering the Google Business Profile, on-page, citations and NAP consistency, reviews, links, and technical or speed.
+- Each "check" is something the owner or agency can actually verify, phrased as a yes or no. "why" is one sentence on the consequence of getting it wrong.
+- "priority": the 5 things to do first, in order, for THIS business.
+- "quickwins": 5 that take under an hour each.
+- "measure": 4 things to track, and how to know they moved.
+- No promises about rankings or timeframes. Nobody can honestly make those.
+- NEVER use an em dash.`},
+  proposal:{label:'Proposal & pricing',btn:'btnProposal',
+    sys:b=>`You draft the proposal an agency sends this business after a first conversation, and the pricing to go with it.
+Return ONLY raw JSON: {"summary":string,"problem":string,"scope":[{"item":string,"detail":string}],"packages":[{"name":string,"price":string,"includes":[string],"best_for":string}],"timeline":[{"phase":string,"duration":string,"output":string}],"terms":[string],"close":string,"upsells":[{"service":string,"when":string,"why":string}]}
+- "summary": three sentences the owner reads first, in their language, about their business.
+- "problem": what it is costing them today, concretely, without inventing a figure.
+- "packages": 3 tiers. Put the price as a placeholder like "[your price]" unless the brief gave you one, because inventing a price the seller has not agreed to is worse than leaving a gap.
+- "timeline": 4 phases with realistic durations.
+- "terms": 5 plain-English commercial terms, including what happens if they go quiet.
+- "upsells": 4 services to sell after the site is live, when to raise each, and why it follows naturally from what they will see in month one.
 - NEVER use an em dash.`},
   kw:{label:'Keyword plan',btn:'btnKw',
     sys:b=>`You build a local SEO keyword plan.
@@ -6202,6 +6437,55 @@ function growthRender(kind,d){
     html+=box('Negative keywords',(d.negatives||[]).map(x=>`<div class="gitem">${esc2(x)}</div>`).join(''));
     const bad=over(h,30).length+over(ds,90).length;
     if(bad) html=box('Check before uploading',`<pre>${bad} item${bad===1?'':'s'} exceed Google's character limit and are marked OVER below. Shorten them or Google will reject the ad.</pre>`)+html;
+  }
+  const generic=(title,arr,fmt)=>arr&&arr.length?box(title,arr.map(fmt).join('')):'';
+  if(kind==='social'){
+    html+=generic('Content pillars',d.pillars,x=>`<div class="gitem"><b>${esc2(x.name)}</b><div class="gmeta">${esc2(x.why)}</div></div>`);
+    html+=generic('4 weeks of posts',d.posts,x=>`<div class="gitem"><b>Week ${esc2(x.week)}, ${esc2(x.day)} · ${esc2(x.platform)}</b>
+      <div class="gmeta">${esc2(x.hook)}</div><div class="gmeta">${esc2(x.body)}</div>
+      <div class="gmeta">CTA: ${esc2(x.cta)} · Shot: ${esc2(x.shot)}</div></div>`);
+    html+=generic('Hashtags',d.hashtags,x=>`<div class="gitem">${esc2(x)}</div>`);
+    if(d.cadence) html+=box('Realistic minimum',`<pre>${esc2(d.cadence)}</pre>`);
+  }
+  if(kind==='email'){
+    html+=generic('Sequence',d.sequence,x=>`<div class="gitem"><b>${esc2(x.step)}. ${esc2(x.channel)} · ${esc2(x.timing)}</b>
+      ${x.subject?`<div class="gmeta">Subject: ${esc2(x.subject)}</div>`:''}
+      <div class="gmeta">${esc2(x.body)}</div><div class="gmeta">${esc2(x.purpose)}</div></div>`);
+    html+=generic('SMS',d.sms,x=>`<div class="gitem">${esc2(x.timing)}<div class="gmeta">${esc2(x.text)} (${String(x.text||'').length} chars)</div></div>`);
+    html+=generic('Rules',d.rules,x=>`<div class="gitem">${esc2(x)}</div>`);
+  }
+  if(kind==='reviews'){
+    if(d.ask) html+=box('How to ask',`<pre>When: ${esc2(d.ask.when)}
+How: ${esc2(d.ask.how)}
+
+"${esc2(d.ask.script)}"</pre>`);
+    if(d.sms) html+=box('SMS request',`<pre>${esc2(d.sms)}</pre>`);
+    if(d.email) html+=box('Email request',`<pre>${esc2(d.email.subject)}
+
+${esc2(d.email.body)}</pre>`);
+    html+=generic('Reply templates',d.replies,x=>`<div class="gitem"><b>${esc2(x.stars)} star: ${esc2(x.situation)}</b><div class="gmeta">${esc2(x.reply)}</div></div>`);
+    if(d.recovery) html+=box('Unfair or fake reviews',`<pre>${esc2(d.recovery)}</pre>`);
+    html+=generic('Do not do this',d.warnings,x=>`<div class="gitem">${esc2(x)}</div>`);
+  }
+  if(kind==='audit'){
+    (d.sections||[]).forEach(sec=>{
+      html+=box(esc2(sec.area),(sec.items||[]).map(x=>
+        `<div class="gitem">${esc2(x.check)} <span class="gmeta">${esc2(x.effort)}</span><div class="gmeta">${esc2(x.why)}</div></div>`).join(''));
+    });
+    html+=generic('Do these first',d.priority,x=>`<div class="gitem">${esc2(x)}</div>`);
+    html+=generic('Quick wins',d.quickwins,x=>`<div class="gitem">${esc2(x)}</div>`);
+    html+=generic('What to measure',d.measure,x=>`<div class="gitem">${esc2(x)}</div>`);
+  }
+  if(kind==='proposal'){
+    if(d.summary) html+=box('Summary',`<pre>${esc2(d.summary)}</pre>`);
+    if(d.problem) html+=box('What it is costing them',`<pre>${esc2(d.problem)}</pre>`);
+    html+=generic('Scope',d.scope,x=>`<div class="gitem"><b>${esc2(x.item)}</b><div class="gmeta">${esc2(x.detail)}</div></div>`);
+    html+=generic('Packages',d.packages,x=>`<div class="gitem"><b>${esc2(x.name)} · ${esc2(x.price)}</b>
+      <div class="gmeta">${(x.includes||[]).map(esc2).join(' · ')}</div><div class="gmeta">Best for: ${esc2(x.best_for)}</div></div>`);
+    html+=generic('Timeline',d.timeline,x=>`<div class="gitem"><b>${esc2(x.phase)} · ${esc2(x.duration)}</b><div class="gmeta">${esc2(x.output)}</div></div>`);
+    html+=generic('Terms',d.terms,x=>`<div class="gitem">${esc2(x)}</div>`);
+    html+=generic('What to sell next',d.upsells,x=>`<div class="gitem"><b>${esc2(x.service)}</b><div class="gmeta">${esc2(x.when)} · ${esc2(x.why)}</div></div>`);
+    if(d.close) html+=box('Close',`<pre>${esc2(d.close)}</pre>`);
   }
   if(kind==='kw'){
     html+=box('Clusters',(d.clusters||[]).map(x=>`<div class="gitem"><b>${esc2(x.primary)}</b> <span class="gmeta">${esc2(x.intent)} · ${esc2(x.page)}</span>
@@ -6345,9 +6629,20 @@ NEVER use an em dash.`;
 const FORM_FIELD_KEYS=['name','phone','email','address','suburb','service','urgency','budget','preferred','date','message'];
 const FORM_FIELD_LABEL={name:'Name',phone:'Phone',email:'Email',address:'Address',suburb:'Suburb',
   service:'Service',urgency:'Urgency',budget:'Budget',preferred:'Best time',date:'Date',message:'Message'};
+function renderFormCols(){
+  const cur=(siteState&&siteState.meta.form&&siteState.meta.form.cols)||'auto';
+  document.querySelectorAll('#formColsSeg [data-fc]').forEach(b=>b.classList.toggle('on',b.dataset.fc===cur));
+}
+document.querySelectorAll('#formColsSeg [data-fc]').forEach(b=>b.onclick=()=>{
+  if(!siteState) return;
+  siteState.meta.form.cols=b.dataset.fc;
+  renderFormCols(); renderPreview(); pushHistory(siteState); lastShareURL='';
+});
+renderFormCols();
 function renderFormFields(){
   const host=$('formFields'); if(!host) return;
   const on=new Set(((siteState&&siteState.meta.form&&siteState.meta.form.fields)||[]));
+  const fc=$('formFieldCount'); if(fc) fc.textContent=`${on.size} on`;
   host.innerHTML=FORM_FIELD_KEYS.map(k=>
     `<button type="button" class="chip${on.has(k)?' on':''}" data-ff="${k}">${FORM_FIELD_LABEL[k]}</button>`).join('');
   host.querySelectorAll('[data-ff]').forEach(b=>b.onclick=()=>{
