@@ -398,6 +398,14 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
 .mbtns button{padding:5px 10px;font-size:11.5px;border-radius:99px;border:1px solid var(--stroke);background:var(--surface)}
 .mbtns button:hover{background:var(--fill)}
 
+.jsopts{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.jsopt{padding:8px 10px;border-radius:10px;border:1px solid var(--stroke);background:var(--surface);font-size:12px;font-weight:600;text-align:left;transition:all .18s var(--ease)}
+.jsopt span{display:block;font-weight:400;font-size:10px;color:var(--txt-3);margin-top:1px}
+.jsopt:hover:not(:disabled){border-color:var(--stroke-2);background:var(--fill)}
+.jsopt.on{border-color:var(--accent);background:var(--sel);color:var(--accent)}
+.jsopt.on span{color:var(--accent)}
+.jsopt:disabled{opacity:.4;cursor:not-allowed}
+
 /* pages */
 .pgrow{display:flex;align-items:center;gap:6px;padding:6px 8px;border:1px solid var(--stroke);border-radius:10px;margin-bottom:5px;background:var(--bg)}
 .pgrow.cur{border-color:var(--accent);background:var(--sel)}
@@ -717,8 +725,14 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
           </div>
         </div>
         <div class="row">
-          <div class="lbl"><b>Motion</b>Scroll-reveal animations and a hero parallax, in pure CSS — the export stays at zero JavaScript. Off for anyone with reduced-motion set.</div>
+          <div class="lbl"><b>Motion</b>Scroll reveals, ambient background drift and a hero parallax. Pure CSS on its own; add libraries below if you want more. Always off for visitors with reduced-motion set.</div>
           <div class="switch" id="motionSwitch" role="switch" tabindex="0"></div>
+        </div>
+        <div class="field" id="jsWrap">
+          <label>JavaScript animation
+            <span class="help" data-tip="Adds real animation libraries (Lenis, GSAP + ScrollTrigger, Three.js) from a pinned CDN with SRI integrity hashes. They make the page feel more alive, but they are downloaded on every visit and are the single biggest thing you can do to slow the site down. Everything degrades to the CSS animation if a script fails to load.">?</span></label>
+          <div class="jsopts" id="jsOpts"></div>
+          <div class="tiny" id="jsNote"></div>
         </div>
         <div class="row">
           <div class="lbl"><b>System fonts only</b>Drops Google Fonts from exports — zero external requests.</div>
@@ -1026,6 +1040,148 @@ const blankPage=(title,st)=>({
   sections:{order:SECTION_ORDER.slice(),hidden:['stats','services','process','about','gallery','reviews','faq','areas']}
 });
 
+/* ==========================================================================
+   JS MOTION LAYER  (opt-in — default stays zero-JavaScript)
+   Real animation libraries, loaded from a pinned CDN with SRI integrity
+   hashes so a compromised CDN cannot silently rewrite a client's page.
+   Each level is cumulative and the byte cost is shown in the UI, because it
+   is substantial: a WebGL hero is ~20x the weight of the whole page.
+   Everything below is wrapped in a prefers-reduced-motion check and degrades
+   to the CSS-only behaviour if a script fails to load.
+   ========================================================================== */
+const JS_LEVELS={
+  off:   {label:'Off',          kb:0,   note:'Zero JavaScript. CSS animation only — fastest, most reliable.'},
+  smooth:{label:'Smooth scroll',kb:13,  note:'Lenis. Momentum scrolling, the effect most often mistaken for "a premium site".'},
+  gsap:  {label:'GSAP effects', kb:128, note:'GSAP + ScrollTrigger + Lenis. Pinned sections, parallax, counters, staggered reveals.'},
+  webgl: {label:'WebGL hero',   kb:736, note:'Adds Three.js. An animated particle field behind the hero. Heavy — check it on a phone.'}
+};
+const LIB={
+  gsap:{src:'https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js',
+        sri:'sha384-g4NTh/Iv5PPU4xPyhEWqPcwtNXOvdaDI8LLnyYfyNZOjKJeYQyjzQ9X5275eBjpt'},
+  scrolltrigger:{src:'https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js',
+        sri:'sha384-Z3REaz79l2IaAZqJsSABtTbhjgOUYyV3p90XNnAPCSHg3EMTz1fouunq9WZRtj3d'},
+  lenis:{src:'https://cdn.jsdelivr.net/npm/lenis@1.1.14/dist/lenis.min.js',
+        sri:'sha384-O55L/6rhHr9CFvrxqv5luxOCcmVaBmETbZbJDP+Do8T0pztTACsFBD/IXCNkj7DV'},
+  three:{src:'https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js',
+        sri:'sha384-vV17nr/rMaJqmeZkFUzXLpHdQ+ME5QHKdydaqqN+3Ga39RJlNrTatJxHwGV4ml2C'}
+};
+const libTag=k=>`<script src="${LIB[k].src}" integrity="${LIB[k].sri}" crossorigin="anonymous" defer><\/script>`;
+
+/* The runtime. Written defensively: every library is feature-detected, so a
+   blocked CDN or an offline visitor degrades to the CSS animation rather
+   than throwing and leaving elements stuck invisible. */
+function motionRuntime(level,t){
+  return `
+(function(){
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var LV=${JSON.stringify(level)};
+  function ready(fn){ document.readyState!=='loading'?fn():document.addEventListener('DOMContentLoaded',fn); }
+
+  function smooth(){
+    if(typeof Lenis==='undefined') return null;
+    var l=new Lenis({duration:1.05,smoothWheel:true});
+    function raf(t){ l.raf(t); requestAnimationFrame(raf); }
+    requestAnimationFrame(raf);
+    document.querySelectorAll('a[href^="#"]').forEach(function(a){
+      a.addEventListener('click',function(e){
+        var el=document.querySelector(a.getAttribute('href'));
+        if(el){ e.preventDefault(); l.scrollTo(el,{offset:-96}); }
+      });
+    });
+    return l;
+  }
+
+  function effects(lenis){
+    if(typeof gsap==='undefined'||typeof ScrollTrigger==='undefined') return;
+    gsap.registerPlugin(ScrollTrigger);
+    if(lenis){ lenis.on('scroll',ScrollTrigger.update);
+      gsap.ticker.add(function(time){ lenis.raf(time*1000); }); gsap.ticker.lagSmoothing(0); }
+
+    // CSS scroll-driven reveals already handled these; disable them so the two
+    // systems do not fight over the same properties.
+    document.documentElement.classList.add('js-motion');
+
+    gsap.utils.toArray('.card,.rows .row,.num .item,.q,.gal figure,.areas span').forEach(function(el,i){
+      gsap.from(el,{opacity:0,y:34,duration:.8,ease:'power3.out',
+        scrollTrigger:{trigger:el,start:'top 88%'},delay:(i%4)*0.06});
+    });
+    gsap.utils.toArray('.head').forEach(function(el){
+      gsap.from(el.children,{opacity:0,y:22,duration:.7,stagger:.09,ease:'power3.out',
+        scrollTrigger:{trigger:el,start:'top 90%'}});
+    });
+    // Count up plain quantities only. Ratios like "24/7" would read as "0/7"
+    // mid-animation, and years like "Since 2009" would tick up from zero —
+    // both look broken, so they are left alone.
+    gsap.utils.toArray('.stat .v').forEach(function(el){
+      var txt=(el.textContent||'').trim();
+      if(txt.indexOf('/')>-1) return;
+      var m=txt.match(/^([^0-9]*)([0-9][0-9,\\.]*)(.*)$/);
+      if(!m) return;
+      var pre=m[1],post=m[3],target=parseFloat(m[2].replace(/,/g,'')),o={n:0};
+      if(!isFinite(target)) return;
+      if(target>=1900&&target<=2100&&Math.round(target)===target) return;   // a year, not a count
+      gsap.to(o,{n:target,duration:1.6,ease:'power2.out',
+        scrollTrigger:{trigger:el,start:'top 92%'},
+        onUpdate:function(){ el.textContent=pre+Math.round(o.n).toLocaleString()+post; }});
+    });
+    // Hero parallax.
+    var hero=document.querySelector('.hero.photo');
+    if(hero) gsap.to(hero,{backgroundPosition:'center 62%',ease:'none',
+      scrollTrigger:{trigger:hero,start:'top top',end:'bottom top',scrub:true}});
+  }
+
+  function webgl(){
+    if(typeof THREE==='undefined') return;
+    var hero=document.querySelector('.hero'); if(!hero) return;
+    var cv=document.createElement('canvas');
+    cv.className='glcanvas';
+    hero.insertBefore(cv,hero.firstChild);
+    var w=hero.clientWidth,h=hero.clientHeight;
+    var rend;
+    try{ rend=new THREE.WebGLRenderer({canvas:cv,alpha:true,antialias:false}); }
+    catch(e){ cv.remove(); return; }              // no WebGL — leave the CSS hero alone
+    rend.setPixelRatio(Math.min(devicePixelRatio,1.6)); rend.setSize(w,h,false);
+    var scene=new THREE.Scene();
+    var cam=new THREE.PerspectiveCamera(60,w/h,.1,100); cam.position.z=15;
+    var N=700,pos=new Float32Array(N*3);
+    for(var i=0;i<N;i++){ pos[i*3]=(Math.random()-.5)*44; pos[i*3+1]=(Math.random()-.5)*26; pos[i*3+2]=(Math.random()-.5)*24; }
+    var geo=new THREE.BufferGeometry();
+    geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+    var mat=new THREE.PointsMaterial({color:${JSON.stringify(t.primary)},size:.13,transparent:true,opacity:.5,depthWrite:false});
+    var pts=new THREE.Points(geo,mat); scene.add(pts);
+    var mx=0,my=0;
+    addEventListener('pointermove',function(e){ mx=(e.clientX/innerWidth-.5); my=(e.clientY/innerHeight-.5); },{passive:true});
+    var run=true;
+    // Stop rendering once the hero is off screen — otherwise it burns battery
+    // for the entire visit.
+    if('IntersectionObserver' in window) new IntersectionObserver(function(en){ run=en[0].isIntersecting; })
+      .observe(hero);
+    (function loop(){
+      requestAnimationFrame(loop);
+      if(!run) return;
+      pts.rotation.y+=.0006; pts.rotation.x+=.0002;
+      cam.position.x+=(mx*2.4-cam.position.x)*.03;
+      cam.position.y+=(-my*1.6-cam.position.y)*.03;
+      cam.lookAt(0,0,0);
+      rend.render(scene,cam);
+    })();
+    addEventListener('resize',function(){
+      w=hero.clientWidth; h=hero.clientHeight;
+      cam.aspect=w/h; cam.updateProjectionMatrix(); rend.setSize(w,h,false);
+    },{passive:true});
+  }
+
+  ready(function(){
+    // defer scripts have run by DOMContentLoaded, but guard anyway.
+    setTimeout(function(){
+      var l=(LV==='smooth'||LV==='gsap'||LV==='webgl')?smooth():null;
+      if(LV==='gsap'||LV==='webgl') effects(l);
+      if(LV==='webgl') webgl();
+    },0);
+  });
+})();`;
+}
+
 /* Page sections, in default order. Reorderable and hideable per page. */
 const SECTION_ORDER=['hero','stats','services','process','about','gallery','reviews','faq','areas','contact'];
 const NAV_LABELS={services:'Services',process:'How it works',about:'About',gallery:'Work',reviews:'Reviews',faq:'FAQ',areas:'Areas',contact:'Contact'};
@@ -1050,7 +1206,7 @@ let siteState=null, currentId=null, loadTimer=null, lastBrief=null, persistTimer
 let currentPage=0;                       // which page the editor is showing
 const curPage=()=>pageOf(siteState,currentPage);
 let wl={on:false,name:'',logo:''};
-let prefs={systemFonts:false,motion:true,theme:DEFAULT_THEME,appearance:'auto'};
+let prefs={systemFonts:false,motion:true,js:'off',theme:DEFAULT_THEME,appearance:'auto'};
 const $=id=>document.getElementById(id);
 
 /* ==========================================================================
@@ -1111,6 +1267,7 @@ function loadPrefs(){
     const o=JSON.parse(localStorage.getItem(LS_PREF)||'{}');
     prefs={systemFonts:!!o.systemFonts,
            motion:o.motion!==false,          // motion on by default
+           js:JS_LEVELS[o.js]?o.js:'off',    // JS libraries stay opt-in
            theme:THEMES[o.theme]?o.theme:DEFAULT_THEME,
            appearance:['auto','light','dark'].includes(o.appearance)?o.appearance:'auto'};
   }catch{}
@@ -1551,7 +1708,17 @@ ${editable?`[contenteditable]{outline:none}
 .bs{padding:10px 20px;font-size:15px}
 .hero{position:relative;padding:${d+18}px 0 ${d}px;overflow:hidden}
 .hero::before{content:'';position:absolute;inset:0;background:radial-gradient(720px 460px at 12% -12%,${rgba(t.primary,.14)},transparent 62%),radial-gradient(600px 420px at 92% 6%,${rgba(t.accent,.12)},transparent 60%)}
-.hero .w{position:relative}
+.hero .w{position:relative;z-index:2}
+.hero::before{z-index:1}
+.glcanvas{position:absolute;inset:0;width:100%;height:100%;z-index:0;display:block;pointer-events:none}
+/* When GSAP drives the reveals it owns opacity/transform outright — leaving the
+   CSS scroll-timeline rules on as well makes the two fight and elements flicker
+   or stick at opacity 0. */
+.js-motion .card,.js-motion .rows .row,.js-motion .num .item,.js-motion .q,
+.js-motion .gal figure,.js-motion .areas span,.js-motion .head,
+.js-motion .stat .v,.js-motion .step::before,.js-motion .about > .w > div,
+.js-motion .fig,.js-motion .final .inner{animation:none!important}
+.js-motion .hero.photo{animation:none!important}
 .hero.center .w{max-width:840px;text-align:center}
 .hero.split .w{display:grid;grid-template-columns:1.15fr .85fr;gap:56px;align-items:center}
 .hero.banner{padding:${d+34}px 0 ${d+10}px;background:${t.dark?t.panel:t.ink};color:${t.dark?t.ink:t.bg}}
@@ -1786,6 +1953,11 @@ function buildSite(state,mode,pageIdx){
   const inApp=mode===true||mode==='view'; // are page links handled by the host app?
   const m=state.meta,t=resolveTheme(m.theme),c=m.contact||{};
   const s=pageOf(state,pageIdx);          // page content; meta stays shared
+  // JS motion level. Never active without motion itself being on.
+  const jsLevel=(prefs.motion&&JS_LEVELS[prefs.js])?prefs.js:'off';
+  const jsLibs=jsLevel==='smooth'?['lenis']
+              :jsLevel==='gsap'?['lenis','gsap','scrolltrigger']
+              :jsLevel==='webgl'?['lenis','gsap','scrolltrigger','three']:[];
   const ed=(path,tag,cls,txt)=>`<${tag}${cls?` class="${cls}"`:''}${editable?` contenteditable="true" data-path="${path}" spellcheck="false"`:''}>${esc(txt)}</${tag}>`;
   const heroImg=mediaOf(s,'hero'), aboutImg=mediaOf(s,'about'), logoImg=mediaOf(s,'logo');
   // In editable mode every slot is a click target; in export they are plain markup.
@@ -2070,6 +2242,8 @@ ${t.callBar&&(c.phone||c.email)?`<div class="callbar">
   ${c.phone?`<a href="${telHref(c.phone)}">Call now</a>`:''}
   <a href="${c.book?esc(c.book):(c.email?'mailto:'+esc(c.email):'#contact')}">${c.book?'Book online':'Email us'}</a>
 </div>`:''}
+${jsLevel==='off'?'':`${jsLibs.map(libTag).join('\n')}
+<script>${motionRuntime(jsLevel,t)}<\/script>`}
 </body>
 </html>`;
 }
@@ -2223,8 +2397,21 @@ function renderChecks(){
     .reduce((n,x)=>n+((x&&x.src)?x.src.length/1024:0),0);
   // Slow-3G is ~50 KB/s effective; state the real arithmetic rather than a slogan.
   const slow3g=kb/50;
+  // A JS level is only real if motion is on; mirror the builder's own rule.
+  const jsLv=(prefs.motion&&JS_LEVELS[prefs.js])?prefs.js:'off';
+  const jsKB=JS_LEVELS[jsLv].kb;
+  if(jsLv!=='off'){
+    const total=kb+jsKB;
+    items.push({ok:jsKB<=130,title:'JavaScript libraries',body:
+      `<b>${JS_LEVELS[jsLv].label}</b> is on, so the page pulls <b>~${jsKB} KB</b> of JavaScript from jsDelivr on every visit — `+
+      `about <b>${total.toFixed(0)} KB</b> all up, or roughly <b>${(total/50).toFixed(0)}s on slow 3G</b>. `+
+      `Scripts are pinned to exact versions with SRI integrity hashes, load with <code>defer</code>, and everything falls back to the CSS animation if the CDN is blocked. `+
+      (jsLv==='webgl'?`WebGL also runs a render loop — it pauses when the hero scrolls off screen, but test this on a real phone before shipping it to a client.`
+                     :`Switch to <b>Off</b> in Settings for the zero-JavaScript build.`)});
+  }
   items.push({ok:kb<250,title:'Page weight &amp; speed',body:
     `Export is <b>${kb.toFixed(0)} KB</b>`+(imgKB>20?` (<b>${imgKB.toFixed(0)} KB</b> of that is photos)`:'')+
+    (jsKB?` before <b>${jsKB} KB</b> of JavaScript libraries`:'')+
     ` with all CSS inlined, <b>${scripts}</b> executable scripts and <b>${reqs}</b> external requests`+
     (reqs?` (Google Fonts — preconnected with <code>display=swap</code>, so it never blocks first paint; flip <b>System fonts only</b> for zero).`
         :` — nothing to fetch, renders offline.`)+
@@ -2879,8 +3066,23 @@ $('btnReveal').onclick=()=>{ const f=$('apiKey'); f.type=f.type==='password'?'te
 $('motionSwitch').onclick=()=>{
   prefs.motion=!prefs.motion; savePrefs();
   $('motionSwitch').classList.toggle('on',prefs.motion);
+  renderJsOpts();
   if(siteState){ renderPreview(); renderChecks(); }
 };
+function renderJsOpts(){
+  const host=$('jsOpts'); if(!host) return;
+  host.innerHTML=Object.entries(JS_LEVELS).map(([k,v])=>
+    `<button type="button" class="jsopt${prefs.js===k?' on':''}" data-js="${k}" ${prefs.motion?'':'disabled'}>
+       ${v.label}${v.kb?`<span>+${v.kb} KB</span>`:''}</button>`).join('');
+  host.querySelectorAll('[data-js]').forEach(b=>b.onclick=()=>{
+    prefs.js=b.dataset.js; savePrefs(); renderJsOpts();
+    if(siteState){ renderPreview(); renderChecks(); }
+  });
+  const lv=JS_LEVELS[prefs.js]||JS_LEVELS.off;
+  $('jsNote').innerHTML=prefs.motion
+    ? esc(lv.note)+(lv.kb?` <b>Adds ~${lv.kb} KB downloaded on every visit.</b>`:'')
+    : 'Turn Motion on to enable JavaScript animation.';
+}
 $('motionSwitch').onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); $('motionSwitch').click(); } };
 // SEO fields live on meta so they travel with the site through history/share.
 ['seoCanonical','seoOgImage','seoSocials'].forEach(id=>{
@@ -3367,6 +3569,7 @@ function bootDashboard(){
 $('apiKey').value=getKey();
 $('fontSwitch').classList.toggle('on',prefs.systemFonts);
 $('motionSwitch').classList.toggle('on',prefs.motion);
+renderJsOpts();
 $('wlSwitch').classList.toggle('on',wl.on);
 $('wlFields').classList.toggle('hidden',!wl.on);
 $('wlName').value=wl.name;
