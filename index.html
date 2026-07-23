@@ -282,6 +282,12 @@ select{appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%
 .combo-group{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--txt-3);padding:8px 10px 4px}
 .combo-empty{padding:10px;font-size:12px;color:var(--txt-3)}
 .suggs{display:block;font-size:10.5px;color:var(--txt-3);margin-top:5px;letter-spacing:.02em}
+.serp{padding:12px;border:1px solid var(--stroke);border-radius:10px;background:var(--surface);margin-bottom:8px}
+.serp .u{font-size:11.5px;color:var(--txt-3)}
+.serp .t{font-size:15px;color:#1a0dab;line-height:1.3;margin:2px 0}
+.serp .d{font-size:12px;color:var(--txt-2);line-height:1.5}
+.serp.social{background:var(--surface-2)}
+.serp.social .t{color:var(--txt-1);font-weight:600}
 .scorebar{height:8px;border-radius:99px;background:var(--fill-2);overflow:hidden;margin:6px 0 10px}
 .scorebar i{display:block;height:100%;border-radius:99px;transition:width .5s var(--ease)}
 .scorerow{display:flex;gap:8px;align-items:flex-start;padding:6px 0;font-size:12px;border-bottom:1px solid var(--stroke)}
@@ -837,7 +843,12 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
     <details class="sec" id="secContact2">
       <summary>Closing section &amp; enquiry form <span class="tag" id="tagCx">gradient</span></summary>
       <div class="body">
-        <div class="tiny">How the page ends is the part that converts. Twenty layouts, eight of them with a working enquiry form.</div>
+        <div class="tiny">Where the page ends and where it starts are the two places that convert. Twenty closing layouts and ten hero forms, all sharing one set of fields.</div>
+        <div class="field" style="margin-top:10px">
+          <label>Hero form <span class="opt">split-hero themes only</span>
+            <span class="help" data-tip="Replaces the contact card in the hero's second column with an enquiry form. This is the highest-converting position on the page because it sits beside the promise rather than three screens below it. Only themes with a split hero show it.">?</span></label>
+          <div class="cxgridpick" id="hfPick"></div>
+        </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin:10px 0">
           <button class="mini" id="btnSuggestCx" type="button">✨ Suggest the best one</button>
           <button class="mini" id="btnCycleCx" type="button">Try the next one</button>
@@ -909,6 +920,14 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
           <button class="mini" id="btnSeoScore" type="button">Score this page</button>
           <button class="mini" id="btnOgImage" type="button">Make a share image</button>
           <button class="mini" id="btnSeoFix" type="button">✨ Write the meta</button>
+          <button class="mini" id="btnSiteAudit" type="button">Audit whole site</button>
+          <button class="mini" id="btnSerp" type="button">Preview snippets</button>
+          <button class="mini" id="btnSchema" type="button">Schema</button>
+          <button class="mini" id="btnTestLinks" type="button">Open testers</button>
+        </div>
+        <div class="row">
+          <div class="lbl"><b>AI crawlers</b>Adds llms.txt and robots rules for GPTBot, ClaudeBot, PerplexityBot and Google-Extended, so answer engines can read the site.</div>
+          <div class="switch" id="aiCrawlSwitch" role="switch" tabindex="0"></div>
         </div>
         <div id="seoScore"></div>
         <div class="field">
@@ -2246,7 +2265,7 @@ let currentPage=0;                       // which page the editor is showing
 const curPage=()=>pageOf(siteState,currentPage);
 let wl={on:false,name:'',logo:''};
 let prefs={systemFonts:false,motion:true,js:'off',fx:[],theme:DEFAULT_THEME,appearance:'auto',
-  contactLayout:'gradient',formCols:'auto',formFields:['name','phone','email','message']};
+  contactLayout:'gradient',formCols:'auto',formFields:['name','phone','email','message'],heroForm:'none',aiCrawl:true};
 const $=id=>document.getElementById(id);
 
 /* ==========================================================================
@@ -2319,6 +2338,8 @@ function loadPrefs(){
            formCols:['1','2','auto'].includes(o.formCols)?o.formCols:'auto',
            formFields:(Array.isArray(o.formFields)&&o.formFields.length>=2)
              ? o.formFields.slice() : ['name','phone','email','message'],
+           heroForm:typeof o.heroForm==='string'?o.heroForm:'none',
+           aiCrawl:o.aiCrawl!==false,
            approveTo:typeof o.approveTo==='string'?o.approveTo:''};
   }catch{}
 }
@@ -3374,6 +3395,26 @@ section{padding:${d}px 0}
 .cxhours{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-bottom:24px}
 .cxhours span{padding:8px 15px;border-radius:${t.radius};background:${t.panel};border:1px solid ${t.line};font-size:15px}
 /* ---- enquiry form ---- */
+/* ---- hero form ---- */
+.hform{padding:26px}
+.hform h3{font-size:20px;margin-bottom:6px}
+.hfsub{font-size:14.5px;color:${t.ink2};margin-bottom:16px;line-height:1.5}
+.hform .cform{gap:12px}
+.hform .cform input,.hform .cform select,.hform .cform textarea{padding:10px 12px;font-size:15.5px}
+.hform .cform textarea{min-height:82px}
+.hfor{margin-top:12px;font-size:14px;color:${t.ink2};text-align:center}
+.hfor a{font-weight:600;color:${t.primary}}
+.hfmini{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin-top:16px;padding-top:14px;
+  border-top:1px solid ${t.line};font-size:14.5px}
+.hfmini dt{font-weight:600;color:${t.ink}}
+.hfmini dd{color:${t.ink2}}
+.hf-tight,.hf-compact{max-width:360px;margin-left:auto}
+.hf-offer{border:2px solid ${t.accent}}
+.hf-offer h3{color:${t.accent}}
+.hf-urgent{border:2px solid ${t.primary}}
+.hf-list .cform .ff label::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;
+  background:${t.primary};margin-right:7px;vertical-align:2px}
+.hero.photo .hform{background:${t.bg}}
 .cform{display:grid;grid-template-columns:1fr;gap:16px}
 .cform.cols2{grid-template-columns:1fr 1fr}
 /* Two columns only where there is genuinely room. A 460px panel with two
@@ -3844,11 +3885,50 @@ function buildSite(state,mode,pageIdx){
       ${c.area?`<dt>Area</dt><dd>${esc(c.area)}</dd>`:''}
     </dl><a href="${primaryHref}" class="b">${esc(s.hero.cta_text)}</a></aside>`:'';
 
+  /* ---- hero enquiry forms -------------------------------------------------
+     The split hero's second column only ever held the contact card. A form
+     there is the single highest-converting position on the page, because it is
+     beside the promise rather than three screens below it. Ten variants, all
+     drawing on the same field config and the same posting logic as the closing
+     section, so there is one form system rather than two. */
+  const hf=(m.heroForm||'none');
+  const hFields=(m.heroFormFields&&m.heroFormFields.length>=2)?m.heroFormFields:F;
+  const hForm=(fields,title,sub,btn,cls)=>!canForm?'':`
+    <aside class="hcard hform ${cls||''}">
+      ${title?`<h3>${esc(title)}</h3>`:''}
+      ${sub?`<p class="hfsub">${esc(sub)}</p>`:''}
+      ${formBody(fields,btn||s.hero.cta_text)}
+      ${c.phone?`<p class="hfor">or call <a href="${telHref(c.phone)}">${esc(c.phone)}</a></p>`:''}
+    </aside>`;
+  const HERO_FORMS={
+    none:      ()=>heroCard,
+    quick:     ()=>hForm(hFields.slice(0,3),'Get a fast reply','',null,'hf-quick'),
+    quote:     ()=>hForm(hFields,'Request a quote','No obligation, no pressure.','Send my request','hf-quote'),
+    callback:  ()=>hForm(hFields.slice(0,2),'Ask us to call you','Leave a number and we will ring back.','Call me back','hf-tight'),
+    booking:   ()=>hForm(hFields,'Book a time','Tell us what suits and we will confirm.','Request this time','hf-quote'),
+    checklist: ()=>hForm(hFields.slice(0,3),'Start here',null,'Get started','hf-list'),
+    offer:     ()=>hForm(hFields.slice(0,3),m.standout||'Free, no-obligation quote','Claim it in under a minute.','Claim it','hf-offer'),
+    urgent:    ()=>hForm(hFields.slice(0,2),'Need someone today?','Send this and we will call you straight back.','Send now','hf-urgent'),
+    compact:   ()=>hForm(hFields.slice(0,2),null,null,null,'hf-compact'),
+    detailed:  ()=>hForm(hFields,'Tell us about the job','The more you tell us, the sharper the quote.','Send the details','hf-quote'),
+    withcard:  ()=>!canForm?heroCard:`
+      <aside class="hcard hform hf-both">
+        <h3>Get in touch</h3>
+        ${formBody(hFields.slice(0,3),s.hero.cta_text)}
+        <dl class="hfmini">
+          ${c.phone?`<dt>Phone</dt><dd><a href="${telHref(c.phone)}">${esc(c.phone)}</a></dd>`:''}
+          ${c.hours?`<dt>Hours</dt><dd>${esc(c.hours)}</dd>`:''}
+        </dl>
+      </aside>`
+  };
+  const HERO_FORM_KEYS=Object.keys(HERO_FORMS);
+  const heroAside=(HERO_FORMS[hf]||HERO_FORMS.none)()||heroCard;
+
   const heroPhoto=heroImg.src?` photo`:'';
   const heroStyle=heroImg.src?` style="background-image:url(${heroImg.src})"`:'';
   const heroSlot=slot('hero',heroImg.src?'Replace background':'Add a background photo');
-  const heroHTML=(t.hero==='split'&&heroCard)
-    ?`<header class="hero split${heroPhoto}"${heroStyle}${heroSlot}><div class="w"><div>${heroInner}</div>${heroCard}</div></header>`
+  const heroHTML=(t.hero==='split'&&heroAside)
+    ?`<header class="hero split${heroPhoto}"${heroStyle}${heroSlot}><div class="w"><div>${heroInner}</div>${heroAside}</div></header>`
     :`<header class="hero ${t.hero==='banner'?'banner':'center'}${heroPhoto}"${heroStyle}${heroSlot}><div class="w">${heroInner}</div></header>`;
 
   /* Sections are assembled from an ordered list so they can be reordered and
@@ -4476,6 +4556,7 @@ function renderThemeGrid(){
   $('themeGrid').querySelectorAll('.theme').forEach(b=>b.onclick=()=>setTheme(b.dataset.t));
   // Derived, never hardcoded: the count drifted to 14 while the library grew to 36.
   const tt=$('tagTheme'); if(tt) tt.textContent=`${THEME_IDS.length} themes`;
+  if(typeof renderHfPick==='function') renderHfPick();
 }
 
 /* ==========================================================================
@@ -5367,12 +5448,58 @@ ${urls.map(u=>`  <url>
   </url>`).join('\n')}
 </urlset>
 `;
+  const ai=state.meta.aiCrawl!==false&&(state.meta.aiCrawl||prefs.aiCrawl);
   const robots=`User-agent: *
 Allow: /
+${ai?`
+# Answer engines. Allowed on purpose: these are becoming a real referral
+# source, and a site that blocks them by default is invisible to them.
+User-agent: GPTBot
+Allow: /
 
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+`:''}
 Sitemap: ${base}/sitemap.xml
 `;
-  return [{name:'sitemap.xml',text:sitemap},{name:'robots.txt',text:robots}];
+  const files=[{name:'sitemap.xml',text:sitemap},{name:'robots.txt',text:robots}];
+  if(ai){
+    /* llms.txt: a plain-language map of the site for language models, which
+       read prose far better than they read a sitemap. */
+    const m2=state.meta, c2=m2.contact||{};
+    const p0=pageOf(state,0);
+    files.push({name:'llms.txt',text:`# ${m2.businessName}
+${m2.location?`> ${m2.businessName} is a ${(PACKS[m2.type]||PACKS.other).label.toLowerCase()} business in ${m2.location}.`:''}
+
+${(p0.about||p0.hero&&p0.hero.subheadline||'').trim()}
+
+## Contact
+${c2.phone?`- Phone: ${c2.phone}`:''}
+${c2.email?`- Email: ${c2.email}`:''}
+${c2.hours?`- Hours: ${c2.hours}`:''}
+${c2.area?`- Service area: ${c2.area}`:''}
+
+## Services
+${(p0.services||[]).map(x=>`- ${x.title}: ${x.description}`).join('\n')}
+
+## Pages
+${Array.from({length:pageCount(state)},(_,i)=>i).map(i=>
+  `- [${pageTitle(state,i)}](${base}/${i?pageHref(state,i):''}): ${(pageOf(state,i).seo_meta_description||'').slice(0,120)}`).join('\n')}
+
+## Common questions
+${(p0.faqs||[]).map(f=>`### ${f.question}\n${f.answer}`).join('\n\n')}
+`.replace(/\n{3,}/g,'\n\n')});
+  }
+  return files;
 }
 
 async function download(){
@@ -5450,10 +5577,13 @@ function migrate(s){
   if(!Array.isArray(s.media.gallery)) s.media.gallery=[];
   s.meta.seo=s.meta.seo||{};
   s.meta.links=s.meta.links||{primary:'',secondary:'',secondaryLabel:''};
+  if(typeof s.meta.heroForm!=='string') s.meta.heroForm=prefs.heroForm||'none';
+  if(!Array.isArray(s.meta.heroFormFields)) s.meta.heroFormFields=[];
   s.meta.form=s.meta.form||{action:'',fields:(prefs.formFields||['name','phone','email','message']).slice(),cols:prefs.formCols||'auto'};
   if(!['1','2','auto'].includes(s.meta.form.cols)) s.meta.form.cols='auto';
   if(!Array.isArray(s.meta.form.fields)||s.meta.form.fields.length<2)
     s.meta.form.fields=(prefs.formFields||['name','phone','email','message']).slice();
+  if(typeof s.meta.aiCrawl!=='boolean') s.meta.aiCrawl=!!prefs.aiCrawl;
   if(typeof s.meta.contactLayout!=='string') s.meta.contactLayout=prefs.contactLayout||'gradient';
   s.meta.sections=s.meta.sections||{order:SECTION_ORDER.slice(),hidden:[]};
   if(!Array.isArray(s.meta.sections.order)||!s.meta.sections.order.length) s.meta.sections.order=SECTION_ORDER.slice();
@@ -6330,6 +6460,143 @@ function runSeoScore(){
 }
 $('btnSeoScore').onclick=runSeoScore;
 
+/* ---- whole-site audit -------------------------------------------------
+   Per-page scoring misses the problems that only exist between pages:
+   duplicate titles, pages nothing links to, a target phrase that appears on
+   four pages at once. These are the checks the paid crawlers lead with. */
+$('btnSiteAudit').onclick=()=>{
+  if(!siteState){ $('seoScore').innerHTML='<div class="tiny">Generate a site first.</div>'; return; }
+  const n=pageCount(siteState);
+  const pages=Array.from({length:n},(_,i)=>{
+    const h=buildSite(siteState,false,i), P=pageOf(siteState,i);
+    return {i, name:pageTitle(siteState,i), href:pageHref(siteState,i),
+      title:(h.match(/<title>([^<]*)<\/title>/)||[])[1]||'',
+      desc:(h.match(/name="description" content="([^"]*)"/)||[])[1]||'',
+      // Relative only. An absolute .html in the canonical or og:url is not an
+      // internal link, and counting it flagged every page as linking to a
+      // page that does not exist.
+      links:[...h.matchAll(/href="(?!https?:|\/\/|#|mailto:|tel:)([^"]+\.html)"/g)].map(m=>m[1]),
+      h1:(h.match(/<h1[^>]*>([\s\S]*?)<\/h1>/)||[])[1]||'',
+      // <style> has to go too, or the CSS is counted as prose and every page
+      // reports three thousand words.
+      words:((h.replace(/<script[\s\S]*?<\/script>/g,'').replace(/<style[\s\S]*?<\/style>/g,'')
+        .replace(/<[^>]+>/g,' ').match(/\b\w+\b/g))||[]).length,
+      kw:(P.keyword||siteState.meta.keyword||'').toLowerCase(),
+      legal:!!P.legal};
+  });
+  const issues=[];
+  const dupe=(key,label)=>{
+    const seen={};
+    pages.forEach(p=>{ const v=(p[key]||'').trim().toLowerCase(); if(!v) return; (seen[v]=seen[v]||[]).push(p.name); });
+    Object.entries(seen).filter(([,a])=>a.length>1).forEach(([v,a])=>
+      issues.push({sev:'bad',t:`Duplicate ${label}`,d:`${a.join(' and ')} share "${v.slice(0,60)}". Search engines pick one and ignore the rest.`}));
+  };
+  dupe('title','title tag'); dupe('desc','meta description'); dupe('h1','H1');
+  // orphans: pages nothing links to
+  const linkedTo=new Set(); pages.forEach(p=>p.links.forEach(l=>linkedTo.add(l)));
+  pages.slice(1).forEach(p=>{ if(!linkedTo.has(p.href))
+    issues.push({sev:'bad',t:'Orphan page',d:`Nothing links to ${p.name}. A page no page links to is a page nothing can find.`}); });
+  // broken internal links
+  const real=new Set(pages.map(p=>p.href));
+  pages.forEach(p=>p.links.filter(l=>!real.has(l)).forEach(l=>
+    issues.push({sev:'bad',t:'Broken link',d:`${p.name} links to ${l}, which is not in this site.`})));
+  // thin pages
+  pages.filter(p=>!p.legal&&p.words<250).forEach(p=>
+    issues.push({sev:'warn',t:'Thin page',d:`${p.name} has about ${p.words} words. Thin for a page meant to rank.`}));
+  // missing meta
+  pages.filter(p=>!p.desc).forEach(p=>issues.push({sev:'warn',t:'No meta description',d:`${p.name} has none, so Google writes its own snippet.`}));
+  // keyword cannibalisation
+  const kws={}; pages.forEach(p=>{ if(p.kw) (kws[p.kw]=kws[p.kw]||[]).push(p.name); });
+  Object.entries(kws).filter(([,a])=>a.length>1).forEach(([k,a])=>
+    issues.push({sev:'warn',t:'Two pages, one phrase',d:`${a.join(' and ')} both target "${k}". They will compete with each other.`}));
+  if(!((siteState.meta.seo||{}).canonical||'').trim())
+    issues.push({sev:'warn',t:'No live URL',d:'Without it there is no canonical, no sitemap, no robots.txt and no breadcrumbs.'});
+  const col=s=>s==='bad'?'var(--bad)':s==='warn'?'var(--warn)':'var(--good)';
+  $('seoScore').innerHTML=`<div class="gout">
+    <h5>Site audit: ${n} page${n===1?'':'s'}, ${issues.length} issue${issues.length===1?'':'s'}</h5>
+    ${issues.length?issues.map(x=>`<div class="scorerow"><span class="dot" style="background:${col(x.sev)}"></span>
+      <span><b>${esc(x.t)}</b><div class="gmeta">${esc(x.d)}</div></span></div>`).join('')
+      :'<div class="gmeta">Nothing found across the whole site. Titles, descriptions and H1s are unique, every page is linked, and no two pages chase the same phrase.</div>'}
+    <div class="scorerow"><span class="dot" style="background:var(--good)"></span><span><b>Pages</b>
+      <div class="gmeta">${pages.map(p=>`${esc(p.name)} (${p.words}w)`).join(' · ')}</div></span></div>
+  </div>`;
+};
+
+/* ---- how it will actually look ---- */
+$('btnSerp').onclick=()=>{
+  if(!siteState){ $('seoScore').innerHTML='<div class="tiny">Generate a site first.</div>'; return; }
+  const h=buildSite(siteState,false,currentPage);
+  const title=(h.match(/<title>([^<]*)<\/title>/)||[])[1]||'';
+  const desc=(h.match(/name="description" content="([^"]*)"/)||[])[1]||'';
+  const base=((siteState.meta.seo||{}).canonical||'https://example.co.nz').replace(/\/+$/,'');
+  const url=base+(currentPage?'/'+pageHref(siteState,currentPage):'/');
+  const cut=(t,n)=>t.length>n?t.slice(0,n-1).replace(/\s\S*$/,'')+'…':t;
+  const og=((siteState.meta.seo||{}).ogImage||'').trim();
+  $('seoScore').innerHTML=`<div class="gout"><h5>Google result</h5>
+      <div class="serp"><div class="u">${esc(url)}</div>
+        <div class="t">${esc(cut(title,60))}</div><div class="d">${esc(cut(desc,158))}</div></div>
+      <h5>Shared on Facebook, LinkedIn or WhatsApp</h5>
+      <div class="serp social">
+        ${og?`<img src="${esc(og)}" style="width:100%;border-radius:6px;margin-bottom:6px" onerror="this.style.display='none'">`
+            :`<div class="gmeta" style="padding:22px;text-align:center;border:1px dashed var(--stroke);border-radius:6px;margin-bottom:6px">No share image set, so this area is blank when posted</div>`}
+        <div class="u">${esc((base.match(/\/\/([^/]+)/)||[])[1]||'')}</div>
+        <div class="t">${esc(cut(title,88))}</div><div class="d">${esc(cut(desc,120))}</div></div>
+      <div class="gmeta">Titles cut at about 60 characters in Google and 88 on social. Yours are ${title.length} and ${desc.length}.</div>
+    </div>`;
+};
+
+/* ---- schema inspector ---- */
+$('btnSchema').onclick=()=>{
+  if(!siteState){ $('seoScore').innerHTML='<div class="tiny">Generate a site first.</div>'; return; }
+  const h=buildSite(siteState,false,currentPage);
+  const blocks=[...h.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map(m=>{
+    try{ return JSON.parse(m[1]); }catch{ return {'@type':'INVALID JSON'}; }
+  });
+  const missing=[];
+  const types=blocks.map(b=>b['@type']);
+  if(!types.includes('FAQPage')) missing.push('FAQPage: add FAQs to this page and it appears automatically, which is the cheapest rich result there is.');
+  if(!types.includes('BreadcrumbList')) missing.push('BreadcrumbList: set the live URL and sub-pages get one.');
+  if(!(siteState.meta.contact||{}).area) missing.push('areaServed is empty on LocalBusiness. Fill in the service area.');
+  if(!((siteState.meta.seo||{}).socials||'').trim()) missing.push('sameAs is empty. Add social profiles so Google can connect them to this business.');
+  $('seoScore').innerHTML=`<div class="gout"><h5>Structured data on this page</h5>
+    ${blocks.map(b=>`<div class="gitem"><b>${esc(b['@type']||'unknown')}</b>
+      <pre style="margin-top:4px">${esc(JSON.stringify(b,null,1).slice(0,900))}</pre></div>`).join('')||'<div class="gmeta">None.</div>'}
+    ${missing.length?`<h5 style="margin-top:10px">Could be richer</h5>${missing.map(x=>`<div class="gitem">${esc(x)}</div>`).join('')}`:''}
+    <div class="gmeta" style="margin-top:8px">Deliberately no review or rating schema: the testimonials are written examples, and marking up invented reviews is a Google penalty and, in most markets, illegal.</div>
+  </div>`;
+};
+
+/* ---- the external testers people actually use ---- */
+$('btnTestLinks').onclick=()=>{
+  const base=((siteState&&siteState.meta.seo&&siteState.meta.seo.canonical)||'').trim().replace(/\/+$/,'');
+  const u=base?base+(currentPage?'/'+pageHref(siteState,currentPage):'/'):'';
+  const tools=[
+    ['Rich Results Test','https://search.google.com/test/rich-results?url=','Does Google see your structured data'],
+    ['PageSpeed Insights','https://pagespeed.web.dev/analysis?url=','Core Web Vitals and the real speed score'],
+    ['Mobile-Friendly / Lighthouse','https://pagespeed.web.dev/analysis?form_factor=mobile&url=','How it scores on a phone'],
+    ['Schema validator','https://validator.schema.org/#url=','Full schema.org validation'],
+    ['Search Console','https://search.google.com/search-console','Index coverage, once verified'],
+    ['Business Profile','https://business.google.com/','Where the local ranking actually happens']
+  ];
+  $('seoScore').innerHTML=`<div class="gout"><h5>Test it with the real tools</h5>
+    ${u?'':'<div class="gmeta" style="margin-bottom:8px">Set the live URL below to make these one-click. Until the site is hosted they open the tool, not your page.</div>'}
+    ${tools.map(([n,href,why])=>`<div class="gitem">
+      <a href="${esc(href.endsWith('=')&&u?href+encodeURIComponent(u):href)}" target="_blank" rel="noopener"><b>${esc(n)} ↗</b></a>
+      <div class="gmeta">${esc(why)}</div></div>`).join('')}</div>`;
+};
+
+/* ---- AI crawler access ----
+   Answer engines are becoming a real referral source, and the default posture
+   of most sites is accidental: no llms.txt, and robots rules written years ago
+   for search crawlers. This makes it a deliberate choice. */
+$('aiCrawlSwitch').onclick=()=>{
+  prefs.aiCrawl=!prefs.aiCrawl; savePrefs();
+  $('aiCrawlSwitch').classList.toggle('on',prefs.aiCrawl);
+  if(siteState){ siteState.meta.aiCrawl=prefs.aiCrawl; schedulePersist(); }
+};
+$('aiCrawlSwitch').onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); $('aiCrawlSwitch').click(); } };
+
+
 /* A 1200x630 share card drawn from the site's own theme and copy. Nothing else
    in the app produced one, so og:image was a field you had to fill from
    elsewhere, and links posted anywhere looked blank. */
@@ -6931,6 +7198,36 @@ Object.entries(GROWTH).forEach(([kind,g])=>{
   });
 });
 
+/* ---- hero form picker -------------------------------------------------- */
+const HF_META={
+  none:      ['Contact card','The default. Phone, email, hours and area.'],
+  quick:     ['Quick reply','Three fields and a button. Lowest friction there is.'],
+  quote:     ['Request a quote','Full field set with a reassuring subhead.'],
+  callback:  ['Call me back','Two fields. For trades where the phone closes the job.'],
+  booking:   ['Book a time','Service and date alongside the details.'],
+  checklist: ['Checklist style','Bulleted labels, reads as a short intake form.'],
+  offer:     ['Offer box','Framed in your standout, outlined in the accent colour.'],
+  urgent:    ['Urgent callout','Two fields, outlined, for emergency trades.'],
+  compact:   ['Compact','Narrow, right-aligned, stays out of the headline’s way.'],
+  detailed:  ['Tell us the job','Every field, for considered purchases.'],
+  withcard:  ['Form and details','Short form with phone and hours underneath.']
+};
+const HF_KEYS=Object.keys(HF_META);
+const hfNow=()=>(siteState?siteState.meta.heroForm:prefs.heroForm)||'none';
+function renderHfPick(){
+  const host=$('hfPick'); if(!host) return;
+  const cur=hfNow(), split=siteState?resolveTheme(siteState.meta.theme).hero==='split':true;
+  host.innerHTML=HF_KEYS.map(k=>
+    `<button type="button" class="cxbtn${k===cur?' on':''}" data-hf="${k}"><b>${esc(HF_META[k][0])}</b><span>${esc(HF_META[k][1])}</span></button>`).join('')
+    +(split?'':`<div class="tiny" style="grid-column:1/-1;margin-top:6px">This theme does not use a split hero, so the hero form is not shown. Pick a split-hero theme to use it.</div>`);
+  host.querySelectorAll('[data-hf]').forEach(b=>b.onclick=()=>{
+    prefs.heroForm=b.dataset.hf; savePrefs();
+    if(siteState){ siteState.meta.heroForm=b.dataset.hf; pushHistory(siteState); lastShareURL=''; renderPreview(); }
+    renderHfPick();
+  });
+}
+renderHfPick();
+
 /* ---- closing section picker ------------------------------------------- */
 const CX_META={
   gradient:  ['Gradient panel','The default. Centred, high contrast, works anywhere.'],
@@ -7528,6 +7825,13 @@ function verifyAppTokens(){
 
 /* ---- boot ---- */
 loadWL(); loadPrefs(); loadBrief();
+/* These panels render at their definition site, which executes BEFORE
+   loadPrefs(). They painted from the hardcoded defaults while prefs held
+   something else, so the UI and the state disagreed until the first click,
+   at which point the selection appeared to jump at random. Repaint them once
+   the real preferences are in. */
+renderCxPick(); renderFormCols(); renderFormFields(); renderHfPick();
+$('aiCrawlSwitch').classList.toggle('on',prefs.aiCrawl!==false);
 applyAppearance(); applyBranding();
 
 function bootDashboard(){
