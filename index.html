@@ -281,6 +281,7 @@ select{appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%
 .combo-list button.new{color:var(--accent)}
 .combo-group{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--txt-3);padding:8px 10px 4px}
 .combo-empty{padding:10px;font-size:12px;color:var(--txt-3)}
+.suggs{display:block;font-size:10.5px;color:var(--txt-3);margin-top:5px;letter-spacing:.02em}
 
 /* theme cards */
 .themes{display:grid;grid-template-columns:1fr 1fr;gap:9px}
@@ -865,6 +866,11 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
           <div class="tiny" id="jsNote"></div>
           <div id="fxWrap" style="margin-top:10px">
             <label style="margin-bottom:6px">Effects <span class="opt" id="fxCount"></span></label>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+              <button class="mini" id="btnSuggestFX" type="button">✨ Suggest the best set</button>
+              <button class="mini" id="btnClearFX" type="button">Turn all off</button>
+            </div>
+            <div id="fxWhy" class="tiny" style="margin-bottom:8px"></div>
             <div class="fxgrid" id="fxGrid"></div>
           </div>
         </div>
@@ -2085,7 +2091,11 @@ function siteDigest(st,skipIdx){
       questions:(P.faqs||[]).map(x=>x.question),
       // Section H2s are the loudest duplication signal, so they go in the
       // digest too — the model cannot avoid reusing what it cannot see.
-      headings:Object.values(P.headings||{}).map(x=>x&&x.h).filter(Boolean)
+      headings:Object.values(P.headings||{}).map(x=>x&&x.h).filter(Boolean),
+      // The section MIX is the other duplication signal. Without it the model
+      // cannot tell that it is about to propose the same skeleton again.
+      layout:((P.sections&&P.sections.order)||SECTION_ORDER)
+        .filter(k=>!((P.sections&&P.sections.hidden)||[]).includes(k))
     });
   }
   return out;
@@ -2135,6 +2145,13 @@ Set "page_intent" from what a person searching for this page actually wants:
 - "trust" — deciding whether to believe this operator. Lead with evidence, people and credentials.
 
 STEP 2 — CHOOSE ONLY THE SECTIONS THAT SERVE THAT JOB.
+Start from the blueprint for the intent you picked, then adjust it for this specific page. These are starting points, not rules — but departing from one should be a decision, not an oversight:
+- transactional → hero, services, process, faq, contact. The reader wants to know what they get, what happens next, and what might stop them.
+- informational → hero, about, services, faq, contact. The reader wants the answer first and the detail second; "about" carries the substantive body, not a company bio.
+- local     → hero, areas, services, reviews, contact. A page about places MUST carry the "areas" section — a coverage page with no list of places served is the single most common way these pages fail.
+- trust     → hero, about, stats, reviews, faq, contact. Evidence, people, credentials, then the objections.
+Read the page title literally. If it names places, it needs "areas". If it names a process or a "how", it needs "process". If it names a catalogue of offerings, it needs "services" carrying THIS page's sub-offerings. If it names proof, credentials or people, it needs "stats" and "reviews".
+Your section list must also DIFFER from the other pages listed under ALREADY COVERED. If three pages in a row run hero/services/about/faq/contact, the site reads as one page printed three times, whatever the words say.
 "sections" is an ORDERED subset of these keys. Available sections:
 ${PAGE_SECTION_MENU}
 
@@ -2149,7 +2166,7 @@ Section rules — these matter more than any other rule here:
 - Before you answer, count your content sections. If the count is under 3, go back and find another angle on this page's topic that earns its own section — a comparison, a step-by-step, the questions it raises, who it suits — rather than padding an existing one.
 
 STEP 3 — GIVE EVERY SECTION ITS OWN HEADING.
-"section_headings" must contain one entry for EVERY key you listed in "sections" except "hero" (its headline is the H1). Each entry is {"h": the H2, "sub": one supporting sentence — use "" where a sentence would only pad}.
+"section_headings" is REQUIRED and must contain one entry for EVERY key you listed in "sections" except "hero" (its headline is the H1). A page returned without it is incomplete. Each entry is {"h": the H2, "sub": one supporting sentence — use "" where a sentence would only pad}.
 - These are the page's section H2s. Write them for THIS page's topic. A page about emergency callouts does not head its list "What we do" and its closing "Ready when you are" — it heads them for what they actually are on this page.
 - Every H2 must be different from the other pages' H2s listed under ALREADY COVERED. Reusing them is the single most visible way an interior page reads as a copy of the home page, even when the content underneath is new.
 - Keep each "h" under 60 characters. Do not restate the H1.
@@ -2204,11 +2221,12 @@ Page title: "${brief.page}"`;
   if(digest&&digest.length){
     u+=`\n\n=== ALREADY COVERED ELSEWHERE ON THIS SITE — DO NOT REPEAT ===
 ${digest.map(d=>`- ${d.page}: "${d.headline}"`
+  +(d.layout&&d.layout.length?`\n    section mix: ${d.layout.join(' > ')}`:'')
   +(d.headings&&d.headings.length?`\n    section headings used: ${d.headings.join(' | ')}`:'')
   +(d.covers.length?`\n    covers: ${d.covers.join(', ')}`:'')
   +(d.questions.length?`\n    already answers: ${d.questions.join(' | ')}`:'')).join('\n')}
 
-Your page must add something these do not. Do not reuse their headlines, their section headings, their service titles or their questions. Where your topic touches one of them, go a level deeper instead of summarising it again.`;
+Your page must add something these do not. Do not reuse their headlines, their section mix, their section headings, their service titles or their questions. Where your topic touches one of them, go a level deeper instead of summarising it again.`;
   }
   return u+`\n\nReturn the JSON now.`;
 }
@@ -2904,9 +2922,43 @@ function buildSite(state,mode,pageIdx){
      different its content was. That is the duplication you see on an interior
      page even when its copy is genuinely new. The old strings survive as
      fallbacks so existing saved sites are unchanged. */
+  /* Fallbacks must never be the home page's wording on an interior page. The
+     model is asked for section headings, but a model that skips the field
+     would otherwise drop the whole page back onto "What we do" / "About
+     <business>" / "Questions we get asked" — which is the duplication showing
+     up on every sub-page. So the fallback is derived from the page's title and
+     intent instead. Compliance improves the wording; it is no longer what
+     stands between the page and reading like a copy of home. */
+  const isSub=pageIdx>0, pTitle=isSub?pageTitle(state,pageIdx):'';
+  const SUB_DEFAULTS={
+    transactional:{services:['What you get',''],process:['How we get started',''],
+      about:[`Why choose ${m.businessName} for this`,''],reviews:['Clients who booked this work',''],
+      faq:['Before you book',''],areas:['Where we can do this',''],
+      gallery:['Photos from recent jobs',''],stats:['',''],contact:['Get it booked']},
+    /* The page title is only interpolated where it reads as a topic in any
+       sentence — "Common questions about service areas" works, "Before you
+       book Service Areas" does not. */
+    informational:{services:['What\u2019s included',''],process:['How it works, step by step',''],
+      about:['Who does this work',''],reviews:[`What people say about ${pTitle.toLowerCase()}`,''],
+      faq:[`Common questions about ${pTitle.toLowerCase()}`,''],areas:['Where this applies',''],
+      gallery:['What it looks like in practice',''],stats:['',''],contact:['Still deciding? Ask us']},
+    local:{services:['Areas we cover',''],process:['How we work across the region',''],
+      about:[`${m.businessName} in your area`,''],reviews:['Jobs from around the region',''],
+      faq:['Questions about our coverage',''],areas:['Every town and suburb we serve',''],
+      gallery:['Recent work near you',''],stats:['',''],contact:['Check we cover you']},
+    trust:{services:['What we stand behind',''],process:['How we keep it accountable',''],
+      about:[`Who you are dealing with at ${m.businessName}`,''],reviews:['In our clients\u2019 words',''],
+      faq:['The questions people check first',''],areas:['Where we are established',''],
+      gallery:['Work you can inspect',''],stats:['',''],contact:['Talk to us directly']}
+  };
   const HD=(k,defH,defSub)=>{
     const x=((s.headings||{})[k])||{};
-    return {h:isStr(x.h)?x.h:defH, sub:isStr(x.sub)?x.sub:(defSub||'')};
+    let fh=defH, fs=defSub||'';
+    if(isSub&&!isStr(x.h)){
+      const set=SUB_DEFAULTS[s.page_intent]||SUB_DEFAULTS.informational;
+      if(set[k]&&set[k][0]){ fh=set[k][0]; fs=set[k][1]||''; }
+    }
+    return {h:isStr(x.h)?x.h:fh, sub:isStr(x.sub)?x.sub:fs};
   };
   const hdH=(k,defH)=>ed(`headings.${k}.h`,'h2','',HD(k,defH).h);
   const hdSub=(k,defH,defSub)=>{ const v=HD(k,defH,defSub).sub;
@@ -4732,6 +4784,85 @@ $('btnOpenReview').onclick=async()=>{
 };
 if(prefs.approveTo) $('approveTo').value=prefs.approveTo;
 $('approveTo').addEventListener('input',()=>{ lastReviewURL=''; $('reviewUrl').value=''; $('reviewMeta').textContent=''; });
+/* ---- "Suggest the best set" -------------------------------------------
+   Motion is where these sites are most easily ruined: every effect switched
+   on at once reads as a demo reel, and the wrong effect on the wrong theme
+   reads as a template. This picks a coherent set for the theme, the trade and
+   the content that actually exists — and it works with no API key, because a
+   recipe is not something worth spending a call on. With a key it asks Claude
+   to adjust the recipe for this specific business and say why.
+
+   Deliberately conservative about weight: a WebGL hero is only ever suggested
+   for themes built around a dark, visual first screen. */
+const FX_RECIPES={
+  quiet:   {js:'smooth', fx:['fadeup','condense','progress'],
+            why:'Restraint suits this theme — the page moves just enough to feel alive without competing with the copy.'},
+  editorial:{js:'gsap',  fx:['splittext','blurin','fadeup','reveal','condense'],
+            why:'Typography leads, so the headline sets itself and the images wipe in behind it.'},
+  bold:    {js:'gsap',   fx:['splittext','scalein','magnetic','ripple','condense','progress'],
+            why:'A loud theme can carry loud motion: the headline lands hard, the buttons answer the cursor.'},
+  visual:  {js:'webgl',  fx:['splittext','reveal','parallax','hscroll','spotlight','cursor'],
+            why:'A dark, image-led theme is the one place a WebGL hero and a sideways gallery earn their download.'},
+  trust:   {js:'gsap',   fx:['fadeup','blurin','stepline','condense'],
+            why:'Nothing showy — the step line makes the process readable and the rest stays out of the way.'},
+  warm:    {js:'gsap',   fx:['fadeup','wave','scalein','typeout','condense'],
+            why:'Softer motion: the headings arrive letter by letter and the standfirst types itself in.'}
+};
+const THEME_RECIPE={
+  trades:'bold',punch:'bold',auto:'bold',brutal:'bold',neon:'bold',vintage:'bold',agri:'bold',kids:'warm',
+  pro:'trust',corporate:'trust',legal:'trust',medical:'trust',finance:'trust',civic:'trust',clinic:'trust',slate:'trust',midnight:'trust',
+  editorial:'editorial',mono:'editorial',story:'editorial',paper:'editorial',swiss:'editorial',boutique:'editorial',luxe:'editorial',
+  studio:'visual',cinema:'visual',property:'visual',aurora:'visual',coastal:'visual',hospitality:'visual',
+  fresh:'warm',wellness:'warm',fitness:'warm',botanic:'warm',artisan:'warm',saas:'quiet'
+};
+function fxRecipeFor(state){
+  const key=THEME_RECIPE[(state&&state.meta&&state.meta.theme)]||'quiet';
+  const r=FX_RECIPES[key];
+  // Only ever suggest an effect the page has the content to show.
+  const P=pageOf(state,0);
+  const drop=[];
+  if(!((P.media&&P.media.gallery)||[]).length) drop.push('hscroll','parallax','reveal');
+  if(!(P.process||[]).length) drop.push('stepline');
+  if(!(P.areas||[]).length) drop.push('marquee');
+  const fx=r.fx.filter(k=>FX[k]&&!drop.includes(k));
+  return {js:r.js,fx,why:r.why,key};
+}
+function applyFXSuggestion(sug,note){
+  prefs.motion=true; prefs.js=sug.js;
+  prefs.fx=sug.fx.filter(k=>FX[k]);
+  savePrefs(); renderJsOpts(); renderFx(); renderPreview(); renderChecks();
+  const kb=JS_LEVELS[sug.js]?JS_LEVELS[sug.js].kb:0;
+  $('fxWhy').textContent=`${note||sug.why} — ${sug.fx.length} effects on ${JS_LEVELS[sug.js]?sug.js:'off'} (~${kb} KB of libraries).`;
+}
+$('btnClearFX').onclick=()=>{ prefs.fx=[]; savePrefs(); renderFx(); renderPreview();
+  $('fxWhy').textContent='All effects off. The CSS motion layer still runs unless you turn Motion off too.'; };
+$('btnSuggestFX').onclick=async()=>{
+  if(!siteState){ $('fxWhy').textContent='Generate a site first — the suggestion depends on what is actually on the page.'; return; }
+  const base=fxRecipeFor(siteState);
+  const btn=$('btnSuggestFX'), was=btn.textContent;
+  if(!getKey()){ applyFXSuggestion(base,base.why+' (Picked from the theme — add an API key to have Claude tune it.)'); return; }
+  btn.disabled=true; btn.textContent='Thinking…';
+  $('fxWhy').textContent='Asking Claude which motion suits this business…';
+  const b=briefFromMeta();
+  const sys=`You are an art director choosing motion for a small local business website. Restraint wins: the wrong effect makes a site look like a template, and every effect costs download weight and attention.
+Return ONLY raw JSON: {"js":"off"|"smooth"|"gsap"|"webgl","fx":[string],"why":string}
+- "fx" keys must come from: ${Object.keys(FX).join(', ')}.
+- Pick 3 to 6. More than six reads as a demo reel, not a business.
+- "js" weight: smooth ~13 KB, gsap ~128 KB, webgl ~736 KB. Only choose webgl if a dark, image-led hero genuinely justifies three quarters of a megabyte; otherwise do not.
+- Respect what the page has: ${(pageOf(siteState,0).media&&(pageOf(siteState,0).media.gallery||[]).length)||0} gallery images, ${(pageOf(siteState,0).process||[]).length} process steps, ${(pageOf(siteState,0).areas||[]).length} service areas. Never suggest an effect that needs content this page does not have.
+- "why" is one sentence, in plain language, about this business — not about the effects.
+A sensible starting point for this theme is ${JSON.stringify({js:base.js,fx:base.fx})}. Depart from it only where this business gives you a reason.`;
+  try{
+    const raw=await callClaude(sys,`${userPrompt(b,null,null)}\n\nTheme: ${resolveTheme(siteState.meta.theme).label}. Return the JSON now.`);
+    const d=JSON.parse(stripFences(raw));
+    const fx=(Array.isArray(d.fx)?d.fx:[]).map(x=>String(x).trim()).filter(k=>FX[k]).slice(0,7);
+    if(!fx.length) throw new ApiError('No usable effects came back.',raw);
+    applyFXSuggestion({js:JS_LEVELS[d.js]?d.js:base.js,fx,why:base.why},isStr(d.why)?d.why:base.why);
+  }catch(e){
+    applyFXSuggestion(base,base.why+' (Claude could not be reached, so this is the theme default.)');
+  }finally{ btn.disabled=false; btn.textContent=was; }
+};
+
 $('secFind').addEventListener('input',renderSections);
 $('secFind').addEventListener('search',renderSections);
 
@@ -5000,11 +5131,20 @@ $('btnAddPage').onclick=()=>{
      input's dataset at write time meant a keyword went stale the moment you
      added a second page. */
   pg.keyword=$('newPageName').dataset.keyword||'';
+  pg.page_intent=$('newPageName').dataset.intent||'';
+  const want=($('newPageName').dataset.sections||'').split(',').map(x=>x.trim()).filter(k=>SECTION_META[k]);
+  if(want.length>=3){
+    if(!want.includes('hero')) want.unshift('hero');
+    if(!want.includes('contact')) want.push('contact');
+    pg.sections={order:[...want,...SECTION_ORDER.filter(k=>!want.includes(k))],
+                 hidden:SECTION_ORDER.filter(k=>!want.includes(k))};
+  }
   siteState.pages.push(pg);
   $('newPageName').value=''; $('newPageName').dataset.keyword='';
+  $('newPageName').dataset.intent=''; $('newPageName').dataset.sections='';
   gotoPage(pageCount(siteState)-1);
   pushHistory(siteState); lastShareURL='';
-  setPageStatus(`Page added${pg.keyword?` targeting "${pg.keyword}"`:''} — press "Write this page" to fill it.`);
+  setPageStatus(`Page added${pg.keyword?` targeting "${pg.keyword}"`:''}${want.length>=3?` with a ${want.length}-section ${pg.page_intent||''} layout`:''} — press "Write this page" to fill it.`);
 };
 $('newPageName').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); $('btnAddPage').click(); } });
 
@@ -5025,12 +5165,14 @@ $('btnSuggestPages').onclick=async()=>{
   const existing=Array.from({length:pageCount(siteState)},(_,i)=>pageTitle(siteState,i)).join(', ');
   const sys=`You are an SEO strategist planning the page structure of a small local service business website.
 Return ONLY raw JSON, no fences, no preamble, matching:
-{"pages":[{"title":string,"why":string,"keyword":string}]}
+{"pages":[{"title":string,"why":string,"keyword":string,"intent":"transactional"|"informational"|"local"|"trust","sections":[string]}]}
 Rules:
 - 5 to 7 suggestions, ordered by commercial value.
 - "title" is the nav label, 1-3 words, in ${LOCALES[b.locale].label} English.
 - "why" is one short sentence on what it wins — a search term, an objection it answers, or a conversion step.
 - "keyword" is the search phrase that page should target, phrased the way a customer would actually search.
+- "intent" is what the searcher wants: transactional (ready to book), informational (researching), local (looking for this service in a place), trust (deciding whether to believe this operator).
+- "sections" is the page's skeleton, an ordered subset of: hero, stats, services, process, about, gallery, reviews, faq, areas, contact. Always start with "hero" and end with "contact", and put 3 to 5 content sections between them. Choose them for THIS page: a coverage page needs "areas", a how-it-works page needs "process", a credentials page needs "stats" and "reviews". Two suggested pages should not share the same skeleton.
 - Suggest pages that earn their place for THIS trade. Prefer high-intent service and location pages over filler like "Blog" or "Gallery" unless they genuinely suit.
 - Do NOT suggest any of these, which already exist: ${existing}.`;
   try{
@@ -5043,11 +5185,16 @@ Rules:
          <span class="suggt">${esc(p.title)}</span>
          <span class="suggw">${esc(p.why||'')}</span>
          ${p.keyword?`<span class="suggk">${esc(p.keyword)}</span>`:''}
+         ${Array.isArray(p.sections)&&p.sections.length?`<span class="suggs">${p.sections.filter(k=>SECTION_META[k]).map(k=>esc(SECTION_META[k].label)).join(' · ')}</span>`:''}
        </button>`).join('')}</div>`;
     $('pageSuggest').querySelectorAll('.suggrow').forEach(b2=>b2.onclick=()=>{
       const p=list[+b2.dataset.i];
       $('newPageName').value=p.title;
       $('newPageName').dataset.keyword=p.keyword||'';
+      // Carry the suggested skeleton onto the page, so a page that is added
+      // and never AI-written still starts with sections that suit it.
+      $('newPageName').dataset.intent=p.intent||'';
+      $('newPageName').dataset.sections=Array.isArray(p.sections)?p.sections.join(','):'';
       setPageStatus(`"${p.title}" ready — press Add, then "Write this page" to fill it.`);
     });
     setPageStatus(`${list.length} suggestions — click one to use it.`);
