@@ -4740,7 +4740,15 @@ async function renderProspectView(raw,review){
   }
   if(rev){
     const sheet=document.getElementById('pvsheet');
-    const summary=ok=>{
+    /* The whole site travels inside this page's URL fragment, so location.href
+       is anywhere from 1.7 KB to over 100 KB. Putting it in the email body was
+       what produced the Google 400: when the reviewer's mail handler is Gmail,
+       the browser rewrites the mailto into a compose URL, and Google rejects
+       anything past its length limit as a malformed request. The agency already
+       knows which site this is from the business name in the subject, so the
+       email never carries the link. The clipboard copy still can, because the
+       clipboard has no length limit. */
+    const summary=(ok,withLink)=>{
       const unseen=Array.from({length:pageCount(view)},(_,i)=>i).filter(i=>!seen.has(i)).map(i=>pageTitle(view,i));
       const notes=(document.getElementById('pvNotes').value||'').trim();
       return `${ok?'APPROVED':'CHANGES REQUESTED'} — ${view.meta.businessName}\n`
@@ -4748,7 +4756,7 @@ async function renderProspectView(raw,review){
         +(unseen.length?`Not opened: ${unseen.join(', ')}\n`:'')
         +`Date: ${new Date().toLocaleString()}\n`
         +(notes?`\nNotes:\n${notes}\n`:'')
-        +`\nReview link:\n${location.href}`;
+        +(withLink?`\nReview link:\n${location.href}`:'');
     };
     let approving=true;
     const open=ok=>{ approving=ok;
@@ -4763,20 +4771,31 @@ async function renderProspectView(raw,review){
     document.getElementById('pvOk').onclick=()=>open(true);
     document.getElementById('pvNo').onclick=()=>open(false);
     document.getElementById('pvCancel').onclick=()=>{ sheet.style.display='none'; };
-    document.getElementById('pvSend').onclick=()=>{
-      const body=summary(approving);
+    document.getElementById('pvSend').onclick=async()=>{
+      const body=summary(approving,false);           // no link: keeps the mailto short
       const subj=`${approving?'Approved':'Changes requested'}: ${view.meta.businessName} website`;
       if(rev.to){
-        location.href=`mailto:${encodeURIComponent(rev.to)}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`;
-        document.getElementById('pvDone').textContent='Your email app should have opened. Nothing is sent until you press send there.';
+        const mailto=`mailto:${encodeURIComponent(rev.to)}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`;
+        // Even without the link a very long note could overrun a Gmail handler.
+        // Past a safe ceiling, copy the text and open a blank compose instead of
+        // firing a URL that would 400.
+        if(mailto.length>1800){
+          try{ await navigator.clipboard.writeText(body); }catch{}
+          location.href=`mailto:${encodeURIComponent(rev.to)}?subject=${encodeURIComponent(subj)}`;
+          document.getElementById('pvDone').textContent='Your note is long, so it has been copied to the clipboard. Paste it into the email that just opened.';
+        }else{
+          location.href=mailto;
+          document.getElementById('pvDone').textContent='Your email app should have opened. Nothing is sent until you press send there.';
+        }
       }else{
-        navigator.clipboard&&navigator.clipboard.writeText(body);
-        document.getElementById('pvDone').textContent='No return address was set on this link, so your decision has been copied to the clipboard — paste it into a reply.';
+        try{ await navigator.clipboard.writeText(body);
+          document.getElementById('pvDone').textContent='No return address was set on this link, so your decision has been copied to the clipboard — paste it into a reply.'; }
+        catch{ document.getElementById('pvDone').textContent='No return address was set, and the clipboard could not be reached — select the text below and copy it manually.'; }
       }
     };
     document.getElementById('pvCopy').onclick=async()=>{
-      try{ await navigator.clipboard.writeText(summary(approving));
-        document.getElementById('pvDone').textContent='Copied. Paste it into an email or message.'; }
+      try{ await navigator.clipboard.writeText(summary(approving,true));
+        document.getElementById('pvDone').textContent='Copied, including the review link. Paste it into an email or message.'; }
       catch{ document.getElementById('pvDone').textContent='Could not reach the clipboard — select the text above and copy it manually.'; }
     };
   }
