@@ -211,7 +211,7 @@ header .spacer{flex:1}
 .col{min-height:0;overflow-y:auto;overflow-x:hidden}
 .rail{border-right:1px solid var(--stroke);padding:12px 10px;transition:opacity .2s}
 .app.norail .rail{opacity:0;pointer-events:none;padding:0}
-.panel{border-right:1px solid var(--stroke);padding:14px 14px 92px;position:relative;background:var(--bg)}
+.panel{border-right:1px solid var(--stroke);padding:14px 14px 24px;position:relative;background:var(--bg)}
 .work{display:flex;flex-direction:column;min-height:0;overflow:hidden;background:var(--surface-2)}
 
 /* ---------- rail ---------- */
@@ -282,13 +282,36 @@ select{appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%
 .mini:hover{background:var(--fill);border-color:var(--stroke-2)}
 .mini:active{transform:scale(.97)}
 
-/* sticky generate */
-.gobar{position:sticky;bottom:0;margin:14px -14px -92px;padding:12px 14px 14px;background:linear-gradient(to top,var(--bg) 64%,transparent)}
-.go{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:13px;border-radius:var(--r-pill);font-weight:500;font-size:15px;letter-spacing:-.015em;background:var(--accent-fill);color:var(--on-accent);transition:all .2s var(--ease)}
-.go:hover:not(:disabled){background:var(--accent-fill-hover)}
-.go:active:not(:disabled){transform:scale(.985)}
-.go:disabled{opacity:.4;cursor:not-allowed}
-.go svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+/* ---- generate button ----
+   Lives in the rail under Clear history. Futuristic treatment: gradient core,
+   a sweeping scan highlight, a soft outer bloom and a subtle idle pulse — all
+   transform/opacity so it stays on the compositor. */
+.go{position:relative;width:100%;margin-top:14px;padding:0;border-radius:14px;overflow:hidden;isolation:isolate;
+  background:linear-gradient(115deg,var(--accent-fill) 0%,color-mix(in srgb,var(--accent-fill) 55%,#7b5cff) 55%,#7b5cff 100%);
+  color:#fff;box-shadow:0 6px 20px color-mix(in srgb,var(--accent-fill) 42%,transparent),
+    inset 0 1px 0 rgba(255,255,255,.28);
+  transition:transform .18s var(--ease),box-shadow .25s var(--ease),filter .2s var(--ease);
+  animation:goPulse 3.4s ease-in-out infinite}
+.go::before{content:'';position:absolute;inset:-1px;border-radius:inherit;padding:1px;z-index:-1;
+  background:linear-gradient(115deg,rgba(255,255,255,.5),transparent 45%,rgba(255,255,255,.3));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude}
+.go-inner{position:relative;z-index:2;display:flex;align-items:center;justify-content:center;gap:9px;
+  padding:14px 16px;font-weight:600;font-size:15px;letter-spacing:-.01em}
+.go svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
+  filter:drop-shadow(0 0 5px rgba(255,255,255,.65))}
+.go-scan{position:absolute;top:0;bottom:0;width:38%;z-index:1;pointer-events:none;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.42),transparent);
+  transform:translateX(-160%);animation:goScan 3.4s ease-in-out infinite}
+@keyframes goScan{0%,55%{transform:translateX(-160%)}90%,100%{transform:translateX(320%)}}
+@keyframes goPulse{0%,100%{box-shadow:0 6px 20px color-mix(in srgb,var(--accent-fill) 40%,transparent),inset 0 1px 0 rgba(255,255,255,.28)}
+  50%{box-shadow:0 8px 30px color-mix(in srgb,var(--accent-fill) 62%,transparent),inset 0 1px 0 rgba(255,255,255,.34)}}
+.go:hover:not(:disabled){transform:translateY(-1px);filter:brightness(1.07);
+  box-shadow:0 10px 32px color-mix(in srgb,var(--accent-fill) 62%,transparent),inset 0 1px 0 rgba(255,255,255,.36)}
+.go:active:not(:disabled){transform:translateY(0) scale(.985)}
+.go:disabled{opacity:.42;cursor:not-allowed;animation:none;filter:saturate(.5)}
+.go:disabled .go-scan{display:none}
+@media(prefers-reduced-motion:reduce){.go,.go-scan{animation:none}}
 
 /* ---------- work column ---------- */
 .wbar{display:flex;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid var(--stroke);flex:none;flex-wrap:wrap;background:var(--chrome);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px)}
@@ -405,6 +428,19 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
 .jsopt.on{border-color:var(--accent);background:var(--sel);color:var(--accent)}
 .jsopt.on span{color:var(--accent)}
 .jsopt:disabled{opacity:.4;cursor:not-allowed}
+.sugg{display:grid;gap:5px;margin-top:2px}
+.suggrow{text-align:left;padding:8px 10px;border:1px solid var(--stroke);border-radius:10px;background:var(--bg);transition:all .16s var(--ease)}
+.suggrow:hover{border-color:var(--accent);background:var(--sel)}
+.suggt{display:block;font-size:12.5px;font-weight:600}
+.suggw{display:block;font-size:10.5px;color:var(--txt-3);line-height:1.4;margin-top:1px}
+.suggk{display:inline-block;margin-top:4px;font-size:9.5px;font-family:ui-monospace,Menlo,monospace;color:var(--accent);background:var(--sel);padding:1px 6px;border-radius:99px}
+.fxgrid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.fxbtn{position:relative;padding:7px 9px;border-radius:9px;border:1px solid var(--stroke);background:var(--surface);font-size:11.5px;font-weight:500;text-align:left;transition:all .16s var(--ease)}
+.fxbtn i{display:block;font-style:normal;font-size:8.5px;color:var(--txt-3);letter-spacing:.04em;margin-top:1px}
+.fxbtn:hover:not(:disabled){border-color:var(--stroke-2);background:var(--fill)}
+.fxbtn.on{border-color:var(--accent);background:var(--sel);color:var(--accent)}
+.fxbtn.on i{color:var(--accent)}
+.fxbtn:disabled{opacity:.35;cursor:not-allowed}
 
 /* pages */
 .pgrow{display:flex;align-items:center;gap:6px;padding:6px 8px;border:1px solid var(--stroke);border-radius:10px;margin-bottom:5px;background:var(--bg)}
@@ -484,7 +520,6 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
   .app{grid-template-columns:1fr;height:auto}
   .col{overflow:visible}
   .panel{border-right:0;border-bottom:1px solid var(--stroke);padding-bottom:14px}
-  .gobar{position:static;margin:12px 0 0;padding:0;background:none}
   .work{height:auto}
   .wbody{height:76vh}
   .mtabs{display:flex;gap:2px;padding:2px;margin:10px 14px 0;border-radius:9px;background:var(--fill)}
@@ -540,6 +575,14 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
     <div class="rail-head"><span>History</span><span id="histCount">0 / 20</span></div>
     <div id="histList"></div>
     <button class="mini" id="btnClearHist" style="width:100%;margin-top:8px">Clear history</button>
+
+    <button class="go" id="btnGen">
+      <span class="go-scan"></span>
+      <span class="go-inner">
+        <svg viewBox="0 0 24 24"><path d="M13 2 4.5 13.5H11l-1 8.5 8.5-11.5H12l1-8.5z"/></svg>
+        <span id="genLabel">Generate website</span>
+      </span>
+    </button>
   </aside>
 
   <!-- ===== COLUMN 2 — everything you control ===== -->
@@ -581,10 +624,36 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
           <textarea id="desc" maxlength="600" placeholder="Family-run electrical contractor serving residential and light commercial clients…"></textarea>
           <div class="counter"><span id="descCount">0</span> / 600</div></div>
         <div class="two">
+          <div class="field"><label for="bizKeyword">Target search phrase
+            <span class="help" data-tip="The one phrase you most want to rank for, e.g. 'electrician Tauranga'. It steers the headline, the meta description and the service copy. Pick how a customer would actually search, not your internal job title.">?</span></label>
+            <input type="text" id="bizKeyword" placeholder="electrician Tauranga" maxlength="70"></div>
+          <div class="field"><label for="bizEst">Year established</label>
+            <input type="text" id="bizEst" placeholder="2009" maxlength="4"></div>
+        </div>
+        <div class="two">
+          <div class="field"><label for="bizTeam">Team size</label>
+            <input type="text" id="bizTeam" placeholder="9" maxlength="6"></div>
+          <div class="field"><label for="bizPrice">Price range
+            <span class="help" data-tip="Goes into the LocalBusiness schema as priceRange, which Google shows in some local results. $ = budget, $$$$ = premium.">?</span></label>
+            <select id="bizPrice">
+              <option value="">Not shown</option><option value="$">$ — budget</option>
+              <option value="$$">$$ — mid</option><option value="$$$">$$$ — premium</option>
+              <option value="$$$$">$$$$ — high end</option>
+            </select></div>
+        </div>
+        <div class="field"><label for="bizCert">Licences &amp; certifications
+          <span class="help" data-tip="Registration bodies, licences, memberships. These are the strongest trust signals on a trade or health site, and they get worked into the copy rather than invented.">?</span></label>
+          <input type="text" id="bizCert" placeholder="Registered Electrician (EWRB), fully insured" maxlength="120"></div>
+        <div class="field"><label for="bizGuar">Guarantee <span class="opt">optional</span></label>
+          <input type="text" id="bizGuar" placeholder="12-month workmanship guarantee" maxlength="100"></div>
+        <div class="two">
           <div class="field"><label>Tone</label><div class="chips" id="toneChips"></div></div>
           <div class="field"><label>Language</label><div class="chips" id="localeChips"></div></div>
         </div>
-        <button class="mini" id="btnDemo" type="button" style="justify-self:start">Fill example</button>
+        <div style="display:flex;gap:6px;align-items:center">
+          <button class="mini" id="btnDemo" type="button">Fill example</button>
+          <span class="tiny" id="demoWhich"></span>
+        </div>
       </div>
     </details>
 
@@ -615,6 +684,11 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
           <input type="text" id="newPageName" placeholder="Page name, e.g. Services" maxlength="40" style="flex:1">
           <button class="mini" id="btnAddPage" type="button">Add</button>
         </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="mini" id="btnSuggestPages" type="button">Suggest pages with AI</button>
+          <button class="mini" id="btnFillPage" type="button">Write this page</button>
+        </div>
+        <div id="pageSuggest"></div>
         <div id="pageStatus" class="tiny"></div>
       </div>
     </details>
@@ -733,6 +807,10 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
             <span class="help" data-tip="Adds real animation libraries (Lenis, GSAP + ScrollTrigger, Three.js) from a pinned CDN with SRI integrity hashes. They make the page feel more alive, but they are downloaded on every visit and are the single biggest thing you can do to slow the site down. Everything degrades to the CSS animation if a script fails to load.">?</span></label>
           <div class="jsopts" id="jsOpts"></div>
           <div class="tiny" id="jsNote"></div>
+          <div id="fxWrap" style="margin-top:10px">
+            <label style="margin-bottom:6px">Effects <span class="opt" id="fxCount"></span></label>
+            <div class="fxgrid" id="fxGrid"></div>
+          </div>
         </div>
         <div class="row">
           <div class="lbl"><b>System fonts only</b>Drops Google Fonts from exports — zero external requests.</div>
@@ -757,12 +835,6 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
     </details>
     <input type="file" id="mediaFile" accept="image/*" class="hidden">
 
-    <div class="gobar">
-      <button class="go" id="btnGen">
-        <svg viewBox="0 0 24 24"><path d="M13 2 4.5 13.5H11l-1 8.5 8.5-11.5H12l1-8.5z"/></svg>
-        <span id="genLabel">Generate website</span>
-      </button>
-    </div>
   </section>
 
   <!-- ===== COLUMN 3 — preview, checks, per-section regeneration ===== -->
@@ -978,7 +1050,99 @@ const THEMES={
 };
 const THEME_IDS=Object.keys(THEMES);
 const DEFAULT_THEME='trades';
-const TONES=['Professional','Friendly','Bold','Minimal'];
+const TONES=['Professional','Friendly','Bold','Minimal',
+  'Warm','Authoritative','Straight-talking','Premium','Reassuring','Energetic',
+  'Technical','Conversational','Empathetic','Witty','Playful'];
+
+/* ==========================================================================
+   EXAMPLE BRIEFS
+   20 fully-specified businesses across every vertical. Each carries the SEO
+   fields too, so "Fill example" produces a genuinely launch-ready brief rather
+   than a name and two sentences. Cycles on each click.
+   ========================================================================== */
+const EXAMPLES=[
+ {name:'Harbourline Electrical',type:'tradie',loc:'Tauranga, Bay of Plenty',stand:'24/7 emergency callout',
+  desc:'Family-run electrical contractor serving residential and light commercial clients across the western Bay. We handle rewires, switchboard upgrades, EV charger installs and fault finding. Registered electricians, fully insured, on the tools since 2009.',
+  ph:'021 555 0123',em:'hello@harbourline.co.nz',area:'Tauranga, Mount Maunganui, Papamoa, Bethlehem',hrs:'Mon–Fri 7am–5pm · Emergency 24/7',
+  kw:'electrician Tauranga',est:'2009',team:'9',cert:'Registered Electrician (EWRB)',price:'$$',guar:'12-month workmanship guarantee',tone:'Straight-talking'},
+ {name:'Kowhai Street Dental',type:'medical',loc:'Hamilton, Waikato',stand:'Same-week emergency appointments',
+  desc:'Family dental practice in central Hamilton offering check-ups, hygiene, white fillings, crowns and clear aligners. Gentle with nervous patients and children, with transparent pricing quoted before any treatment starts.',
+  ph:'07 555 0188',em:'reception@kowhaidental.co.nz',area:'Hamilton, Chartwell, Rototuna, Cambridge',hrs:'Mon–Fri 8am–5.30pm · Sat 9am–1pm',
+  kw:'dentist Hamilton',est:'2014',team:'12',cert:'NZ Dental Council registered',price:'$$',guar:'Written quote before treatment',tone:'Reassuring'},
+ {name:'Northlight Aerial',type:'drone',loc:'Queenstown, Otago',stand:'CAA Part 102 certified',
+  desc:'Aerial photography and survey for construction, real estate and tourism across the lower South Island. We fly Part 102 certified, deliver same-day edits, and handle everything from progress shots to full orthomosaic site maps.',
+  ph:'027 555 0144',em:'fly@northlightaerial.co.nz',area:'Queenstown, Wanaka, Cromwell, Arrowtown',hrs:'Mon–Sat, weather permitting',
+  kw:'drone photography Queenstown',est:'2018',team:'3',cert:'CAA Part 102 operator certificate',price:'$$$',guar:'Reshoot free if weather spoils the flight',tone:'Technical'},
+ {name:'Bright & Early Cleaning',type:'cleaning',loc:'Christchurch, Canterbury',stand:'Same cleaner every visit',
+  desc:'Residential and office cleaning across greater Christchurch. Weekly, fortnightly or one-off deep cleans, plus end-of-tenancy work that meets landlord inspection standards. Police-vetted, insured, and you get the same cleaner each time.',
+  ph:'03 555 0199',em:'book@brightandearly.co.nz',area:'Christchurch, Riccarton, Papanui, Rolleston',hrs:'Mon–Sat 7am–6pm',
+  kw:'house cleaning Christchurch',est:'2016',team:'22',cert:'Police vetted, fully insured',price:'$$',guar:'Re-clean free if you are not happy',tone:'Warm'},
+ {name:'Ridgeway Property',type:'realestate',loc:'Wellington',stand:'Free no-obligation appraisal',
+  desc:'Boutique residential agency covering Wellington city and the eastern suburbs. We sell around 60 homes a year, focus on presentation and honest pricing, and will tell you when it is not the right time to list.',
+  ph:'04 555 0166',em:'team@ridgewayproperty.co.nz',area:'Wellington, Miramar, Kilbirnie, Hataitai',hrs:'Mon–Sat 8.30am–6pm',
+  kw:'real estate agent Wellington',est:'2011',team:'8',cert:'REINZ member, licensed REAA 2008',price:'$$',guar:'No sale, no commission',tone:'Authoritative'},
+ {name:'Two Hands Bakehouse',type:'hospitality',loc:'Dunedin, Otago',stand:'Everything baked before 5am',
+  desc:'Small-batch bakery and café on the edge of the Octagon. Sourdough, laminated pastry and a short seasonal lunch menu. We mill some of our own flour and bake everything on site before five each morning.',
+  ph:'03 555 0121',em:'hello@twohandsbakehouse.co.nz',area:'Dunedin central, North East Valley, St Clair',hrs:'Tue–Sun 7am–3pm',
+  kw:'bakery Dunedin',est:'2019',team:'11',cert:'Verified food control plan',price:'$$',guar:'',tone:'Witty'},
+ {name:'Iron & Oak Strength',type:'fitness',loc:'Auckland, Grey Lynn',stand:'Free intro session',
+  desc:'Small-group strength coaching for people who are not interested in a big-box gym. Twelve-person classes, real barbells, and a coach who knows your name and your knee history. Beginners welcome and genuinely catered for.',
+  ph:'021 555 0177',em:'train@ironandoak.co.nz',area:'Grey Lynn, Ponsonby, Kingsland, Westmere',hrs:'Mon–Fri 5.30am–8pm · Sat 7am–12pm',
+  kw:'personal trainer Auckland',est:'2017',team:'6',cert:'REPs registered coaches',price:'$$',guar:'First session free, no lock-in contract',tone:'Energetic'},
+ {name:'Meridian Legal',type:'legal',loc:'Auckland CBD',stand:'Fixed-fee conveyancing',
+  desc:'Property and commercial law firm working with first-home buyers, developers and small business owners. We quote fixed fees on conveyancing and trust work so you know the cost before we start.',
+  ph:'09 555 0132',em:'enquiries@meridianlegal.co.nz',area:'Auckland CBD, Ponsonby, Newmarket, Parnell',hrs:'Mon–Fri 8.30am–5.30pm',
+  kw:'property lawyer Auckland',est:'2006',team:'14',cert:'NZ Law Society regulated',price:'$$$',guar:'Fixed fee quoted upfront',tone:'Professional'},
+ {name:'Southbound Auto',type:'auto',loc:'Invercargill, Southland',stand:'Free courtesy car',
+  desc:'Independent workshop handling WOF, servicing, diagnostics and cambelts for all makes. We photograph anything we find and send it to you before doing the work, so there are no surprise invoices.',
+  ph:'03 555 0155',em:'service@southboundauto.co.nz',area:'Invercargill, Bluff, Winton, Gore',hrs:'Mon–Fri 7.30am–5pm',
+  kw:'car service Invercargill',est:'2004',team:'7',cert:'MTA assured, WOF approved',price:'$',guar:'12 months / 20,000km on workmanship',tone:'Straight-talking'},
+ {name:'Clearwater Advisory',type:'corporate',loc:'Auckland, Takapuna',stand:'First meeting at our cost',
+  desc:'Independent financial advisers working with business owners and families on retirement planning, risk cover and KiwiSaver. Fee-based rather than commission-driven, so the advice is not steered by product.',
+  ph:'09 555 0111',em:'advice@clearwateradvisory.co.nz',area:'North Shore, Takapuna, Albany, Devonport',hrs:'Mon–Fri 8am–5pm',
+  kw:'financial adviser Auckland',est:'2012',team:'10',cert:'FMA licensed financial advice provider',price:'$$$',guar:'',tone:'Reassuring'},
+ {name:'Tui & Fern Studio',type:'coach',loc:'Nelson, Tasman',stand:'Free discovery call',
+  desc:'Business coaching for creative freelancers who are good at the work and stuck on the business. Twelve-week programmes covering pricing, positioning and the client pipeline, run one to one.',
+  ph:'027 555 0188',em:'kia.ora@tuiandfern.co.nz',area:'Nelson, Richmond, Motueka (and remote)',hrs:'Mon–Thu 9am–4pm',
+  kw:'business coach Nelson',est:'2020',team:'1',cert:'ICF accredited',price:'$$',guar:'',tone:'Empathetic'},
+ {name:'Halcyon Plumbing & Gas',type:'tradie',loc:'Palmerston North, Manawatū',stand:'No callout fee',
+  desc:'Certifying plumbers and gasfitters covering blocked drains, hot water cylinders, bathroom renovations and gas installs. We do not charge a callout fee and we quote before we start.',
+  ph:'06 555 0143',em:'jobs@halcyonplumbing.co.nz',area:'Palmerston North, Feilding, Ashhurst, Levin',hrs:'Mon–Fri 7am–5pm · After hours available',
+  kw:'plumber Palmerston North',est:'2008',team:'12',cert:'Certifying plumber & gasfitter (PGDB)',price:'$$',guar:'5-year guarantee on installs',tone:'Friendly'},
+ {name:'Aster Physiotherapy',type:'medical',loc:'Napier, Hawke’s Bay',stand:'ACC registered, no referral needed',
+  desc:'Musculoskeletal physiotherapy for sports injuries, back and neck pain and post-surgical rehab. ACC registered so most people can book directly without a doctor referral. Longer appointments so nothing is rushed.',
+  ph:'06 555 0122',em:'clinic@asterphysio.co.nz',area:'Napier, Taradale, Hastings, Havelock North',hrs:'Mon–Fri 7.30am–6pm',
+  kw:'physio Napier',est:'2015',team:'6',cert:'ACC registered, PBANZ annual practising certificate',price:'$$',guar:'',tone:'Professional'},
+ {name:'Longacre Landscapes',type:'cleaning',loc:'Cambridge, Waikato',stand:'Free design consultation',
+  desc:'Garden design, planting and ongoing maintenance for lifestyle blocks and town sections. We plant for the site you actually have, and we maintain what we install so it still looks right in five years.',
+  ph:'027 555 0134',em:'grow@longacrelandscapes.co.nz',area:'Cambridge, Hamilton, Te Awamutu, Tamahere',hrs:'Mon–Fri 7am–4.30pm',
+  kw:'landscaping Cambridge',est:'2013',team:'9',cert:'Registered Master Landscapers',price:'$$$',guar:'Plant replacement in first season',tone:'Warm'},
+ {name:'Fold Architecture',type:'other',other:'Residential architecture studio',loc:'Wānaka, Otago',stand:'Alpine-climate specialists',
+  desc:'A four-person studio designing houses for cold, bright, wind-exposed sites. We work in a small number of projects a year so the director is on every one, from concept through to site observation.',
+  ph:'03 555 0177',em:'studio@foldarchitecture.co.nz',area:'Wānaka, Queenstown, Cardrona, Hāwea',hrs:'Mon–Fri 9am–5pm',
+  kw:'architect Wanaka',est:'2016',team:'4',cert:'NZRAB registered architects',price:'$$$',guar:'',tone:'Minimal'},
+ {name:'Pemberton Roofing',type:'tradie',loc:'Rotorua, Bay of Plenty',stand:'Free roof report with photos',
+  desc:'Long-run and tile roofing, re-roofs, spouting and leak repairs across the central North Island. We send a photo report before quoting so you can see the problem yourself rather than take our word for it.',
+  ph:'07 555 0166',em:'quotes@pembertonroofing.co.nz',area:'Rotorua, Taupō, Tauranga, Whakatāne',hrs:'Mon–Fri 7am–4pm',
+  kw:'roofing Rotorua',est:'2010',team:'15',cert:'Licensed Building Practitioner (Roofing)',price:'$$',guar:'15-year weathertightness guarantee',tone:'Bold'},
+ {name:'Salt & Cedar Interiors',type:'other',other:'Interior design studio',loc:'Mount Maunganui',stand:'Fixed-fee concept packages',
+  desc:'Interior design for renovations and new builds, working mostly with coastal homes. Fixed-fee concept packages so you can test the idea before committing to a full documentation set.',
+  ph:'021 555 0155',em:'hello@saltandcedar.co.nz',area:'Mount Maunganui, Papamoa, Tauranga, Ōmokoroa',hrs:'Mon–Fri 9am–4pm',
+  kw:'interior designer Tauranga',est:'2019',team:'3',cert:'DINZ member',price:'$$$',guar:'',tone:'Premium'},
+ {name:'Rivet Coffee Roasters',type:'hospitality',loc:'New Plymouth, Taranaki',stand:'Roasted weekly, never stockpiled',
+  desc:'Small coffee roastery and espresso bar. We roast once a week in small batches, publish the roast date on every bag, and run free public cuppings on the first Saturday of the month.',
+  ph:'06 555 0128',em:'orders@rivetcoffee.co.nz',area:'New Plymouth, Bell Block, Oakura, Stratford',hrs:'Mon–Fri 7am–3pm · Sat 8am–2pm',
+  kw:'coffee roaster New Plymouth',est:'2017',team:'8',cert:'Verified food control plan',price:'$$',guar:'',tone:'Conversational'},
+ {name:'Kestrel Security',type:'corporate',loc:'Auckland, Penrose',stand:'Monitored 24/7 from New Zealand',
+  desc:'Commercial alarms, CCTV and access control for warehouses, retail and body corporates. Our monitoring centre is based in New Zealand and staffed around the clock, not offshore.',
+  ph:'09 555 0190',em:'sales@kestrelsecurity.co.nz',area:'Auckland, Penrose, Manukau, Albany',hrs:'Mon–Fri 8am–5pm · Monitoring 24/7',
+  kw:'commercial security Auckland',est:'2003',team:'34',cert:'NZSA member, PSPLA licensed',price:'$$',guar:'',tone:'Authoritative'},
+ {name:'Wildfoot Dog Walking',type:'cleaning',loc:'Wellington, Karori',stand:'Photo update after every walk',
+  desc:'Small-pack dog walking and drop-in visits across the western suburbs. Maximum four dogs per walk, insured and first-aid trained, and you get a photo and short note after every outing.',
+  ph:'022 555 0113',em:'woof@wildfoot.co.nz',area:'Karori, Northland, Wilton, Kelburn',hrs:'Mon–Fri 7am–5pm',
+  kw:'dog walker Wellington',est:'2021',team:'4',cert:'Pet first aid certified, fully insured',price:'$',guar:'',tone:'Playful'}
+];
+let exampleIdx=-1;
 const LOCALES={
   nz:{label:'NZ / AU',promptHint:'Write in New Zealand/Australian English: -our spellings (colour, favour), -ise spellings (organise, specialise), "metre", "licence" (noun). Use local trust signals ("fully licensed and insured", "locally owned and operated"). Never use US spellings.'},
   us:{label:'US',promptHint:'Write in standard US English: color, organize, meter, license. Use US trust signals ("licensed, bonded and insured").'}
@@ -1055,6 +1219,24 @@ const JS_LEVELS={
   gsap:  {label:'GSAP effects', kb:128, note:'GSAP + ScrollTrigger + Lenis. Pinned sections, parallax, counters, staggered reveals.'},
   webgl: {label:'WebGL hero',   kb:736, note:'Adds Three.js. An animated particle field behind the hero. Heavy — check it on a phone.'}
 };
+/* Individual effects, layered on top of the level. Each declares the minimum
+   level it needs — a GSAP effect is meaningless at 'smooth'. */
+const FX={
+  fadeup:   {label:'Fade up',       need:'gsap',   note:'Elements rise as they enter view'},
+  splittext:{label:'Split headline',need:'gsap',   note:'Hero headline animates word by word'},
+  magnetic: {label:'Magnetic buttons',need:'smooth',note:'Buttons lean toward the cursor'},
+  tilt:     {label:'Tilt cards',    need:'smooth', note:'Service cards tilt in 3D on hover'},
+  marquee:  {label:'Marquee strip', need:'smooth', note:'Scrolling ticker of your service areas'},
+  parallax: {label:'Layer parallax',need:'gsap',   note:'Photos drift at a different rate to the page'},
+  cursor:   {label:'Custom cursor', need:'smooth', note:'Trailing dot cursor — desktop only'},
+  pin:      {label:'Pinned about',  need:'gsap',   note:'About text holds while the photo scrolls'},
+  reveal:   {label:'Mask reveal',   need:'gsap',   note:'Images wipe into view behind a mask'},
+  progress: {label:'Scroll progress',need:'smooth',note:'Thin bar across the top showing position'}
+};
+const FX_KEYS=Object.keys(FX);
+const fxOn=k=>{ const lv=jsLevelNow(); if(lv==='off') return false;
+  const need=FX[k].need; if(need==='gsap'&&lv==='smooth') return false;
+  return (prefs.fx||[]).includes(k); };
 const LIB={
   gsap:{src:'https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js',
         sri:'sha384-g4NTh/Iv5PPU4xPyhEWqPcwtNXOvdaDI8LLnyYfyNZOjKJeYQyjzQ9X5275eBjpt'},
@@ -1066,6 +1248,10 @@ const LIB={
         sri:'sha384-vV17nr/rMaJqmeZkFUzXLpHdQ+ME5QHKdydaqqN+3Ga39RJlNrTatJxHwGV4ml2C'}
 };
 const libTag=k=>`<script src="${LIB[k].src}" integrity="${LIB[k].sri}" crossorigin="anonymous" defer><\/script>`;
+// Single source of truth — siteCSS and buildSite must agree, or the CSS ends up
+// configured for a JS level the page is not actually running.
+const jsLevelNow=()=>(prefs.motion&&JS_LEVELS[prefs.js])?prefs.js:'off';
+const jsSmoothOn=()=>jsLevelNow()!=='off';
 
 /* The runtime. Written defensively: every library is feature-detected, so a
    blocked CDN or an offline visitor degrades to the CSS animation rather
@@ -1079,13 +1265,26 @@ function motionRuntime(level,t){
 
   function smooth(){
     if(typeof Lenis==='undefined') return null;
-    var l=new Lenis({duration:1.05,smoothWheel:true});
+    var l=new Lenis({
+      // lerp, not duration. A duration-based tween restarts on every wheel tick,
+      // so continuous scrolling never converges and feels like wading. lerp
+      // chases the target each frame: responds instantly, still glides.
+      lerp:0.12,
+      smoothWheel:true,
+      wheelMultiplier:1.1,
+      // Touch stays native. Hijacking it replaces the OS momentum with a JS
+      // approximation that feels heavy and breaks pull-to-refresh.
+      syncTouch:false,
+      touchMultiplier:1.6
+    });
     function raf(t){ l.raf(t); requestAnimationFrame(raf); }
     requestAnimationFrame(raf);
     document.querySelectorAll('a[href^="#"]').forEach(function(a){
+      var href=a.getAttribute('href');
+      if(!href||href==='#') return;
       a.addEventListener('click',function(e){
-        var el=document.querySelector(a.getAttribute('href'));
-        if(el){ e.preventDefault(); l.scrollTo(el,{offset:-96}); }
+        var el=null; try{ el=document.querySelector(href); }catch(err){ return; }
+        if(el){ e.preventDefault(); l.scrollTo(el,{offset:-96,duration:0.7}); }
       });
     });
     return l;
@@ -1171,12 +1370,114 @@ function motionRuntime(level,t){
     },{passive:true});
   }
 
+  /* ---- optional effects ---- */
+  var FX=${JSON.stringify(FX_KEYS.filter(fxOn))};
+  var has=function(k){ return FX.indexOf(k)>-1; };
+  var fine=matchMedia('(hover:hover) and (pointer:fine)').matches;
+
+  function fxProgress(){
+    var b=document.createElement('div'); b.className='fx-progress'; document.body.appendChild(b);
+    var upd=function(){ var h=document.documentElement.scrollHeight-innerHeight;
+      b.style.transform='scaleX('+(h>0?Math.min(1,scrollY/h):0)+')'; };
+    addEventListener('scroll',upd,{passive:true}); upd();
+  }
+  function fxCursor(){
+    if(!fine) return;
+    var c=document.createElement('div'); c.className='fx-cursor'; document.body.appendChild(c);
+    var x=0,y=0,tx=0,ty=0;
+    addEventListener('pointermove',function(e){ tx=e.clientX; ty=e.clientY; },{passive:true});
+    (function loop(){ x+=(tx-x)*.18; y+=(ty-y)*.18;
+      c.style.transform='translate3d('+x+'px,'+y+'px,0)'; requestAnimationFrame(loop); })();
+    document.querySelectorAll('a,button').forEach(function(el){
+      el.addEventListener('pointerenter',function(){ c.classList.add('big'); });
+      el.addEventListener('pointerleave',function(){ c.classList.remove('big'); });
+    });
+  }
+  function fxMagnetic(){
+    if(!fine) return;
+    document.querySelectorAll('.b').forEach(function(el){
+      el.addEventListener('pointermove',function(e){
+        var r=el.getBoundingClientRect();
+        el.style.transform='translate('+((e.clientX-r.left-r.width/2)*.18)+'px,'+((e.clientY-r.top-r.height/2)*.3)+'px)';
+      });
+      el.addEventListener('pointerleave',function(){ el.style.transform=''; });
+    });
+  }
+  function fxTilt(){
+    if(!fine) return;
+    document.querySelectorAll('.card,.q').forEach(function(el){
+      el.style.transformStyle='preserve-3d';
+      el.addEventListener('pointermove',function(e){
+        var r=el.getBoundingClientRect();
+        var px=(e.clientX-r.left)/r.width-.5, py=(e.clientY-r.top)/r.height-.5;
+        el.style.transform='perspective(800px) rotateY('+(px*7)+'deg) rotateX('+(-py*7)+'deg) translateY(-4px)';
+      });
+      el.addEventListener('pointerleave',function(){ el.style.transform=''; });
+    });
+  }
+  function fxMarquee(){
+    var areas=document.querySelectorAll('#areas .areas span');
+    if(!areas.length) return;
+    var words=[].map.call(areas,function(a){ return a.textContent.trim(); }).filter(Boolean);
+    if(!words.length) return;
+    var host=document.createElement('div'); host.className='fx-marquee';
+    var run=document.createElement('div'); run.className='fx-marquee-run';
+    var line=words.join('  •  ')+'  •  ';
+    run.textContent=line+line+line;              // enough width to loop seamlessly
+    host.appendChild(run);
+    var sec=document.getElementById('areas')||document.getElementById('services');
+    if(sec&&sec.parentNode) sec.parentNode.insertBefore(host,sec);
+  }
+  function fxSplit(){
+    if(typeof gsap==='undefined') return;
+    var h1=document.querySelector('.hero h1'); if(!h1||h1.dataset.split) return;
+    h1.dataset.split='1';
+    var words=(h1.textContent||'').split(/\\s+/).filter(Boolean);
+    h1.innerHTML=words.map(function(w){
+      return '<span class="fx-w"><span>'+w.replace(/[&<>]/g,'')+'</span></span>';
+    }).join(' ');
+    gsap.from(h1.querySelectorAll('.fx-w > span'),{yPercent:110,opacity:0,duration:.8,stagger:.05,ease:'power3.out',delay:.1});
+  }
+  function fxFadeUp(){
+    if(typeof gsap==='undefined') return;
+    gsap.utils.toArray('section p, section li, .trust span').forEach(function(el){
+      gsap.from(el,{opacity:0,y:16,duration:.6,ease:'power2.out',
+        scrollTrigger:{trigger:el,start:'top 92%'}});
+    });
+  }
+  function fxParallax(){
+    if(typeof gsap==='undefined') return;
+    gsap.utils.toArray('.fig img,.gal figure img').forEach(function(el){
+      gsap.fromTo(el,{yPercent:-6},{yPercent:6,ease:'none',
+        scrollTrigger:{trigger:el,start:'top bottom',end:'bottom top',scrub:true}});
+    });
+  }
+  function fxReveal(){
+    if(typeof gsap==='undefined') return;
+    gsap.utils.toArray('.fig,.gal figure').forEach(function(el){
+      gsap.fromTo(el,{clipPath:'inset(0 0 100% 0)'},{clipPath:'inset(0 0 0% 0)',duration:1,ease:'power3.out',
+        scrollTrigger:{trigger:el,start:'top 86%'}});
+    });
+  }
+  function fxPin(){
+    if(typeof gsap==='undefined'||innerWidth<900) return;
+    var about=document.querySelector('.about .w > div:first-child');
+    var sec=document.getElementById('about');
+    if(!about||!sec) return;
+    ScrollTrigger.create({trigger:sec,start:'top 20%',end:'bottom 80%',pin:about,pinSpacing:false});
+  }
+
   ready(function(){
     // defer scripts have run by DOMContentLoaded, but guard anyway.
     setTimeout(function(){
       var l=(LV==='smooth'||LV==='gsap'||LV==='webgl')?smooth():null;
       if(LV==='gsap'||LV==='webgl') effects(l);
       if(LV==='webgl') webgl();
+      // Each is independently guarded, so one failing cannot stop the rest.
+      var fns={progress:fxProgress,cursor:fxCursor,magnetic:fxMagnetic,tilt:fxTilt,marquee:fxMarquee,
+               splittext:fxSplit,fadeup:fxFadeUp,parallax:fxParallax,reveal:fxReveal,pin:fxPin};
+      FX.forEach(function(k){ try{ fns[k]&&fns[k](); }catch(e){} });
+      if(typeof ScrollTrigger!=='undefined') ScrollTrigger.refresh();
     },0);
   });
 })();`;
@@ -1206,7 +1507,7 @@ let siteState=null, currentId=null, loadTimer=null, lastBrief=null, persistTimer
 let currentPage=0;                       // which page the editor is showing
 const curPage=()=>pageOf(siteState,currentPage);
 let wl={on:false,name:'',logo:''};
-let prefs={systemFonts:false,motion:true,js:'off',theme:DEFAULT_THEME,appearance:'auto'};
+let prefs={systemFonts:false,motion:true,js:'off',fx:[],theme:DEFAULT_THEME,appearance:'auto'};
 const $=id=>document.getElementById(id);
 
 /* ==========================================================================
@@ -1268,12 +1569,13 @@ function loadPrefs(){
     prefs={systemFonts:!!o.systemFonts,
            motion:o.motion!==false,          // motion on by default
            js:JS_LEVELS[o.js]?o.js:'off',    // JS libraries stay opt-in
+           fx:Array.isArray(o.fx)?o.fx.filter(k=>FX[k]):[],
            theme:THEMES[o.theme]?o.theme:DEFAULT_THEME,
            appearance:['auto','light','dark'].includes(o.appearance)?o.appearance:'auto'};
   }catch{}
 }
 function savePrefs(){ localStorage.setItem(LS_PREF,JSON.stringify(prefs)); }
-const BRIEF_FIELDS=['bizName','bizType','bizTypeOther','location','standout','desc','cPhone','cEmail','cArea','cHours','cBook'];
+const BRIEF_FIELDS=['bizName','bizType','bizTypeOther','location','standout','desc','bizKeyword','bizEst','bizTeam','bizPrice','bizCert','bizGuar','cPhone','cEmail','cArea','cHours','cBook'];
 function saveBrief(){
   const o={}; BRIEF_FIELDS.forEach(f=>o[f]=$(f).value);
   o.tone=curChip('toneChips'); o.locale=curChip('localeChips');
@@ -1364,8 +1666,19 @@ What they do: ${brief.desc}`;
   if(brief.standout) u+=`\nStandout feature (work this in prominently): ${brief.standout}`;
   if(brief.hours) u+=`\nOpening hours: ${brief.hours}`;
   if(brief.area) u+=`\nService area: ${brief.area}`;
+  /* Facts the operator supplied. These are the only figures that may appear —
+     the system prompt forbids inventing any others. */
+  if(brief.est) u+=`\nEstablished: ${brief.est} (you may state how long they have been going)`;
+  if(brief.team) u+=`\nTeam size: ${brief.team} people`;
+  if(brief.cert) u+=`\nLicences and certifications (use these verbatim as trust signals): ${brief.cert}`;
+  if(brief.guarantee) u+=`\nGuarantee offered: ${brief.guarantee}`;
+  if(brief.price) u+=`\nPrice positioning: ${brief.price} (do NOT print this symbol; let it inform the tone only)`;
+  if(brief.keyword) u+=`\nTARGET SEARCH PHRASE: "${brief.keyword}". Work this phrase, or a very close natural variant, into the hero headline or subheadline, the about paragraph, and the meta description. It must read naturally — never repeat it mechanically.`;
   u+=`\nTone: ${brief.tone}\nLanguage: ${LOCALES[brief.locale].label} English`;
-  if(brief.page) u+=`\n\nIMPORTANT: this content is for a dedicated sub-page titled "${brief.page}", not the home page. Write specifically about "${brief.page}" — go deeper on that one topic rather than summarising the whole business.`;
+  if(brief.page){
+    u+=`\n\nIMPORTANT: this content is for a dedicated sub-page titled "${brief.page}", not the home page. Write specifically about "${brief.page}" — go deeper on that one topic rather than summarising the whole business. The hero headline must be about "${brief.page}" specifically, and seo_meta_description must describe THIS page, not the business as a whole.`;
+    if(brief.pageKeyword) u+=`\nThis page targets the search phrase "${brief.pageKeyword}" — work it in naturally in the headline and the meta description.`;
+  }
   if(existing&&scope){
     u+=`\n\nExisting site content (keep tone and facts consistent; regenerate only "${scope}"):\n${JSON.stringify({
       hero:existing.hero,services:existing.services,about:existing.about,
@@ -1651,7 +1964,16 @@ function siteCSS(t,editable){
   const onPrimary=bestOn(t.primary), onAccent=bestOn(t.accent);
   const cta=ctaOf(t), ctaEnd=cta.end, onCta=cta.on;
   return `*{box-sizing:border-box;margin:0;padding:0}
-html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+html{-webkit-text-size-adjust:100%${jsSmoothOn()?'':';scroll-behavior:smooth'}}
+${jsSmoothOn()?`/* Lenis owns scrolling here. Native smooth-scroll must be off or the browser
+   re-animates every position Lenis sets — smoothing on top of smoothing, which
+   measured at 1210ms to settle one wheel tick. These rules are Lenis's own
+   required stylesheet. */
+html.lenis,html.lenis body{height:auto}
+.lenis.lenis-smooth{scroll-behavior:auto!important}
+.lenis.lenis-smooth [data-lenis-prevent]{overscroll-behavior:contain}
+.lenis.lenis-stopped{overflow:hidden}
+.lenis.lenis-smooth iframe{pointer-events:none}`:''}
 body{background:${t.bg};color:${t.ink};font-family:${t.bodyFont},sans-serif;font-size:17px;line-height:1.65;-webkit-font-smoothing:antialiased}
 h1,h2,h3{font-family:${t.displayFont},sans-serif;font-weight:${t.weight};line-height:1.12;letter-spacing:${t.caps?'.01em':'-.02em'}}
 img{max-width:100%;height:auto;display:block}
@@ -1711,6 +2033,20 @@ ${editable?`[contenteditable]{outline:none}
 .hero .w{position:relative;z-index:2}
 .hero::before{z-index:1}
 .glcanvas{position:absolute;inset:0;width:100%;height:100%;z-index:0;display:block;pointer-events:none}
+${jsSmoothOn()?`
+.fx-progress{position:fixed;top:0;left:0;right:0;height:3px;background:${t.primary};transform:scaleX(0);transform-origin:0 50%;z-index:60;pointer-events:none;will-change:transform}
+.fx-cursor{position:fixed;top:0;left:0;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;
+  border:1.5px solid ${t.primary};z-index:70;pointer-events:none;transition:width .18s,height .18s,margin .18s,background .18s;will-change:transform}
+.fx-cursor.big{width:44px;height:44px;margin:-22px 0 0 -22px;background:${rgba(t.primary,.12)}}
+@media (hover:none){.fx-cursor{display:none}}
+.b{will-change:transform}
+.fx-marquee{overflow:hidden;white-space:nowrap;border-top:1px solid ${t.line};border-bottom:1px solid ${t.line};background:${t.panel};padding:14px 0}
+.fx-marquee-run{display:inline-block;padding-left:100%;font-family:${t.displayFont},sans-serif;font-weight:${t.weight};
+  font-size:clamp(18px,2.4vw,26px);color:${t.primary};opacity:.85;animation:fxmarq 38s linear infinite;${t.caps?'text-transform:uppercase;letter-spacing:.05em;':''}}
+@keyframes fxmarq{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.fx-w{display:inline-block;overflow:hidden;vertical-align:bottom}
+.fx-w > span{display:inline-block}
+@media(prefers-reduced-motion:reduce){.fx-marquee-run{animation:none}.fx-cursor,.fx-progress{display:none}}`:''}
 /* When GSAP drives the reveals it owns opacity/transform outright — leaving the
    CSS scroll-timeline rules on as well makes the two fight and elements flicker
    or stick at opacity 0. */
@@ -2175,6 +2511,10 @@ function buildSite(state,mode,pageIdx){
     openingHours:c.hours||undefined,
     url:canonical||undefined, image:ogImage||undefined,
     sameAs:socials.length?socials:undefined,
+    priceRange:m.price||undefined,
+    foundingDate:/^\d{4}$/.test(m.est||'')?m.est:undefined,
+    numberOfEmployees:/^\d+$/.test(m.team||'')?{'@type':'QuantitativeValue',value:Number(m.team)}:undefined,
+    knowsAbout:m.cert||undefined,
     address:m.location?{'@type':'PostalAddress',addressLocality:m.location}:undefined,
     hasOfferCatalog:{'@type':'OfferCatalog',name:'Services',
       itemListElement:s.services.map(sv=>({'@type':'Offer',
@@ -2526,6 +2866,8 @@ function selChip(id,v){
 function readBrief(){
   return {name:$('bizName').value.trim(),type:$('bizType').value,typeOther:$('bizTypeOther').value.trim(),
     location:$('location').value.trim(),desc:$('desc').value.trim(),standout:$('standout').value.trim(),
+    keyword:$('bizKeyword').value.trim(),est:$('bizEst').value.trim(),team:$('bizTeam').value.trim(),
+    price:$('bizPrice').value,cert:$('bizCert').value.trim(),guarantee:$('bizGuar').value.trim(),
     tone:curChip('toneChips'),locale:curChip('localeChips'),theme:prefs.theme,
     phone:$('cPhone').value.trim(),email:$('cEmail').value.trim(),area:$('cArea').value.trim(),
     hours:$('cHours').value.trim(),book:$('cBook').value.trim()};
@@ -2557,6 +2899,7 @@ async function generate(brief){
     const parsed=parseAndValidate(raw);
     parsed.meta={businessName:brief.name,location:brief.location,standout:brief.standout,
       type:brief.type,typeOther:brief.typeOther,tone:brief.tone,locale:brief.locale,desc:brief.desc,theme:brief.theme,
+      keyword:brief.keyword,est:brief.est,team:brief.team,price:brief.price,cert:brief.cert,guarantee:brief.guarantee,
       contact:{phone:brief.phone,email:brief.email,area:brief.area,hours:brief.hours,book:brief.book},
       seo:{canonical:'',ogImage:'',socials:''},
       links:{primary:'',secondary:'',secondaryLabel:''},
@@ -2590,6 +2933,7 @@ async function regenSection(section,btn){
   const m=siteState.meta,c=m.contact||{};
   const brief={name:m.businessName,type:m.type,typeOther:m.typeOther,location:m.location,desc:m.desc,
     standout:m.standout,tone:m.tone,locale:m.locale,area:c.area,hours:c.hours,
+    keyword:m.keyword,est:m.est,team:m.team,price:m.price,cert:m.cert,guarantee:m.guarantee,
     // Sub-pages need to know what they are about, or every page reads like home.
     page:currentPage?pageTitle(siteState,currentPage):''};
   try{
@@ -2954,6 +3298,8 @@ $('bizType').onchange=()=>{
    site's phone, email, hours and booking link could never be changed. */
 const LIVE_FIELDS={
   bizName:['businessName'], location:['location'], standout:['standout'],
+  bizKeyword:['keyword'], bizEst:['est'], bizTeam:['team'],
+  bizPrice:['price'], bizCert:['cert'], bizGuar:['guarantee'],
   cPhone:['contact','phone'], cEmail:['contact','email'],
   cArea:['contact','area'], cHours:['contact','hours'], cBook:['contact','book']
 };
@@ -2986,6 +3332,8 @@ function loadBriefFromSite(){
   if(!siteState) return;
   const m=siteState.meta,c=m.contact||{};
   $('bizName').value=m.businessName||''; $('location').value=m.location||''; $('standout').value=m.standout||'';
+  $('bizKeyword').value=m.keyword||''; $('bizEst').value=m.est||''; $('bizTeam').value=m.team||'';
+  $('bizPrice').value=m.price||''; $('bizCert').value=m.cert||''; $('bizGuar').value=m.guarantee||'';
   $('desc').value=m.desc||''; $('descCount').textContent=$('desc').value.length;
   if(m.type&&PACKS[m.type]) $('bizType').value=m.type;
   $('bizTypeOther').value=m.typeOther||''; syncOtherField();
@@ -2997,14 +3345,20 @@ function loadBriefFromSite(){
 }
 $('btnGen').onclick=()=>generate(readBrief());
 $('btnDemo').onclick=()=>{
-  $('bizName').value='Harbourline Electrical';
-  $('bizType').value='tradie'; $('bizType').onchange();
-  $('location').value='Tauranga, Bay of Plenty';
-  $('standout').value='24/7 emergency callout';
-  $('desc').value='Family-run electrical contractor serving residential and light commercial clients across the western Bay. We handle rewires, switchboard upgrades, EV charger installs and fault finding. Fully licensed and insured, on the tools since 2009.';
-  $('descCount').textContent=$('desc').value.length;
-  $('cPhone').value='021 555 0123'; $('cEmail').value='hello@harbourline.co.nz';
-  $('cArea').value='Tauranga, Mount Maunganui, Papamoa'; $('cHours').value='Mon–Fri 7am–5pm · Emergency 24/7';
+  exampleIdx=(exampleIdx+1)%EXAMPLES.length;
+  const e=EXAMPLES[exampleIdx];
+  $('bizName').value=e.name;
+  $('bizType').value=e.type; $('bizType').onchange();
+  $('bizTypeOther').value=e.other||'';
+  $('location').value=e.loc; $('standout').value=e.stand;
+  $('desc').value=e.desc; $('descCount').textContent=e.desc.length;
+  $('bizKeyword').value=e.kw||''; $('bizEst').value=e.est||''; $('bizTeam').value=e.team||'';
+  $('bizPrice').value=e.price||''; $('bizCert').value=e.cert||''; $('bizGuar').value=e.guar||'';
+  $('cPhone').value=e.ph||''; $('cEmail').value=e.em||'';
+  $('cArea').value=e.area||''; $('cHours').value=e.hrs||''; $('cBook').value='';
+  if(e.tone) selChip('toneChips',e.tone);
+  syncOtherField();
+  $('demoWhich').textContent=`${exampleIdx+1} of ${EXAMPLES.length} — click again for another`;
   saveBrief(); refreshStatus();
 };
 
@@ -3082,6 +3436,28 @@ function renderJsOpts(){
   $('jsNote').innerHTML=prefs.motion
     ? esc(lv.note)+(lv.kb?` <b>Adds ~${lv.kb} KB downloaded on every visit.</b>`:'')
     : 'Turn Motion on to enable JavaScript animation.';
+  renderFx();
+}
+function renderFx(){
+  const host=$('fxGrid'); if(!host) return;
+  const cur=jsLevelNow();
+  prefs.fx=prefs.fx||[];
+  const active=FX_KEYS.filter(k=>fxOn(k)).length;
+  $('fxCount').textContent=cur==='off'?'— needs a JavaScript level':`${active} on`;
+  host.innerHTML=FX_KEYS.map(k=>{
+    const f=FX[k];
+    const blocked=cur==='off'||(f.need==='gsap'&&cur==='smooth');
+    const on=(prefs.fx||[]).includes(k);
+    return `<button type="button" class="fxbtn${on?' on':''}" data-fx="${k}" ${blocked?'disabled':''}
+      title="${esc(f.note)}${blocked?` — needs ${f.need==='gsap'?'GSAP effects':'a JavaScript level'}`:''}">
+      ${f.label}${f.need==='gsap'?'<i>GSAP</i>':''}</button>`;
+  }).join('');
+  host.querySelectorAll('[data-fx]').forEach(b=>b.onclick=()=>{
+    const k=b.dataset.fx, i=prefs.fx.indexOf(k);
+    if(i>=0) prefs.fx.splice(i,1); else prefs.fx.push(k);
+    savePrefs(); renderFx();
+    if(siteState){ renderPreview(); renderChecks(); }
+  });
 }
 $('motionSwitch').onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); $('motionSwitch').click(); } };
 // SEO fields live on meta so they travel with the site through history/share.
@@ -3247,6 +3623,79 @@ $('btnAddPage').onclick=()=>{
   setPageStatus('Page added — edit it in the preview, or use the regenerate buttons to fill it with AI copy.');
 };
 $('newPageName').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); $('btnAddPage').click(); } });
+
+/* ---- AI page suggestions + full page authoring ------------------------- */
+function briefFromMeta(){
+  const m=siteState.meta,c=m.contact||{};
+  return {name:m.businessName,type:m.type,typeOther:m.typeOther,location:m.location,desc:m.desc,
+    standout:m.standout,tone:m.tone,locale:m.locale,area:c.area,hours:c.hours,
+    keyword:m.keyword,est:m.est,team:m.team,price:m.price,cert:m.cert,guarantee:m.guarantee};
+}
+$('btnSuggestPages').onclick=async()=>{
+  if(!siteState){ setPageStatus('Generate a site first.',true); return; }
+  if(!getKey()){ setPageStatus('Add an API key under Settings first.',true); return; }
+  const btn=$('btnSuggestPages'), was=btn.textContent;
+  btn.disabled=true; btn.textContent='Thinking…'; $('pageSuggest').innerHTML='';
+  setPageStatus('Asking Claude which pages this business should have…');
+  const b=briefFromMeta();
+  const existing=Array.from({length:pageCount(siteState)},(_,i)=>pageTitle(siteState,i)).join(', ');
+  const sys=`You are an SEO strategist planning the page structure of a small local service business website.
+Return ONLY raw JSON, no fences, no preamble, matching:
+{"pages":[{"title":string,"why":string,"keyword":string}]}
+Rules:
+- 5 to 7 suggestions, ordered by commercial value.
+- "title" is the nav label, 1-3 words, in ${LOCALES[b.locale].label} English.
+- "why" is one short sentence on what it wins — a search term, an objection it answers, or a conversion step.
+- "keyword" is the search phrase that page should target, phrased the way a customer would actually search.
+- Suggest pages that earn their place for THIS trade. Prefer high-intent service and location pages over filler like "Blog" or "Gallery" unless they genuinely suit.
+- Do NOT suggest any of these, which already exist: ${existing}.`;
+  try{
+    const raw=await callClaude(sys,userPrompt(b,null,null));
+    let data; try{ data=JSON.parse(stripFences(raw)); }catch{ throw new ApiError('Claude did not return usable JSON.',raw); }
+    const list=(data.pages||[]).filter(p=>p&&isStr(p.title)).slice(0,7);
+    if(!list.length) throw new ApiError('No suggestions came back.',raw);
+    $('pageSuggest').innerHTML=`<div class="sugg">${list.map((p,i)=>
+      `<button type="button" class="suggrow" data-i="${i}">
+         <span class="suggt">${esc(p.title)}</span>
+         <span class="suggw">${esc(p.why||'')}</span>
+         ${p.keyword?`<span class="suggk">${esc(p.keyword)}</span>`:''}
+       </button>`).join('')}</div>`;
+    $('pageSuggest').querySelectorAll('.suggrow').forEach(b2=>b2.onclick=()=>{
+      const p=list[+b2.dataset.i];
+      $('newPageName').value=p.title;
+      $('newPageName').dataset.keyword=p.keyword||'';
+      setPageStatus(`"${p.title}" ready — press Add, then "Write this page" to fill it.`);
+    });
+    setPageStatus(`${list.length} suggestions — click one to use it.`);
+  }catch(e){ setPageStatus(e.message||'Could not get suggestions.',true); }
+  finally{ btn.disabled=false; btn.textContent=was; }
+};
+
+// Writes a complete, SEO-shaped page into whichever page is open.
+$('btnFillPage').onclick=async()=>{
+  if(!siteState){ setPageStatus('Generate a site first.',true); return; }
+  if(!currentPage){ setPageStatus('Open a sub-page first — this fills the page you are viewing, not home.',true); return; }
+  if(!getKey()){ setPageStatus('Add an API key under Settings first.',true); return; }
+  const btn=$('btnFillPage'), was=btn.textContent;
+  btn.disabled=true; btn.textContent='Writing…';
+  const P=curPage(), title=P.title;
+  setPageStatus(`Writing "${title}" — this takes 15–30 seconds…`);
+  const b=briefFromMeta();
+  b.page=title;
+  b.pageKeyword=$('newPageName').dataset.keyword||'';
+  try{
+    const raw=await callClaude(systemPrompt(b,null),userPrompt(b,null,null));
+    const parsed=parseAndValidate(raw);
+    // Overwrite content, keep identity and per-page settings.
+    ['hero','services','about','testimonials','faqs','stats','process','areas','contact_cta','seo_meta_description']
+      .forEach(k=>{ if(parsed[k]!==undefined) P[k]=parsed[k]; });
+    P.sections={order:SECTION_ORDER.slice(),hidden:[]};
+    renderPreview(); renderSections(); renderChecks(); renderTips(); loadLinkFields(); pushHistory(siteState);
+    lastShareURL='';
+    setPageStatus(`"${title}" written — ${(P.services||[]).length} services, ${(P.faqs||[]).length} FAQs.`);
+  }catch(e){ setPageStatus(e.message||'Could not write that page.',true); }
+  finally{ btn.disabled=false; btn.textContent=was; }
+};
 
 /* ---- section manager --------------------------------------------------- */
 function sectionCfg(){
