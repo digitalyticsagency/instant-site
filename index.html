@@ -3174,7 +3174,28 @@ ${editable?`[contenteditable]{outline:none}
   padding:9px 15px;border-radius:99px;white-space:nowrap;opacity:0;transition:opacity .18s;pointer-events:none;z-index:5}
 [data-media]:hover::after{opacity:1}
 [data-media]:hover{outline:3px solid ${t.primary};outline-offset:2px}
-.logo[data-media]:hover::after,.nav [data-media]:hover::after{font-size:11px;padding:6px 10px}`:''}
+.logo[data-media]:hover::after,.nav [data-media]:hover::after{font-size:11px;padding:6px 10px}
+/* ---- in-preview component controls (editor only) ---- */
+.edi{position:relative}
+.edx{position:absolute;top:6px;right:6px;z-index:8;display:flex;gap:4px;opacity:0;transition:opacity .15s;pointer-events:none}
+.edi:hover>.edx,.edi:focus-within>.edx{opacity:1;pointer-events:auto}
+.edx button{width:26px;height:26px;border-radius:7px;border:0;cursor:pointer;font-size:15px;line-height:1;
+  font-family:system-ui,sans-serif;color:#fff;background:rgba(20,20,22,.82);display:grid;place-items:center;
+  box-shadow:0 2px 8px rgba(0,0,0,.28);backdrop-filter:blur(6px)}
+.edx button[data-dup]:hover{background:#1a7f3e}
+.edx button[data-del]:hover,.edx button[data-delg]:hover{background:#c9302c}
+.areawrap>.edx{top:-10px;right:-6px}
+.areawrap>.edx button{width:20px;height:20px;font-size:12px;border-radius:6px}
+.edi:hover{outline:2px dashed ${rgba(t.primary,.5)};outline-offset:3px;border-radius:4px}
+section{position:relative}
+.edsec{position:absolute;top:8px;right:8px;z-index:9;display:flex;gap:4px;align-items:center;opacity:0;transition:opacity .15s;pointer-events:none}
+section:hover>.edsec{opacity:1;pointer-events:auto}
+.edseclab{font:600 11px/1 system-ui,sans-serif;color:#fff;background:rgba(20,20,22,.82);padding:6px 9px;border-radius:7px;
+  text-transform:uppercase;letter-spacing:.05em}
+.edsec button{height:26px;min-width:26px;padding:0 8px;border-radius:7px;border:0;cursor:pointer;font:600 13px/1 system-ui,sans-serif;
+  color:#fff;background:rgba(20,20,22,.82);box-shadow:0 2px 8px rgba(0,0,0,.28)}
+.edsec button:hover:not([disabled]){background:${t.primary}}
+.edsec button[disabled]{opacity:.35;cursor:default}`:''}
 .nav{position:sticky;top:0;z-index:30;background:${t.bg};border-bottom:1px solid ${t.line}}
 .nav .w{display:flex;align-items:center;justify-content:space-between;gap:18px;padding-top:15px;padding-bottom:15px}
 .logo{font-family:${t.displayFont},sans-serif;font-weight:${t.weight};font-size:20px;color:${t.primary};${t.caps?'text-transform:uppercase;letter-spacing:.04em;':''}}
@@ -3597,6 +3618,11 @@ function buildSite(state,mode,pageIdx){
               :jsLevel==='gsap'?['lenis','gsap','scrolltrigger']
               :jsLevel==='webgl'?['lenis','gsap','scrolltrigger','three']:[];
   const ed=(path,tag,cls,txt)=>`<${tag}${cls?` class="${cls}"`:''}${editable?` contenteditable="true" data-path="${path}" spellcheck="false"`:''}>${esc(txt)}</${tag}>`;
+  /* In-preview editing controls. Injected only in editor mode, wired from the
+     parent exactly like the contenteditable fields — the iframe is same-origin
+     srcdoc, so the app can listen on these buttons. ＋ duplicates the item and
+     ✕ deletes it; duplicating then editing is the fastest way to add. */
+  const itemCtl=editable?(path)=>`<span class="edx" contenteditable="false"><button type="button" data-dup="${path}" title="Duplicate this">＋</button><button type="button" data-del="${path}" title="Delete this">✕</button></span>`:()=>'';
   const heroImg=mediaOf(s,'hero'), aboutImg=mediaOf(s,'about'), logoImg=mediaOf(s,'logo');
   /* Section headings are page data, not template furniture. They used to be
      hardcoded, so every sub-page repeated the home page word for word —
@@ -3666,26 +3692,26 @@ function buildSite(state,mode,pageIdx){
   let servicesHTML;
   if(t.services==='list'){
     servicesHTML=`<div class="rows">${s.services.map((sv,i)=>`
-        <div class="row"><div class="ico">${iconSVG(sv.icon)}</div><div>
+        <div class="row edi">${itemCtl(`services.${i}`)}<div class="ico">${iconSVG(sv.icon)}</div><div>
           ${ed(`services.${i}.title`,'h3','',sv.title)}
           ${ed(`services.${i}.description`,'p','',sv.description)}
         </div></div>`).join('')}</div>`;
   }else if(t.services==='numbered'){
     servicesHTML=`<div class="num">${s.services.map((sv,i)=>`
-        <div class="item"><div class="n">${String(i+1).padStart(2,'0')}</div>
+        <div class="item edi">${itemCtl(`services.${i}`)}<div class="n">${String(i+1).padStart(2,'0')}</div>
           ${ed(`services.${i}.title`,'h3','',sv.title)}
           ${ed(`services.${i}.description`,'p','',sv.description)}
         </div>`).join('')}</div>`;
   }else{
     servicesHTML=`<div class="grid">${s.services.map((sv,i)=>`
-        <article class="card"><div class="ico">${iconSVG(sv.icon)}</div>
+        <article class="card edi">${itemCtl(`services.${i}`)}<div class="ico">${iconSVG(sv.icon)}</div>
           ${ed(`services.${i}.title`,'h3','',sv.title)}
           ${ed(`services.${i}.description`,'p','',sv.description)}
         </article>`).join('')}</div>`;
   }
 
   const quoteBlocks=s.testimonials.map((q,i)=>`
-        <figure class="q"><div class="stars">${star.repeat(5)}</div>
+        <figure class="q edi">${itemCtl(`testimonials.${i}`)}<div class="stars">${star.repeat(5)}</div>
           <blockquote${editable?` contenteditable="true" data-path="testimonials.${i}.quote" spellcheck="false"`:''}>&ldquo;${esc(q.quote)}&rdquo;</blockquote>
           <figcaption class="who"${editable?` contenteditable="true" data-path="testimonials.${i}.author_placeholder" spellcheck="false"`:''}>${esc(q.author_placeholder)}</figcaption>
         </figure>`).join('');
@@ -3697,7 +3723,7 @@ function buildSite(state,mode,pageIdx){
   <div class="w">
     ${head('faq','Questions we get asked','')}
     <div class="faq">${faqs.map((f,i)=>`
-      <details${i===0?' open':''}>
+      <details${i===0?' open':''} class="edi">${itemCtl(`faqs.${i}`)}
         <summary${editable?` contenteditable="true" data-path="faqs.${i}.question" spellcheck="false"`:''}>${esc(f.question)}</summary>
         ${ed(`faqs.${i}.answer`,'p','',f.answer)}
       </details>`).join('')}
@@ -3713,27 +3739,29 @@ function buildSite(state,mode,pageIdx){
 
   const statsHTML=stats.length?`
 <section id="stats" class="stats"><div class="w">${stats.map((x,i)=>`
-  <div class="stat">${ed(`stats.${i}.value`,'div','v',x.value)}${ed(`stats.${i}.label`,'div','l',x.label)}</div>`).join('')}
+  <div class="stat edi">${itemCtl(`stats.${i}`)}${ed(`stats.${i}.value`,'div','v',x.value)}${ed(`stats.${i}.label`,'div','l',x.label)}</div>`).join('')}
 </div></section>`:'';
 
   const processHTML=process.length?`
 <section id="process"><div class="w">
   ${head('process','How it works','No surprises. Here is exactly what happens.')}
   <div class="steps">${process.map((x,i)=>`
-    <div class="step">${ed(`process.${i}.title`,'h3','',x.title)}${ed(`process.${i}.description`,'p','',x.description)}</div>`).join('')}
+    <div class="step edi">${itemCtl(`process.${i}`)}${ed(`process.${i}.title`,'h3','',x.title)}${ed(`process.${i}.description`,'p','',x.description)}</div>`).join('')}
   </div>
 </div></section>`:'';
 
   const areasHTML=areas.length?`
 <section id="areas" class="alt"><div class="w">
   ${head('areas','Where we work',`${m.businessName} covers these areas${m.location?` around ${m.location}`:''}.`)}
-  <div class="areas">${areas.map((a,i)=>`<span${editable?` contenteditable="true" data-path="areas.${i}" spellcheck="false"`:''}>${pin}${esc(a)}</span>`).join('')}</div>
+  <div class="areas">${areas.map((a,i)=>editable
+    ? `<span class="edi areawrap">${itemCtl(`areas.${i}`)}<span contenteditable="true" data-path="areas.${i}" spellcheck="false">${pin}${esc(a)}</span></span>`
+    : `<span>${pin}${esc(a)}</span>`).join('')}</div>
 </div></section>`:'';
 
   const galleryHTML=gallery.length?`
 <section id="gallery"><div class="w">
   ${head('gallery','Recent work',`A few jobs from around ${m.location||'the area'}.`)}
-  <div class="gal">${gallery.map(g=>`<figure><img src="${g.src}" alt="${esc(g.alt||'Recent work by '+m.businessName)}" loading="lazy" decoding="async"></figure>`).join('')}</div>
+  <div class="gal">${gallery.map((g,i)=>`<figure class="${editable?'edi':''}">${editable?`<span class="edx" contenteditable="false"><button type="button" data-delg="${i}" title="Remove photo">✕</button></span>`:''}<img src="${g.src}" alt="${esc(g.alt||'Recent work by '+m.businessName)}" loading="lazy" decoding="async"></figure>`).join('')}</div>
 </div></section>`:'';
 
   /* Policy pages are ordinary pages carrying one long-form section, so they
@@ -3970,7 +3998,24 @@ function buildSite(state,mode,pageIdx){
     .filter(k=>SECTION_HTML[k]!==undefined);
   SECTION_ORDER.forEach(k=>{ if(!order.includes(k)) order.push(k); });   // tolerate older saved orders
   const hidden=new Set(secCfg.hidden||[]);
-  const sectionsHTML=order.filter(k=>!hidden.has(k)).map(k=>SECTION_HTML[k]).join('\n');
+  let sectionsHTML=order.filter(k=>!hidden.has(k)).map(k=>SECTION_HTML[k]).join('\n');
+  /* Inline section controls: move up/down and hide, on every section except
+     the two fixed ones. Injected straight after each opening <section> tag; the
+     section is made position:relative in editor CSS so they anchor to its
+     corner. Wired from the parent like every other editor control. */
+  if(editable){
+    const shownOrder=order.filter(k=>!hidden.has(k)&&SECTION_HTML[k]!=='');
+    sectionsHTML=sectionsHTML.replace(/(<section id="([a-z]+)"[^>]*>)/g,(full,open,key)=>{
+      if(key==='hero'||key==='contact') return open;
+      const idx=shownOrder.indexOf(key);
+      return open+`<div class="edsec" contenteditable="false">`
+        +`<span class="edseclab">${(SECTION_META[key]||{label:key}).label}</span>`
+        +`<button type="button" data-secup="${key}" ${idx<=0?'disabled':''} title="Move up">↑</button>`
+        +`<button type="button" data-secdn="${key}" ${idx===shownOrder.length-1?'disabled':''} title="Move down">↓</button>`
+        +`<button type="button" data-sechide="${key}" title="Hide this section">Hide</button>`
+        +`</div>`;
+    });
+  }
 
   /* Nav. With one page it lists in-page anchors; with several it lists the
      pages, because site navigation beats section navigation once there is
@@ -4238,7 +4283,65 @@ function renderPreview(){
         pickImage(el.dataset.media);
       });
     });
+    // In-preview component controls: duplicate / delete an item, remove a
+    // gallery photo, and move / hide a section. Each mutates siteState and
+    // repaints, exactly like the panel does.
+    doc.querySelectorAll('[data-dup]').forEach(b=>b.onclick=e=>{ e.preventDefault(); e.stopPropagation(); dupPreviewItem(b.dataset.dup); });
+    doc.querySelectorAll('[data-del]').forEach(b=>b.onclick=e=>{ e.preventDefault(); e.stopPropagation(); delPreviewItem(b.dataset.del); });
+    doc.querySelectorAll('[data-delg]').forEach(b=>b.onclick=e=>{ e.preventDefault(); e.stopPropagation(); delGalleryItem(+b.dataset.delg); });
+    doc.querySelectorAll('[data-secup]').forEach(b=>b.onclick=e=>{ e.preventDefault(); e.stopPropagation(); movePreviewSection(b.dataset.secup,-1); });
+    doc.querySelectorAll('[data-secdn]').forEach(b=>b.onclick=e=>{ e.preventDefault(); e.stopPropagation(); movePreviewSection(b.dataset.secdn,1); });
+    doc.querySelectorAll('[data-sechide]').forEach(b=>b.onclick=e=>{ e.preventDefault(); e.stopPropagation(); hidePreviewSection(b.dataset.sechide); });
   };
+}
+
+/* ---- component editing from inside the preview ------------------------- */
+const ITEM_BLANK={
+  services:()=>({title:'New service',description:'Describe what this is and what it gets the customer.',icon:'wrench'}),
+  testimonials:()=>({quote:'A short, specific quote from a real client.',author_placeholder:'[Replace with real client name]'}),
+  faqs:()=>({question:'A question people actually ask?',answer:'A clear, honest answer in a sentence or two.'}),
+  stats:()=>({value:'100+',label:'Label'}),
+  process:()=>({title:'Step',description:'What happens at this step.'}),
+  areas:()=>'New area'
+};
+function itemArray(P,kind){ if(!Array.isArray(P[kind])) P[kind]=[]; return P[kind]; }
+function afterItemChange(msg){
+  renderPreview(); renderSections(); renderChecks(); renderTips();
+  if(!pushHistory(siteState)) setPageStatus('Saved to the page, but history is full.',true);
+  lastShareURL=''; lastReviewURL='';
+}
+function dupPreviewItem(path){
+  const [kind,idx]=path.split('.'); const P=curPage(); const arr=itemArray(P,kind);
+  const i=+idx; if(i<0||i>=arr.length) return;
+  const copy=JSON.parse(JSON.stringify(arr[i]));
+  arr.splice(i+1,0,copy); afterItemChange();
+}
+function delPreviewItem(path){
+  const [kind,idx]=path.split('.'); const P=curPage(); const arr=itemArray(P,kind);
+  const i=+idx; if(i<0||i>=arr.length) return;
+  arr.splice(i,1); afterItemChange();
+}
+function delGalleryItem(i){
+  const P=curPage(); if(!P.media||!Array.isArray(P.media.gallery)) return;
+  const withSrc=P.media.gallery.filter(g=>g&&g.src);
+  const target=withSrc[i]; if(!target) return;
+  P.media.gallery=P.media.gallery.filter(g=>g!==target);
+  renderPreview(); renderMediaPanel(); renderChecks();
+  pushHistory(siteState); lastShareURL='';
+}
+function movePreviewSection(key,dir){
+  const c=sectionCfg(); const order=c.order.slice();
+  const vis=order.filter(k=>!c.hidden.includes(k));       // reorder within the visible run
+  const vi=vis.indexOf(key); const nj=vi+dir;
+  if(vi<0||nj<0||nj>=vis.length) return;
+  const other=vis[nj];
+  const ai=order.indexOf(key), bi=order.indexOf(other);
+  order[ai]=other; order[bi]=key;
+  c.order=order; afterItemChange();
+}
+function hidePreviewSection(key){
+  const c=sectionCfg(); if(!c.hidden.includes(key)) c.hidden.push(key);
+  afterItemChange();
 }
 
 /* ---- image picking ---------------------------------------------------- */
@@ -4678,8 +4781,18 @@ async function renderProspectView(raw,review){
   const BAR='position:fixed;z-index:9;background:rgba(20,20,22,.9);backdrop-filter:blur(14px);color:#fff;'+
             'font:500 12.5px/1.5 var(--sans);box-shadow:0 8px 26px rgba(0,0,0,.34)';
   const PILL='color:#fff;background:rgba(255,255,255,.18);padding:7px 13px;border-radius:999px;text-decoration:none;border:0;cursor:pointer;font:inherit';
-  document.body.innerHTML=`
-    <iframe id="pv" title="${esc(st.meta.businessName)}" style="position:fixed;inset:0;width:100%;height:100%;border:0"></iframe>`
+  /* A theme picker for the client. Content is theme-independent, so switching
+     is instant and free — the client can try all 36 looks and their pick rides
+     back with an approval. The strip lives at the top so it never fights the
+     review bar at the bottom. */
+  const themeBar=`
+    <div id="pvtheme" style="${BAR};left:0;right:0;top:0;padding:9px 12px;display:flex;gap:8px;align-items:center;overflow-x:auto;white-space:nowrap">
+      <span style="opacity:.8;flex:none;padding-right:2px">Try a look:</span>
+      ${THEME_IDS.map(id=>`<button type="button" data-pvt="${id}" style="flex:none;display:inline-flex;align-items:center;gap:6px;${PILL};padding:6px 12px${id===st.meta.theme?';outline:2px solid #fff':''}">
+        <i style="width:11px;height:11px;border-radius:3px;background:${THEMES[id].primary};display:inline-block"></i>${esc(THEMES[id].label)}</button>`).join('')}
+    </div>`;
+  document.body.innerHTML=themeBar+`
+    <iframe id="pv" title="${esc(st.meta.businessName)}" style="position:fixed;inset:52px 0 0 0;width:100%;height:calc(100% - 52px);border:0"></iframe>`
     +(rev?`
     <div id="pvbar" style="${BAR};left:0;right:0;bottom:0;padding:10px 14px;display:flex;gap:10px;
       align-items:center;flex-wrap:wrap;justify-content:center">
@@ -4710,7 +4823,12 @@ async function renderProspectView(raw,review){
   /* Shared links carry every page, so the prospect view needs its own page
      switching — the .html filenames only exist inside the exported ZIP. */
   const view=migrate(st);
-  let pv=document.getElementById('pv'), shown=0;
+  let pv=document.getElementById('pv'), shown=0, themePicked='';
+  document.querySelectorAll('#pvtheme [data-pvt]').forEach(btn=>btn.onclick=()=>{
+    view.meta.theme=btn.dataset.pvt; themePicked=btn.dataset.pvt;
+    document.querySelectorAll('#pvtheme [data-pvt]').forEach(x=>x.style.outline=x===btn?'2px solid #fff':'none');
+    paint(shown);
+  });
   const paint=i=>{
     shown=i;
     pv.srcdoc=buildSite(view,'view',i);
@@ -4755,6 +4873,7 @@ async function renderProspectView(raw,review){
         +`Reviewed: ${Array.from(seen).map(i=>pageTitle(view,i)).join(', ')||'none'}\n`
         +(unseen.length?`Not opened: ${unseen.join(', ')}\n`:'')
         +`Date: ${new Date().toLocaleString()}\n`
+        +(themePicked&&themePicked!==st.meta.theme?`Preferred theme: ${(THEMES[themePicked]||{}).label||themePicked}\n`:'')
         +(notes?`\nNotes:\n${notes}\n`:'')
         +(withLink?`\nReview link:\n${location.href}`:'');
     };
