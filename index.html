@@ -4819,6 +4819,10 @@ async function generate(brief){
     parsed.pages=[]; parsed.sections={order:SECTION_ORDER.slice(),hidden:[]};
     currentPage=0;
     siteState=parsed;
+    // Run the same backfill the history-load path uses, so form, popup and the
+    // other meta defaults exist before any panel reads them. Without this a
+    // freshly generated site had no meta.form and loadLeadUI threw on web3key.
+    migrate(siteState);
     currentId='is_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
     lastShareURL=''; $('shareUrl').value=''; $('shareMeta').textContent='';
     stopLoading(); renderPreview(); renderThemeStrip(); renderChecks(); renderTips(); renderMediaPanel(); renderPages(); renderSections(); loadSeoFields(); loadLinkFields(); loadLeadUI(); renderCxPick(); renderHfPick(); pushHistory(siteState);
@@ -8113,7 +8117,9 @@ document.querySelectorAll('#popupStyle [data-ps]').forEach(b=>b.onclick=()=>{
 }));
 function loadLeadUI(){
   if(!siteState) return;
-  const fp=siteState.meta.form, pop=siteState.meta.popup;
+  // Belt and braces: a state that somehow reached here unmigrated must not throw.
+  const fp=siteState.meta.form||(siteState.meta.form={action:'',web3key:'',thankyou:'',provider:'',fields:['name','phone','email','message'],cols:'auto'});
+  const pop=siteState.meta.popup||(siteState.meta.popup={on:false,style:'card',headline:'',sub:'',button:''});
   $('web3key').value=fp.web3key||''; $('formAction').value=fp.action||''; $('formThankyou').value=fp.thankyou||'';
   renderLeadProv();
   $('popupSwitch').classList.toggle('on',pop.on);
