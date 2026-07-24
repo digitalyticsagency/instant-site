@@ -7303,16 +7303,43 @@ const PROSPECT_SOURCES={
     note:'Needs a free Foursquare Places key. Good on hospitality and retail, thinner on trades.'}
 };
 let prospectSource='osm', prospectRows=[];
-const OSM_CATS={
-  'Any business':['shop','craft','office','amenity'],
-  'Trades and craft':['craft'],
-  'Shops and retail':['shop'],
-  'Offices and services':['office'],
-  'Food and hospitality':['amenity=restaurant','amenity=cafe','amenity=bar','amenity=fast_food'],
-  'Health and clinics':['amenity=doctors','amenity=dentist','amenity=clinic','amenity=veterinary','shop=optician'],
-  'Beauty and salon':['shop=hairdresser','shop=beauty','shop=massage'],
-  'Auto and repair':['shop=car_repair','shop=tyres','shop=car_parts','craft=electronics_repair']
+/* Each category carries its OpenStreetMap tag filters AND a plain search
+   phrase. The phrase is what Google Places and Foursquare actually want; the
+   old code passed the dropdown label ("Health and clinics") straight into a
+   text query, which searched literally for that phrase. */
+const CATS={
+  'Any business':{q:'business',osm:['shop','craft','office','amenity']},
+  'Trades and craft':{q:'tradesman',osm:['craft']},
+  'Shops and retail':{q:'shop',osm:['shop']},
+  'Offices and services':{q:'office',osm:['office']},
+  'Food and hospitality':{q:'restaurant cafe',osm:['amenity=restaurant','amenity=cafe','amenity=bar','amenity=fast_food']},
+  'Health and clinics':{q:'medical clinic',osm:['amenity=doctors','amenity=dentist','amenity=clinic','amenity=veterinary','shop=optician']},
+  'Beauty and salon':{q:'beauty salon',osm:['shop=hairdresser','shop=beauty','shop=massage']},
+  'Auto and repair':{q:'car repair',osm:['shop=car_repair','shop=tyres','shop=car_parts','craft=electronics_repair']},
+  /* ---- 20 specific trades and businesses ---- */
+  'Plumbers':{q:'plumber',osm:['craft=plumber']},
+  'Electricians':{q:'electrician',osm:['craft=electrician']},
+  'Builders':{q:'builder',osm:['craft=builder','craft=carpenter']},
+  'Painters and decorators':{q:'painter and decorator',osm:['craft=painter']},
+  'Roofers':{q:'roofer',osm:['craft=roofer']},
+  'Landscapers and gardeners':{q:'landscaper',osm:['craft=gardener','shop=garden_centre']},
+  'Cleaners':{q:'cleaning services',osm:['shop=dry_cleaning','shop=laundry']},
+  'Cafes':{q:'cafe',osm:['amenity=cafe']},
+  'Restaurants':{q:'restaurant',osm:['amenity=restaurant']},
+  'Bakeries':{q:'bakery',osm:['shop=bakery']},
+  'Bars and pubs':{q:'bar',osm:['amenity=bar','amenity=pub']},
+  'Hairdressers and barbers':{q:'hairdresser barber',osm:['shop=hairdresser']},
+  'Nail and beauty studios':{q:'nail salon',osm:['shop=beauty','shop=nails']},
+  'Gyms and fitness':{q:'gym',osm:['leisure=fitness_centre','leisure=sports_centre']},
+  'Dentists':{q:'dentist',osm:['amenity=dentist']},
+  'Physiotherapists':{q:'physiotherapist',osm:['healthcare=physiotherapist']},
+  'Vets':{q:'veterinary',osm:['amenity=veterinary']},
+  'Mechanics':{q:'mechanic',osm:['shop=car_repair']},
+  'Real estate agents':{q:'real estate agent',osm:['office=estate_agent']},
+  'Accountants and bookkeepers':{q:'accountant',osm:['office=accountant','office=financial']}
 };
+const catQ=cat=>{ const c=CATS[cat]; return c&&c.q?c.q:'business'; };
+const catOSM=cat=>(CATS[cat]||CATS['Any business']).osm;
 function renderProspectSources(){
   const host=$('pSources'); if(!host) return;
   host.innerHTML=Object.entries(PROSPECT_SOURCES).map(([k,v])=>{
@@ -7326,7 +7353,7 @@ function renderProspectSources(){
     +(v.warn?`<span class="warnline" style="display:block;margin-top:6px">${esc(v.warn)}</span>`:'');
   const sel=$('pWhat');
   if(sel&&!sel.dataset.filled){ sel.dataset.filled='1';
-    sel.innerHTML=Object.keys(OSM_CATS).map(k=>`<option>${esc(k)}</option>`).join(''); }
+    sel.innerHTML=Object.keys(CATS).map(k=>`<option>${esc(k)}</option>`).join(''); }
 }
 renderProspectSources();
 
@@ -7336,12 +7363,20 @@ async function geocode(place){
   const d=await r.json();
   if(!d.length) throw new Error(`No map data for "${place}". Try adding the country.`);
   const b=d[0].boundingbox.map(Number);          // [south, north, west, east]
+  /* A whole country or region is useless for prospecting local operators and
+     would time the map server out on a bbox that size, so refuse it here with
+     a clear message rather than returning junk or a 504. About 1.4 degrees is
+     roughly a large city and its surrounds; anything bigger is too broad. */
+  const span=Math.max(Math.abs(b[1]-b[0]),Math.abs(b[3]-b[2]));
+  const kind=(d[0].type||'')+' '+(d[0].class||'');
+  if(span>1.4||/country|state|region/.test(kind))
+    throw new Error(`"${place}" covers too large an area for finding local businesses. Enter a single town or suburb, like "Rotorua" or "Papamoa".`);
   return {s:b[0],n:b[1],w:b[2],e:b[3],name:d[0].display_name};
 }
 async function findOSM(place,cat){
   const bb=await geocode(place);
   const box=`(${bb.s},${bb.w},${bb.n},${bb.e})`;
-  const parts=(OSM_CATS[cat]||OSM_CATS['Any business']).map(t=>{
+  const parts=catOSM(cat).map(t=>{
     const [k,v]=t.split('=');
     return `nwr["${k}"${v?`="${v}"`:''}]${box}["name"][!"website"][!"contact:website"];`;
   }).join('');
@@ -7370,7 +7405,7 @@ async function findGoogle(place,cat){
       method:'POST',
       headers:{'Content-Type':'application/json','X-Goog-Api-Key':key,
         'X-Goog-FieldMask':'places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.websiteUri,places.rating,places.userRatingCount,places.primaryTypeDisplayName,places.googleMapsUri'},
-      body:JSON.stringify({textQuery:`${cat==='Any business'?'business':cat} in ${place}`,maxResultCount:20})});
+      body:JSON.stringify({textQuery:`${catQ(cat)} in ${place}`,maxResultCount:20})});
   }catch(e){ throw new Error('Could not reach Google. Your key or network blocked the request.'+OSM); }
   if(!r.ok){
     let d=''; try{ d=(await r.json()).error.message||''; }catch{}
@@ -7392,7 +7427,7 @@ async function findGoogle(place,cat){
 async function findFoursquare(place,cat){
   const key=imgKeys.foursquare;
   if(!key) throw new Error('Add a Foursquare Places key under Settings first.');
-  const r=await fetch(`https://api.foursquare.com/v3/places/search?query=${encodeURIComponent(cat==='Any business'?'':cat)}&near=${encodeURIComponent(place)}&limit=30&fields=name,location,tel,website,categories,rating,stats`,
+  const r=await fetch(`https://api.foursquare.com/v3/places/search?query=${encodeURIComponent(cat==='Any business'?'':catQ(cat))}&near=${encodeURIComponent(place)}&limit=30&fields=name,location,tel,website,categories,rating,stats`,
     {headers:{Authorization:key,Accept:'application/json'}});
   if(r.status===401) throw new Error('Foursquare rejected that key.');
   if(!r.ok) throw new Error(`Foursquare failed (HTTP ${r.status}).`);
