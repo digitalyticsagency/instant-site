@@ -7297,7 +7297,7 @@ $('btnShareNative').onclick=async()=>{
 const PROSPECT_SOURCES={
   osm:{label:'OpenStreetMap',key:null,
     note:'Free, no key. Filters directly on "has no website", which is the whole question. Coverage is patchy for very small towns.'},
-  google:{label:'Google Places',key:'googlePlaces',
+  google:{label:'Google Places',key:'googlePlaces',warn:'Needs a Google Cloud key with Places API (New) enabled and billing set up — fiddly and it can cost money at volume. OpenStreetMap does the same job free.',
     note:'Needs a Google Maps Platform key. The only source carrying real Google Business Profile data: rating, review count and whether a website is listed.'},
   foursquare:{label:'Foursquare',key:'foursquare',
     note:'Needs a free Foursquare Places key. Good on hospitality and retail, thinner on trades.'}
@@ -7321,7 +7321,9 @@ function renderProspectSources(){
   }).join('');
   host.querySelectorAll('[data-ps]').forEach(b=>b.onclick=()=>{ prospectSource=b.dataset.ps; renderProspectSources(); });
   const v=PROSPECT_SOURCES[prospectSource], locked=v.key&&!imgKeys[v.key];
-  $('pSourceNote').innerHTML=esc(v.note)+(locked?' <b>No key set, add one under Settings.</b>':'');
+  $('pSourceNote').innerHTML=esc(v.note)
+    +(locked?' <b>No key set, add one under Settings.</b>':'')
+    +(v.warn?`<span class="warnline" style="display:block;margin-top:6px">${esc(v.warn)}</span>`:'');
   const sel=$('pWhat');
   if(sel&&!sel.dataset.filled){ sel.dataset.filled='1';
     sel.innerHTML=Object.keys(OSM_CATS).map(k=>`<option>${esc(k)}</option>`).join(''); }
@@ -7359,15 +7361,27 @@ async function findOSM(place,cat){
   }).filter(x=>x.name);
 }
 async function findGoogle(place,cat){
-  const key=imgKeys.googlePlaces;
-  if(!key) throw new Error('Add a Google Maps Platform key under Settings first.');
-  const r=await fetch('https://places.googleapis.com/v1/places:searchText',{
-    method:'POST',
-    headers:{'Content-Type':'application/json','X-Goog-Api-Key':key,
-      'X-Goog-FieldMask':'places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.websiteUri,places.rating,places.userRatingCount,places.primaryTypeDisplayName,places.googleMapsUri'},
-    body:JSON.stringify({textQuery:`${cat==='Any business'?'business':cat} in ${place}`,maxResultCount:20})});
-  if(r.status===403) throw new Error('Google rejected that key. Check Places API (New) is enabled and the key allows your origin.');
-  if(!r.ok){ let d=''; try{ d=(await r.json()).error.message; }catch{} throw new Error(`Google Places failed (HTTP ${r.status})${d?': '+d:'.'}`); }
+  const key=(imgKeys.googlePlaces||'').trim();
+  if(!key) throw new Error('Add a Google Maps Platform key under Settings first, or switch the source above to OpenStreetMap, which needs no key.');
+  const OSM='  Or switch the source to OpenStreetMap above — it is free, needs no key, and filters on “no website” directly.';
+  let r;
+  try{
+    r=await fetch('https://places.googleapis.com/v1/places:searchText',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Goog-Api-Key':key,
+        'X-Goog-FieldMask':'places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.websiteUri,places.rating,places.userRatingCount,places.primaryTypeDisplayName,places.googleMapsUri'},
+      body:JSON.stringify({textQuery:`${cat==='Any business'?'business':cat} in ${place}`,maxResultCount:20})});
+  }catch(e){ throw new Error('Could not reach Google. Your key or network blocked the request.'+OSM); }
+  if(!r.ok){
+    let d=''; try{ d=(await r.json()).error.message||''; }catch{}
+    const dl=d.toLowerCase();
+    if(r.status===400&&/api key not valid/.test(dl)) throw new Error('That Google key is not valid. Copy it again from console.cloud.google.com > Credentials.'+OSM);
+    if(r.status===403&&/(not been used|is disabled|not enabled)/.test(dl)) throw new Error('Your key works, but “Places API (New)” is not enabled on it. Enable it at console.cloud.google.com > APIs, wait a minute, and try again.'+OSM);
+    if(r.status===403&&/referer|referrer|origin/.test(dl)) throw new Error('Your key is restricted to other websites. In console.cloud.google.com add this site’s address to the key’s allowed referrers, or remove the restriction.'+OSM);
+    if(r.status===403) throw new Error('Google rejected the key (403). It usually means Places API (New) is not enabled, billing is not set up, or the key is restricted to another site.'+OSM);
+    if(r.status===429) throw new Error('Google rate-limited the request. Wait a moment and try again.'+OSM);
+    throw new Error(`Google Places failed (HTTP ${r.status})${d?': '+d:'.'}`+OSM);
+  }
   const d=await r.json();
   return (d.places||[]).map(p=>({
     name:(p.displayName&&p.displayName.text)||'', cat:(p.primaryTypeDisplayName&&p.primaryTypeDisplayName.text)||'business',
