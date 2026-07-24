@@ -7382,7 +7382,10 @@ async function findOSM(place,cat){
   }).join('');
   const q=`[out:json][timeout:25];(${parts});out center 300;`;
   const r=await fetch('https://overpass-api.de/api/interpreter',{method:'POST',body:'data='+encodeURIComponent(q)});
-  if(r.status===429||r.status===504) throw new Error('The map server is busy. Wait a moment and try again.');
+  if(r.status===429||r.status===504) throw new Error(
+    cat==='Any business'
+      ? '"Any business" over a large town takes a while and the map server timed out. Pick a specific category (Plumbers, Cafes, Mechanics...) — those are much faster.'
+      : 'The map server is busy. Wait a moment and try again.');
   if(!r.ok) throw new Error(`Map search failed (HTTP ${r.status}).`);
   const d=await r.json();
   return (d.elements||[]).map(e=>{
@@ -7444,7 +7447,9 @@ $('btnFind').onclick=async()=>{
   const cat=$('pWhat').value;
   if(!place){ $('pStatus').textContent='Enter a town or suburb first.'; return; }
   const btn=$('btnFind'), was=btn.textContent; btn.disabled=true; btn.textContent='Searching…';
-  $('pStatus').textContent=`Searching ${PROSPECT_SOURCES[prospectSource].label}…`;
+  if((prospectSource==='google'||prospectSource==='foursquare')&&cat==='Any business'){
+    $('pStatus').innerHTML=`Heads up: "Any business" on ${PROSPECT_SOURCES[prospectSource].label} returns the best-known businesses, which nearly all have websites. Searching anyway — but a specific category, or the OpenStreetMap source, works far better.`;
+  }else $('pStatus').textContent=`Searching ${PROSPECT_SOURCES[prospectSource].label}…`;
   $('pResults').innerHTML='';
   try{
     let rows=prospectSource==='google'?await findGoogle(place,cat)
@@ -7455,7 +7460,16 @@ $('btnFind').onclick=async()=>{
     rows=rows.filter(r=>!r.site);
     rows.sort((a,b)=>(b.phone?1:0)-(a.phone?1:0)||(+b.reviews||0)-(+a.reviews||0));
     prospectRows=rows;
-    if(!rows.length){ $('pStatus').textContent=`Found ${total} businesses but every one already has a website. Try another category or a nearby town.`; return; }
+    if(!rows.length){
+      // Google and Foursquare rank by prominence, so a generic search returns
+      // the best-known businesses, which all have websites. That is the wrong
+      // tool for finding the small operators who do not. Say so, and steer.
+      if(prospectSource==='google'||prospectSource==='foursquare'){
+        $('pStatus').innerHTML=`All ${total} results already have a website. ${PROSPECT_SOURCES[prospectSource].label} lists the best-known businesses first, and those are exactly the ones that have sites.<br><b>Pick a specific category</b> (Plumbers, Cafes, Mechanics...) rather than "Any business", or switch the source to <b>OpenStreetMap</b>, which finds the small operators the others bury.`;
+      }else{
+        $('pStatus').textContent=`Found ${total} businesses and all of them list a website. Try a specific category, or a nearby suburb.`;
+      }
+      return; }
     const withPhone=rows.filter(r=>r.phone).length;
     $('pStatus').textContent=`${rows.length} of ${total} have no website, ${withPhone} with a phone number. Click one to load it into the brief.`;
     $('pResults').innerHTML=`<div class="gout"><h5>No website listed</h5>${rows.slice(0,60).map((r,i)=>
