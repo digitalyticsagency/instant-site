@@ -996,6 +996,8 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
             <button class="mini" id="btnReviews" title="Set up review requests and reply templates for one to five stars." type="button">Review engine</button>
             <button class="mini" id="btnAudit" title="Produce a local SEO audit checklist with effort ratings." type="button">Local SEO audit</button>
             <button class="mini" id="btnProposal" title="Draft the proposal, three pricing tiers and what to sell next." type="button">Proposal &amp; pricing</button>
+            <button class="mini" id="btnSocialKit" title="Generate an Instagram post and a LinkedIn banner in this site's theme, as PNGs. No design work needed." type="button">Social image kit</button>
+            <button class="mini" id="btnBioLink" title="Add a mobile-first link-in-bio page listing your site, socials, phone, email and booking link, styled to match." type="button">Add bio-link page</button>
           </div>
           <div id="growthStatus" class="tiny" style="margin-top:8px"></div>
         </div>
@@ -1748,7 +1750,7 @@ const blankPage=(title,st)=>({
   services:[],about:'',testimonials:[],faqs:[],stats:[],process:[],areas:[],
   contact_cta:'Get in touch and we will come straight back to you.',
   seo_meta_description:'',seo_title:'',keyword:'',page_intent:'',headings:{},
-  legal:false,legalBody:[],contactLayout:'',
+  legal:false,legalBody:[],bio:false,contactLayout:'',
   media:blankMedia(),
   sections:{order:SECTION_ORDER.slice(),hidden:['stats','services','process','about','gallery','reviews','faq','areas']}
 });
@@ -2427,6 +2429,8 @@ Rules:
 - "process": EXACTLY 3 or EXACTLY 6 items, for the same grid reason. The actual steps of working with this business, from first contact to finished job. Titles 1-3 words, descriptions one short sentence written in the second person.
 - "areas": 6 to 10 suburbs, towns or districts inside the stated service area or near the stated location. Real place names only — if you are not confident of local place names, return fewer, or an empty array. Never invent place names.
 - "hero.headline": under 70 characters, benefit-led, no colon-and-subtitle formatting.
+- STRUCTURE THE HOME PAGE ON AIDA. The hero is Attention and Interest: the headline names the reader's want, the subheadline builds interest with a specific reason to keep reading. Services and stats are Desire: concrete proof this is the right operator. The closing section is Action.
+- "hero.cta_text": a LOW-FRICTION action for the home page. A first-time visitor is not ready to buy, so ask for the small yes: "See how it works", "Get a free quote", "Check your area". Not "Buy now".
 - "contact_cta": one short sentence pushing the visitor to make contact.
 - "palette": colours suiting this trade and tone. "background" must be light. "primary" and "accent" must each hit 4.5:1 against "background".
 - "seo_meta_description": under 160 characters, includes the business name and location.
@@ -2588,7 +2592,11 @@ STEP 3 — GIVE EVERY SECTION ITS OWN HEADING.
 - Every H2 must be different from the other pages' H2s listed under ALREADY COVERED. Reusing them is the single most visible way an interior page reads as a copy of the home page, even when the content underneath is new.
 - Keep each "h" under 60 characters. Do not restate the H1.
 
-STEP 4 — WRITE FOR SEARCH ENGINES AND ANSWER ENGINES.
+STEP 4 — STRUCTURE THE COPY ON PAS WHEN THE PAGE SELLS.
+On a transactional or a service/pricing page, run the body on Problem, Agitate, Solve: name the problem the reader arrived with, make the cost of leaving it unsolved concrete, then present this business as the solution. The "about" block and the services carry this. On an informational page, lead with the answer instead — PAS on a page someone is only researching feels like pressure.
+- "hero.cta_text": match the intent. A transactional or pricing page has earned a HIGH-INTENT ask: "Book your assessment", "Get your fixed quote", "Reserve your spot". An informational page keeps it low-friction: "Ask us a question", "See the options".
+
+STEP 5 — WRITE FOR SEARCH ENGINES AND ANSWER ENGINES.
 This page has to win a classic search result AND be quotable by an AI assistant answering a question out loud. That means:
 - "hero.headline" — the page's single H1. Under 65 characters. It must state the page's specific topic, not the business's general pitch. Do not restate the home page headline.
 - "hero.subheadline" — 1 to 2 sentences that stand completely on their own as a direct answer to what the searcher asked, naming the business and the place. Assume it will be lifted out of the page and read aloud with no surrounding context: no "we", "this", "it" or "as mentioned" pointing at something outside the sentence.
@@ -3603,6 +3611,76 @@ function resolveTheme(id){
   });
 }
 
+function buildBioPage(state,mode,pageIdx){
+  const editable=mode===true;
+  const m=state.meta,t=resolveTheme(m.theme),c=m.contact||{},seo=m.seo||{};
+  const s=pageOf(state,pageIdx);
+  const lang=(LOCALES[m.locale]&&LOCALES[m.locale].tag)||'en';
+  // mediaOf always returns an object, so pick whichever actually has a src.
+  const logo=mediaOf(s,'logo').src?mediaOf(s,'logo'):mediaOf(pageOf(state,0),'logo');
+  const socials=(seo.socials||'').split(/[\s,]+/).filter(u=>/^https?:\/\//.test(u));
+  const canon=(seo.canonical||'').trim().replace(/\/+$/,'');
+  const on=bestOn(t.primary);
+  const link=(href,label,note)=>href?`<a class="biolink" href="${esc(href)}"${/^https?:/.test(href)?' target="_blank" rel="noopener"':''}>
+    <span>${esc(label)}</span>${note?`<em>${esc(note)}</em>`:''}</a>`:'';
+  const socialName=u=>{const h=(u.match(/^https?:\/\/([^/]+)/)||[])[1]||'';
+    return /facebook|fb\./.test(h)?'Facebook':/instagram/.test(h)?'Instagram':/linkedin/.test(h)?'LinkedIn'
+      :/youtube|youtu\.be/.test(h)?'YouTube':/tiktok/.test(h)?'TikTok':/twitter|x\.com/.test(h)?'X'
+      :/pinterest/.test(h)?'Pinterest':(h.replace(/^www\./,'')||'Website');};
+  const ed=(path,tag,cls,txt)=>`<${tag}${cls?` class="${cls}"`:''}${editable?` contenteditable="true" data-path="${path}" spellcheck="false"`:''}>${esc(txt)}</${tag}>`;
+  const links=[
+    canon?link(canon,'Visit the website','Our full site'):(pageCount(state)>1?link(pageHref(state,0),'Visit the website',''):''),
+    c.book?link(esc(c.book),'Book online','Pick a time that suits'):'',
+    c.phone?link(telHref(c.phone),'Call us',c.phone):'',
+    c.email?link('mailto:'+esc(c.email),'Email us',c.email):'',
+    ...socials.map(u=>link(u,socialName(u),''))
+  ].filter(Boolean).join('');
+  const useSystem=prefs.systemFonts;
+  const font=useSystem?t.sysBody:`'${(t.body||'').replace(/'/g,'')}',${t.sysBody}`;
+  const fontLink=(!useSystem&&t.google)?`<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=${t.google}&display=swap">`:'';
+  return `<!DOCTYPE html>
+<html lang="${lang}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(s.seo_title||m.businessName+' — Links')}</title>
+<meta name="description" content="${esc(s.seo_meta_description||'')}">
+<meta name="theme-color" content="${t.primary}">
+<meta name="robots" content="index,follow">
+${canon?`<link rel="canonical" href="${esc(canon+'/'+pageHref(state,pageIdx))}">`:''}
+${fontLink}
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:${t.bg};color:${t.ink};font-family:${font};min-height:100vh;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;padding:44px 20px;text-align:center;
+  background-image:radial-gradient(60vw 60vw at 50% -10%,${rgba(t.primary,.12)},transparent 60%)}
+.biowrap{width:100%;max-width:440px;display:flex;flex-direction:column;gap:14px;align-items:center}
+.biologo{max-height:88px;width:auto;border-radius:20px}
+.bioname{font-family:${useSystem?t.sysDisplay:`'${(t.display||'').replace(/'/g,'')}',${t.sysDisplay}`};
+  font-weight:${t.weight};font-size:clamp(26px,7vw,34px);${t.caps?'text-transform:uppercase;letter-spacing:.03em;':''}}
+.biotag{color:${t.ink2};font-size:16px;line-height:1.5;max-width:34ch;margin-bottom:8px}
+.biolink{display:block;width:100%;padding:17px 20px;border-radius:${t.radius==='0px'?'0':'16px'};
+  background:${t.primary};color:${on};text-decoration:none;font-weight:600;font-size:17px;
+  transition:transform .15s,box-shadow .15s;box-shadow:0 6px 18px ${rgba(t.ink,.10)}}
+.biolink:nth-child(even){background:${t.panel};color:${t.ink};border:1px solid ${t.line};box-shadow:none}
+.biolink:hover{transform:translateY(-2px);box-shadow:0 12px 26px ${rgba(t.ink,.16)}}
+.biolink em{display:block;font-style:normal;font-weight:400;font-size:13px;opacity:.8;margin-top:2px}
+.biofoot{margin-top:20px;font-size:12.5px;color:${t.ink2};opacity:.8}
+${editable?`[contenteditable]{outline:none}[contenteditable]:hover{background:${rgba(t.primary,.08)};border-radius:6px}`:''}
+</style>
+</head>
+<body>
+  <div class="biowrap">
+    ${logo.src?`<img class="biologo" src="${logo.src}" alt="${esc(m.businessName)}">`:''}
+    ${ed('hero.headline','div','bioname',s.hero.headline||m.businessName)}
+    ${s.hero.subheadline?ed('hero.subheadline','div','biotag',s.hero.subheadline):''}
+    ${links||`<div class="biotag">Add a phone, email, booking link or social profiles in the panels, and they appear here.</div>`}
+    ${c.area?`<div class="biofoot">${esc(c.area)}</div>`:m.location?`<div class="biofoot">${esc(m.location)}</div>`:''}
+  </div>
+</body>
+</html>`;
+}
+
 function buildSite(state,mode,pageIdx){
   pageIdx=pageIdx||0;
   /* mode: false = export (real hrefs, no editing)
@@ -3612,6 +3690,10 @@ function buildSite(state,mode,pageIdx){
   const inApp=mode===true||mode==='view'; // are page links handled by the host app?
   const m=state.meta,t=resolveTheme(m.theme),c=m.contact||{};
   const s=pageOf(state,pageIdx);          // page content; meta stays shared
+  // A bio-link page is a self-contained micro-page: no nav, no footer, just a
+  // centred stack of tappable links. It still exports as a normal .html file
+  // in the ZIP and shares the theme, so it is built here rather than bolted on.
+  if(s.bio) return buildBioPage(state,mode,pageIdx);
   // JS motion level. Never active without motion itself being on.
   const jsLevel=(prefs.motion&&JS_LEVELS[prefs.js])?prefs.js:'off';
   const jsLibs=jsLevel==='smooth'?['lenis']
@@ -5451,6 +5533,10 @@ get_header();
     const extra=[];
     for(let i=1;i<pageCount(state);i++){
       const pg=pageOf(state,i);
+      // A bio-link page is a whole self-contained document, not a section body,
+      // so it does not belong inside the WordPress page template. It ships in
+      // the static ZIP; here it is skipped.
+      if(pg.bio) continue;
       const body=carve(swapAssets(buildSite(state,false,i))).body;
       extra.push(`		array(
 			'title'   => ${phpStr(pg.title)},
@@ -5775,6 +5861,7 @@ function migrate(s){
     pg.legal=pg.legal===true;
     if(typeof pg.keyword!=='string') pg.keyword='';
     if(typeof pg.contactLayout!=='string') pg.contactLayout='';
+    pg.bio=pg.bio===true;
     const mm=blankMedia(); pg.media=Object.assign(mm,pg.media||{});
     Object.keys(mm).forEach(k=>{ if(k!=='gallery'&&(!pg.media[k]||typeof pg.media[k]!=='object')) pg.media[k]={src:'',alt:'',credit:null}; });
     if(!Array.isArray(pg.media.gallery)) pg.media.gallery=[];
@@ -6794,6 +6881,87 @@ function makeOgImage(){
   x.fillText([m.location,c2.phone].filter(Boolean).join('  ·  '),72,568);
   return c;
 }
+/* One theme-aware card renderer for every social format. Reuses the OG-card
+   approach — canvas drawn from the theme tokens and the page copy, exported as
+   PNG — so the images match the site with zero design work from the user. */
+function drawSocialCard(W,H,kind){
+  const st=siteState, m=st.meta, t=resolveTheme(m.theme), p=pageOf(st,0);
+  const c=document.createElement('canvas'); c.width=W; c.height=H;
+  const x=c.getContext('2d');
+  const dark=t.dark;
+  x.fillStyle=t.bg; x.fillRect(0,0,W,H);
+  const g=x.createLinearGradient(0,0,W,H);
+  g.addColorStop(0,t.primary); g.addColorStop(1,t.accent);
+  // a soft brand wash, heavier on the square post than the wide banner
+  x.globalAlpha=kind==='ig'?0.14:0.10; x.fillStyle=g; x.fillRect(0,0,W,H); x.globalAlpha=1;
+  x.fillStyle=g; x.fillRect(0,0,W,kind==='banner'?8:12);
+  const pad=kind==='banner'?70:88;
+  const ink=t.ink, ink2=t.ink2;
+  // brand line
+  x.fillStyle=ink2; x.font=`600 ${kind==='banner'?24:30}px system-ui,-apple-system,Segoe UI,sans-serif`;
+  x.fillText(String(m.businessName||'').slice(0,44).toUpperCase(),pad,kind==='banner'?H/2-70:150);
+  // headline, wrapped
+  const maxW=W-pad*2;
+  const words=String((p.hero&&p.hero.headline)||m.businessName||'').split(/\s+/);
+  const hSize=kind==='banner'?46:kind==='ig'?76:64;
+  x.fillStyle=ink; x.font=`700 ${hSize}px Georgia,"Times New Roman",serif`;
+  let line='',lines=[];
+  words.forEach(w=>{ const tst=line?line+' '+w:w;
+    if(x.measureText(tst).width>maxW&&line){ lines.push(line); line=w; } else line=tst; });
+  if(line) lines.push(line);
+  const lh=hSize*1.16, cap=kind==='banner'?2:5;
+  let y=kind==='banner'?H/2-70+40:kind==='ig'?H*0.42:230;
+  lines.slice(0,cap).forEach(l=>{ x.fillText(l,pad,y); y+=lh; });
+  // standout / location strip
+  x.fillStyle=t.primary; x.font=`600 ${kind==='banner'?24:30}px system-ui,-apple-system,Segoe UI,sans-serif`;
+  const strip=[m.standout,m.location].filter(Boolean).join('   ·   ').slice(0,60);
+  if(kind==='banner'){ x.fillText([m.location,(m.contact||{}).phone].filter(Boolean).join('   ·   '),pad,H/2+70); }
+  else { x.fillText(strip,pad,y+24); }
+  // CTA pill on the square post
+  if(kind==='ig'){
+    const label=(p.hero&&p.hero.cta_text)||'Get in touch';
+    x.font='600 30px system-ui,-apple-system,Segoe UI,sans-serif';
+    const wpill=Math.min(maxW,x.measureText(label).width+64);
+    x.fillStyle=t.primary; roundRect(x,pad,H-190,wpill,64,14); x.fill();
+    x.fillStyle=bestOn(t.primary); x.fillText(label,pad+32,H-148);
+    const c2=m.contact||{};
+    x.fillStyle=ink2; x.font='500 26px system-ui,-apple-system,Segoe UI,sans-serif';
+    x.fillText([c2.phone,c2.email].filter(Boolean).join('   ·   ').slice(0,52),pad,H-96);
+  }
+  return c;
+}
+function roundRect(x,X,Y,W,H,r){ x.beginPath(); x.moveTo(X+r,Y); x.arcTo(X+W,Y,X+W,Y+H,r);
+  x.arcTo(X+W,Y+H,X,Y+H,r); x.arcTo(X,Y+H,X,Y,r); x.arcTo(X,Y,X+W,Y,r); x.closePath(); }
+$('btnSocialKit').onclick=()=>{
+  if(!siteState){ $('growthStatus').textContent='Generate a site first.'; return; }
+  const slug=slugify(siteState.meta.businessName,'social');
+  const ig=drawSocialCard(1080,1080,'ig');
+  const banner=drawSocialCard(1584,396,'banner');
+  ig.toBlob(b=>saveBlob(b,`${slug}-instagram.png`),'image/png');
+  banner.toBlob(b=>saveBlob(b,`${slug}-linkedin-banner.png`),'image/png');
+  $('growthOut').innerHTML=`<div class="gout"><h5>Instagram post, 1080 x 1080</h5>
+      <img src="${ig.toDataURL('image/png')}" style="width:100%;max-width:280px;border-radius:8px;border:1px solid var(--stroke)">
+    <h5 style="margin-top:12px">LinkedIn banner, 1584 x 396</h5>
+      <img src="${banner.toDataURL('image/png')}" style="width:100%;border-radius:8px;border:1px solid var(--stroke)">
+    <div class="gmeta" style="margin-top:8px">Both downloaded, in this site's theme and colours. Re-run after a theme change to match.</div></div>`;
+  $('growthStatus').textContent='Instagram post and LinkedIn banner downloaded.';
+};
+$('btnBioLink').onclick=()=>{
+  if(!siteState){ $('growthStatus').textContent='Generate a site first.'; return; }
+  if(pageCount(siteState)>=PAGE_CAP){ $('growthStatus').textContent=`Limit is ${PAGE_CAP} pages.`; return; }
+  const exists=(siteState.pages||[]).some(pg=>pg.bio);
+  if(exists){ $('growthStatus').textContent='This site already has a bio-link page. Find it in the Pages panel.'; return; }
+  const pg=blankPage('Links',siteState);
+  pg.bio=true; pg.inNav=false; pg.slug=uniqueSlug(siteState,'links');
+  pg.hero={headline:siteState.meta.businessName,subheadline:siteState.meta.standout||siteState.meta.location||'',cta_text:'Visit the website'};
+  pg.seo_title=`${siteState.meta.businessName} — Links`;
+  pg.seo_meta_description=`Every way to reach ${siteState.meta.businessName}.`;
+  pg.sections={order:['hero'],hidden:SECTION_ORDER.filter(k=>k!=='hero')};
+  siteState.pages=siteState.pages||[]; siteState.pages.push(pg);
+  renderPages(); renderPreview(); pushHistory(siteState); lastShareURL='';
+  $('growthStatus').textContent='Bio-link page added. It is kept out of the main nav; link to it directly from your Instagram or TikTok profile. Its filename is links.html in the export.';
+};
+
 $('btnOgImage').onclick=()=>{
   if(!siteState){ $('seoScore').innerHTML='<div class="tiny">Generate a site first.</div>'; return; }
   const c=makeOgImage();
