@@ -312,7 +312,7 @@ select{appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%
 .cxbtn b{display:block;font-size:12.5px;font-weight:600}
 .cxbtn span{display:block;font-size:10.5px;color:var(--txt-3);margin-top:2px;line-height:1.35}
 .cxbtn.on span{color:var(--accent);opacity:.8}
-.legalbox{margin-top:14px;padding:13px;border:1px solid var(--stroke);border-radius:12px;background:var(--surface-2)}
+.legalbox,.leadbox{margin-top:14px;padding:13px;border:1px solid var(--stroke);border-radius:12px;background:var(--surface-2)}
 .legalwarn{margin-top:9px;padding:8px 10px;border-radius:8px;background:color-mix(in srgb,var(--warn) 12%,transparent);
   color:var(--warn);line-height:1.55}
 
@@ -855,11 +855,43 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
         </div>
         <div id="cxWhy" class="tiny" style="margin-bottom:8px"></div>
         <div class="cxgridpick" id="cxPick"></div>
-        <div class="field" style="margin-top:12px">
-          <label for="formAction">Where the form posts
-            <span class="help" data-tip="Leave blank and the form opens the visitor's email app with the details filled in, which works with no backend. Paste a Formspree, Web3Forms, Basin or Netlify endpoint to receive submissions properly.">?</span></label>
-          <input type="url" id="formAction" placeholder="https://formspree.io/f/… (optional)">
-          <div class="tiny" id="formNote"></div>
+        <div class="leadbox">
+          <b style="font-size:13px">Lead capture</b>
+          <div class="tiny" style="margin-top:5px;line-height:1.6">Where enquiries land. There is no server here, so the form posts straight to a service you own. Every submission carries which page it came from.</div>
+          <div class="tabs" id="leadProv" style="margin:10px 0">
+            <button data-lp="">Email app</button><button data-lp="web3forms">Web3Forms</button><button data-lp="formspree">Formspree</button><button data-lp="custom">Other</button>
+          </div>
+          <div id="leadProvNote" class="tiny" style="margin-bottom:8px"></div>
+          <div class="field" id="leadW3" style="display:none">
+            <label for="web3key">Web3Forms access key
+              <span class="help" data-tip="Free and unlimited. Sign up at web3forms.com with your email, no account needed, and paste the access key here. Submissions arrive in your inbox and their dashboard, and can feed a Google Sheet.">?</span></label>
+            <input type="text" id="web3key" placeholder="a1b2c3d4-… from web3forms.com" autocomplete="off">
+          </div>
+          <div class="field" id="leadURL" style="display:none">
+            <label for="formAction">Endpoint URL</label>
+            <input type="url" id="formAction" placeholder="https://formspree.io/f/…">
+          </div>
+          <div class="field" id="leadThanks" style="display:none">
+            <label for="formThankyou">Thank-you page <span class="opt">optional</span></label>
+            <input type="url" id="formThankyou" placeholder="https://yoursite.co.nz/ (where to send them after submit)">
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button class="mini" id="btnTestLead" type="button">Send a test lead</button>
+            <a class="mini" id="lnkLeadDash" href="#" target="_blank" rel="noopener" style="display:none">Open my inbox ↗</a>
+          </div>
+          <div id="leadTestNote" class="tiny" style="margin-top:8px"></div>
+        </div>
+        <div class="row">
+          <div class="lbl"><b>Exit-intent pop-up</b>An email capture that appears as a visitor leaves. Adds a little JavaScript to the export, so it is off by default. Needs a lead endpoint above.</div>
+          <div class="switch" id="popupSwitch" role="switch" tabindex="0"></div>
+        </div>
+        <div class="field" id="popupCfg" style="display:none">
+          <div class="tabs" id="popupStyle" style="margin-bottom:8px">
+            <button data-ps="card">Centre card</button><button data-ps="bar">Bottom bar</button>
+          </div>
+          <input type="text" id="popupHead" placeholder="Headline, e.g. Before you go" maxlength="60">
+          <input type="text" id="popupSub" placeholder="One line under it" maxlength="120" style="margin-top:6px">
+          <input type="text" id="popupBtn" placeholder="Button text" maxlength="30" style="margin-top:6px">
         </div>
         <div class="row">
           <div class="lbl"><b>Form columns</b>Two columns fit more above the fold. Auto uses two on desktop and one on a phone.</div>
@@ -3480,6 +3512,27 @@ section{padding:${d}px 0}
 .cform textarea{resize:vertical;min-height:104px}
 .cform button.b{width:100%;border:0;cursor:pointer;font-size:17px}
 .cform .fnote{font-size:13.5px;color:${t.ink2};text-align:center;margin:0}
+/* ---- opt-in pop-up ---- */
+.isl-pop{position:fixed;inset:0;z-index:120;display:flex;opacity:0;transition:opacity .25s;pointer-events:none}
+.isl-pop.on{opacity:1;pointer-events:auto}
+.isl-card{background:${t.bg};color:${t.ink};border:1px solid ${t.line};box-shadow:0 24px 70px rgba(0,0,0,.32);position:relative}
+.isl-card h3{font-family:${t.displayFont},sans-serif;font-weight:${t.weight};font-size:23px;margin-bottom:8px}
+.isl-card p{color:${t.ink2};font-size:15.5px;line-height:1.55;margin-bottom:16px}
+.isl-card form{display:flex;flex-direction:column;gap:10px}
+.isl-card input[type=email],.isl-card input[type=tel]{padding:13px 15px;border-radius:${t.radius};border:1px solid ${t.line};background:${t.panel};color:${t.ink};font:inherit;font-size:16px}
+.isl-card input:focus{outline:2px solid ${t.primary};border-color:${t.primary}}
+.isl-card button[type=submit]{padding:14px;border:0;border-radius:${t.radius};background:${t.primary};color:${bestOn(t.primary)};font-family:${t.displayFont},sans-serif;font-weight:${t.weight};font-size:16px;cursor:pointer;${t.caps?'text-transform:uppercase;letter-spacing:.04em;':''}}
+.isl-x{position:absolute;top:10px;right:12px;border:0;background:transparent;font-size:26px;line-height:1;color:${t.ink2};cursor:pointer}
+.isl-card{transition:transform .28s cubic-bezier(.22,1,.36,1)}
+.isl-pop.isl-card{align-items:center;justify-content:center;padding:20px;background:rgba(10,10,12,.55);backdrop-filter:blur(3px)}
+.isl-pop.isl-card .isl-card{width:100%;max-width:420px;padding:30px 28px;border-radius:${t.radius==='0px'?'0':'18px'};transform:translateY(14px) scale(.98)}
+.isl-pop.isl-card.on .isl-card{transform:none}
+.isl-pop.isl-bar{align-items:flex-end;justify-content:center;padding:0}
+.isl-pop.isl-bar .isl-card{width:100%;max-width:none;border-radius:0;border-left:0;border-right:0;border-bottom:0;padding:22px 24px;transform:translateY(100%)}
+.isl-pop.isl-bar.on .isl-card{transform:none}
+.isl-pop.isl-bar .isl-card form{flex-direction:row;flex-wrap:wrap}
+.isl-pop.isl-bar .isl-card form>*{flex:1;min-width:180px}
+@media(max-width:560px){.isl-pop.isl-bar .isl-card form{flex-direction:column}}
 @media(max-width:760px){
   .cx-split > .w,.cx-inline > .w,.cx-two .cxgrid{grid-template-columns:1fr;gap:30px}
   .cform,.cform.cols2,.cform.colsauto{grid-template-columns:1fr}
@@ -3901,10 +3954,33 @@ function buildSite(state,mode,pageIdx){
      or a third-party endpoint the owner pastes in (Formspree, Web3Forms,
      Netlify, Basin). Both are supported; mailto is the default so a form is
      never a dead end. */
-  const formAction=(m.form&&m.form.action||'').trim();
-  const formMethod=formAction?'post':'post';
+  /* Resolve where the form posts from the provider the owner chose. Web3Forms
+     posts to a fixed URL with the access key as a hidden field; Formspree and
+     a custom endpoint post to the URL directly; otherwise a mailto keeps the
+     form from being a dead end. Every real endpoint gets a source_page hidden
+     field so a multi-page site knows which page a lead came from. */
+  const fp=m.form||{};
+  const prov=fp.provider||(fp.action?'custom':'');
+  let formAction='';
+  if(prov==='web3forms'&&(fp.web3key||'').trim()) formAction='https://api.web3forms.com/submit';
+  else if((prov==='formspree'||prov==='custom')&&(fp.action||'').trim()) formAction=(fp.action||'').trim();
   const mailtoForm=!formAction&&c.email;
   const canForm=!!(formAction||c.email);
+  const pageTag=pageIdx?pageTitle(state,pageIdx):'Home';
+  const providerHidden=(source)=>{
+    let h='';
+    if(prov==='web3forms') h+=`<input type="hidden" name="access_key" value="${esc((fp.web3key||'').trim())}">`
+      +`<input type="hidden" name="from_name" value="${esc(m.businessName)} website">`;
+    if(formAction){
+      h+=`<input type="hidden" name="_subject" value="Website enquiry from the ${esc(pageTag)} page — ${esc(m.businessName)}">`
+        +`<input type="hidden" name="subject" value="Website enquiry from the ${esc(pageTag)} page — ${esc(m.businessName)}">`
+        +`<input type="hidden" name="source_page" value="${esc(pageTag)}">`
+        +(source?`<input type="hidden" name="source" value="${esc(source)}">`:'')
+        +((fp.thankyou||'').trim()?`<input type="hidden" name="redirect" value="${esc((fp.thankyou||'').trim())}">`:'')
+        +`<input type="checkbox" name="botcheck" style="display:none" tabindex="-1" autocomplete="off">`;
+    }
+    return h;
+  };
   const F=(m.form&&m.form.fields)||['name','phone','email','message'];
   const FIELD_META={
     name:{label:'Your name',type:'text',auto:'name',req:true},
@@ -3936,14 +4012,54 @@ function buildSite(state,mode,pageIdx){
   };
   const formCols=(m.form&&m.form.cols)||'auto';
   const formBody=(fields,btnLabel)=>!canForm?'':`
-  <form class="cform ${formCols==='2'?'cols2':formCols==='1'?'cols1':'colsauto'}"${formAction?` action="${esc(formAction)}" method="${formMethod}"`
+  <form class="cform ${formCols==='2'?'cols2':formCols==='1'?'cols1':'colsauto'}"${formAction?` action="${esc(formAction)}" method="post"`
       :` action="mailto:${esc(c.email)}" method="post" enctype="text/plain"`}>
     ${fields.filter(k=>FIELD_META[k]).map(field).join('')}
-    ${formAction?`<input type="hidden" name="_subject" value="Website enquiry, ${esc(m.businessName)}">`:''}
+    ${providerHidden('')}
     <p class="ff hp" aria-hidden="true"><label>Leave this empty</label><input type="text" name="_gotcha" tabindex="-1" autocomplete="off"></p>
     <p class="ff wide"><button type="submit" class="b">${esc(btnLabel||s.hero.cta_text)}</button></p>
     ${mailtoForm?`<p class="ff wide fnote">This opens your email app with the details filled in.</p>`:''}
   </form>`;
+  /* ---- opt-in exit-intent / inline pop-up --------------------------------
+     The ONE place a static export gains JavaScript, and only when the owner
+     turns it on AND a real endpoint exists (a pop-up posting to mailto is
+     nonsense). It is a normal <form> POST, so submission needs no script; the
+     small script only decides when to show it and remembers a dismissal. */
+  const pop=m.popup||{};
+  const popupOn=!!(pop.on&&formAction&&!editable);
+  const popStyle=pop.style==='bar'?'bar':'card';
+  const popupBlock=!popupOn?'':`
+<div id="isl-pop" class="isl-pop isl-${popStyle}" hidden>
+  <div class="isl-card" role="dialog" aria-label="Get in touch">
+    <button class="isl-x" type="button" aria-label="Close" onclick="islClose()">&times;</button>
+    <h3>${esc(pop.headline||'Before you go')}</h3>
+    <p>${esc(pop.sub||'Leave your email and we will get back to you.')}</p>
+    <form action="${esc(formAction)}" method="post">
+      <input type="email" name="email" required placeholder="Your email" autocomplete="email">
+      ${(F.includes('phone'))?'<input type="tel" name="phone" placeholder="Phone (optional)" autocomplete="tel">':''}
+      ${providerHidden('popup')}
+      <input type="text" name="_gotcha" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px">
+      <button type="submit">${esc(pop.button||s.hero.cta_text)}</button>
+    </form>
+  </div>
+</div>
+<script>(function(){
+  var K='isl_pop_${slugify(m.businessName,'x')}';
+  try{ if(localStorage.getItem(K)) return; }catch(e){}
+  var el=document.getElementById('isl-pop'); if(!el) return;
+  var shown=false;
+  function show(){ if(shown) return; shown=true; el.hidden=false;
+    requestAnimationFrame(function(){ el.classList.add('on'); }); }
+  window.islClose=function(){ el.classList.remove('on');
+    setTimeout(function(){ el.hidden=true; },250); try{ localStorage.setItem(K,'1'); }catch(e){} };
+  el.addEventListener('click',function(e){ if(e.target===el) islClose(); });
+  // Desktop: fire when the cursor leaves through the top of the window.
+  document.addEventListener('mouseout',function(e){ if(!e.relatedTarget&&e.clientY<=0) show(); });
+  // Touch has no exit-intent, so fall back to time plus a little scrolling.
+  var fine=matchMedia('(hover:hover)').matches;
+  if(!fine){ setTimeout(show,18000);
+    addEventListener('scroll',function(){ if(scrollY>innerHeight*1.5) show(); },{passive:true}); }
+})();<\/script>`;
   const callRow=(centre)=>`<div class="cta-row"${centre?' style="justify-content:center"':''}>
     <a href="${primaryHref}" class="b">${c.phone&&!c.book?`Call ${esc(c.phone)}`:esc(s.hero.cta_text)}</a>
     ${c.email?`<a href="mailto:${esc(c.email)}" class="b b2">Email us</a>`:''}
@@ -4314,6 +4430,7 @@ ${t.callBar&&(c.phone||c.email)?`<div class="callbar">
 </div>`:''}
 ${jsLevel==='off'?'':`${jsLibs.map(libTag).join('\n')}
 <script>${motionRuntime(jsLevel,t)}<\/script>`}
+${popupBlock}
 </body>
 </html>`;
 }
@@ -4703,7 +4820,7 @@ async function generate(brief){
     siteState=parsed;
     currentId='is_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
     lastShareURL=''; $('shareUrl').value=''; $('shareMeta').textContent='';
-    stopLoading(); renderPreview(); renderThemeStrip(); renderChecks(); renderTips(); renderMediaPanel(); renderPages(); renderSections(); loadSeoFields(); loadLinkFields(); pushHistory(siteState);
+    stopLoading(); renderPreview(); renderThemeStrip(); renderChecks(); renderTips(); renderMediaPanel(); renderPages(); renderSections(); loadSeoFields(); loadLinkFields(); loadLeadUI(); renderCxPick(); renderHfPick(); pushHistory(siteState);
     $('secMedia').open=true; $('secLinks').open=true;
     selectTab('preview'); showWork();
     if(window.innerWidth<=900) mobileTab('preview');
@@ -5806,7 +5923,7 @@ function renderHistory(){
     prefs.theme=siteState.meta.theme; savePrefs();
     lastShareURL=''; $('shareUrl').value=''; $('shareMeta').textContent='';
     loadBriefFromSite();   // panel must describe the site you just opened
-    renderPreview(); renderThemeGrid(); renderThemeStrip(); renderChecks(); renderTips(); renderMediaPanel(); renderPages(); renderSections(); loadSeoFields(); loadLinkFields(); renderHistory();
+    renderPreview(); renderThemeGrid(); renderThemeStrip(); renderChecks(); renderTips(); renderMediaPanel(); renderPages(); renderSections(); loadSeoFields(); loadLinkFields(); loadLeadUI(); renderCxPick(); renderHfPick(); renderHistory();
     selectTab('preview'); showWork(); refreshStatus();
     if(window.innerWidth<=1240) $('app').classList.remove('showrail');
     if(window.innerWidth<=900) mobileTab('preview');
@@ -5832,6 +5949,12 @@ function migrate(s){
   if(!Array.isArray(s.meta.heroFormFields)) s.meta.heroFormFields=[];
   s.meta.form=s.meta.form||{action:'',fields:(prefs.formFields||['name','phone','email','message']).slice(),cols:prefs.formCols||'auto'};
   if(!['1','2','auto'].includes(s.meta.form.cols)) s.meta.form.cols='auto';
+  if(typeof s.meta.form.provider!=='string') s.meta.form.provider=s.meta.form.action?'custom':'';
+  if(typeof s.meta.form.web3key!=='string') s.meta.form.web3key='';
+  if(typeof s.meta.form.thankyou!=='string') s.meta.form.thankyou='';
+  s.meta.popup=s.meta.popup||{on:false,style:'card',headline:'',sub:'',button:''};
+  s.meta.popup.on=s.meta.popup.on===true;
+  if(!['card','bar'].includes(s.meta.popup.style)) s.meta.popup.style='card';
   if(!Array.isArray(s.meta.form.fields)||s.meta.form.fields.length<2)
     s.meta.form.fields=(prefs.formFields||['name','phone','email','message']).slice();
   if(typeof s.meta.aiCrawl!=='boolean') s.meta.aiCrawl=!!prefs.aiCrawl;
@@ -7748,15 +7871,104 @@ function renderFormFields(){
   });
 }
 renderFormFields();
+/* ---- lead capture setup ------------------------------------------------- */
+const LEAD_PROV={
+  '':{label:'Email app',note:'No service. The form opens the visitor’s own email app with the details filled in. Works everywhere, but nothing is captured, and it depends on the visitor having email set up.'},
+  web3forms:{label:'Web3Forms',note:'Free and unlimited. Sign up with just an email at web3forms.com, paste the access key, and submissions arrive in your inbox and can feed a Google Sheet. The recommended choice.'},
+  formspree:{label:'Formspree',note:'Paste your form endpoint (https://formspree.io/f/xxxx). Free tier is about 50 submissions a month, with a dashboard.'},
+  custom:{label:'Other',note:'Any endpoint that accepts a POST: Basin, Netlify Forms, a Zapier or Make webhook. Submissions go wherever it points.'}
+};
+function leadProv(){ return (siteState&&siteState.meta.form.provider)||''; }
+function renderLeadProv(){
+  const cur=leadProv();
+  document.querySelectorAll('#leadProv [data-lp]').forEach(b=>b.classList.toggle('on',b.dataset.lp===cur));
+  $('leadW3').style.display=cur==='web3forms'?'block':'none';
+  $('leadURL').style.display=(cur==='formspree'||cur==='custom')?'block':'none';
+  $('leadThanks').style.display=cur?'block':'none';
+  const hasEndpoint=cur==='web3forms'?!!(siteState&&siteState.meta.form.web3key.trim())
+    :(cur==='formspree'||cur==='custom')?!!(siteState&&siteState.meta.form.action.trim()):false;
+  $('btnTestLead').style.display=hasEndpoint?'':'none';
+  const dash=$('lnkLeadDash');
+  if(cur==='web3forms'&&hasEndpoint){ dash.style.display=''; dash.href='https://web3forms.com/'; dash.textContent='Web3Forms dashboard ↗'; }
+  else if(cur==='formspree'&&hasEndpoint){ dash.style.display=''; dash.href='https://formspree.io/forms'; dash.textContent='Formspree dashboard ↗'; }
+  else dash.style.display='none';
+  $('leadProvNote').textContent=LEAD_PROV[cur].note;
+}
+document.querySelectorAll('#leadProv [data-lp]').forEach(b=>b.onclick=()=>{
+  if(!siteState){ setStatusMaybe(); return; }
+  siteState.meta.form.provider=b.dataset.lp;
+  renderLeadProv(); renderPreview(); schedulePersist();
+});
+function setStatusMaybe(){ $('leadProvNote').textContent='Generate a site first, then choose where leads land.'; }
+$('web3key').addEventListener('input',()=>{
+  if(!siteState) return;
+  siteState.meta.form.web3key=$('web3key').value.trim();
+  renderLeadProv(); renderPreview(); schedulePersist();
+});
 $('formAction').addEventListener('input',()=>{
   if(!siteState) return;
-  const v=$('formAction').value.trim();
-  siteState.meta.form.action=v;
-  $('formNote').textContent=v
-    ? (/^https:\/\//.test(v)?'Submissions go to that endpoint.':'That is not an https URL, so it will be ignored.')
-    : 'No endpoint set, so the form opens the visitor’s email app with the details filled in.';
+  siteState.meta.form.action=$('formAction').value.trim();
+  renderLeadProv(); renderPreview(); schedulePersist();
+});
+$('formThankyou').addEventListener('input',()=>{
+  if(!siteState) return; siteState.meta.form.thankyou=$('formThankyou').value.trim();
   renderPreview(); schedulePersist();
 });
+$('btnTestLead').onclick=async()=>{
+  if(!siteState) return;
+  const fp=siteState.meta.form, cur=leadProv();
+  const btn=$('btnTestLead'), was=btn.textContent; btn.disabled=true; btn.textContent='Sending…';
+  $('leadTestNote').textContent='Sending a test submission…';
+  const payload={name:'Instant Site test',email:'test@example.com',phone:'000',
+    message:'This is a test lead sent from the Instant Site builder. If you can see it, capture is working.',
+    source_page:'Test', source:'builder-test', from_name:siteState.meta.businessName+' website',
+    subject:'TEST lead from Instant Site — '+siteState.meta.businessName};
+  let url='';
+  if(cur==='web3forms'){ url='https://api.web3forms.com/submit'; payload.access_key=fp.web3key.trim(); }
+  else url=fp.action.trim();
+  try{
+    const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify(payload)});
+    let ok=res.ok, msg='';
+    try{ const j=await res.json(); if('success' in j){ ok=j.success; msg=j.message||''; } }catch{}
+    $('leadTestNote').textContent=ok
+      ? `Test lead sent. Check the ${LEAD_PROV[cur].label} inbox or dashboard — it should be there in a moment.`
+      : `The service rejected it${msg?': '+msg:` (HTTP ${res.status})`}. Check the key or endpoint.`;
+  }catch(e){ $('leadTestNote').textContent='Could not reach the service. Check the endpoint and your connection.'; }
+  finally{ btn.disabled=false; btn.textContent=was; }
+};
+
+/* ---- exit-intent pop-up ---- */
+$('popupSwitch').onclick=()=>{
+  if(!siteState) return;
+  siteState.meta.popup.on=!siteState.meta.popup.on;
+  $('popupSwitch').classList.toggle('on',siteState.meta.popup.on);
+  $('popupCfg').style.display=siteState.meta.popup.on?'block':'none';
+  if(siteState.meta.popup.on&&leadProv()===''&&!siteState.meta.form.action)
+    $('leadTestNote').textContent='The pop-up needs a lead endpoint above, or it has nowhere to send emails.';
+  renderPreview(); schedulePersist();
+};
+$('popupSwitch').onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); $('popupSwitch').click(); } };
+document.querySelectorAll('#popupStyle [data-ps]').forEach(b=>b.onclick=()=>{
+  if(!siteState) return;
+  siteState.meta.popup.style=b.dataset.ps;
+  document.querySelectorAll('#popupStyle [data-ps]').forEach(x=>x.classList.toggle('on',x===b));
+  renderPreview(); schedulePersist();
+});
+['popupHead','popupSub','popupBtn'].forEach(id=>$(id).addEventListener('input',()=>{
+  if(!siteState) return;
+  siteState.meta.popup[{popupHead:'headline',popupSub:'sub',popupBtn:'button'}[id]]=$(id).value;
+  renderPreview(); schedulePersist();
+}));
+function loadLeadUI(){
+  if(!siteState) return;
+  const fp=siteState.meta.form, pop=siteState.meta.popup;
+  $('web3key').value=fp.web3key||''; $('formAction').value=fp.action||''; $('formThankyou').value=fp.thankyou||'';
+  renderLeadProv();
+  $('popupSwitch').classList.toggle('on',pop.on);
+  $('popupCfg').style.display=pop.on?'block':'none';
+  document.querySelectorAll('#popupStyle [data-ps]').forEach(x=>x.classList.toggle('on',x.dataset.ps===pop.style));
+  $('popupHead').value=pop.headline||''; $('popupSub').value=pop.sub||''; $('popupBtn').value=pop.button||'';
+}
 
 /* ---- policy pages ------------------------------------------------------
    A privacy policy is a page, so it is stored as one. That means it exports
