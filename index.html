@@ -1030,6 +1030,7 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
             <button class="mini" id="btnProposal" title="Draft the proposal, three pricing tiers and what to sell next." type="button">Proposal &amp; pricing</button>
             <button class="mini" id="btnSocialKit" title="Generate an Instagram post and a LinkedIn banner in this site's theme, as PNGs. No design work needed." type="button">Social image kit</button>
             <button class="mini" id="btnBioLink" title="Add a mobile-first link-in-bio page listing your site, socials, phone, email and booking link, styled to match." type="button">Add bio-link page</button>
+            <button class="mini" id="btnLeadMagnet" title="Generate a branded PDF lead magnet — a checklist or short guide from your brief — to give away in exchange for an email." type="button">Lead magnet PDF</button>
           </div>
           <div id="growthStatus" class="tiny" style="margin-top:8px"></div>
         </div>
@@ -7007,6 +7008,126 @@ function makeOgImage(){
 /* One theme-aware card renderer for every social format. Reuses the OG-card
    approach — canvas drawn from the theme tokens and the page copy, exported as
    PNG — so the images match the site with zero design work from the user. */
+
+/* ==========================================================================
+   LEAD MAGNET PDF
+   A PDF is a text format, so it is written here from scratch — the same way
+   this app writes its own ZIP — rather than pulling a ~200 KB library from a
+   CDN into a tool that prides itself on having no dependencies. Standard-14
+   Helvetica needs no font embedding; the AFM width tables below give accurate
+   word wrap, and text is folded to ASCII so macrons and smart quotes cannot
+   corrupt the stream.
+   ========================================================================== */
+const HELV_W=[278,278,355,556,556,889,667,191,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,278,278,584,584,584,556,1015,667,667,722,722,667,611,778,722,278,500,667,556,833,722,778,667,778,722,667,611,722,667,944,667,667,611,278,278,278,469,556,333,556,556,500,556,556,278,556,556,222,222,500,222,833,556,556,556,556,333,500,278,556,500,722,500,500,500,334,260,334,584];
+const HELVB_W=[278,333,474,556,556,889,722,238,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,333,333,584,584,584,611,975,722,722,722,722,667,611,778,722,278,556,722,611,833,722,778,667,778,722,667,611,722,667,944,667,667,611,333,278,333,584,556,333,556,611,556,611,556,333,611,611,278,278,556,278,889,611,611,611,611,389,556,333,611,556,778,556,556,500,389,280,389,584];
+function pdfWidth(str,size,bold){ const T=bold?HELVB_W:HELV_W; let w=0;
+  for(let i=0;i<str.length;i++){ const c=str.charCodeAt(i); w+=(c>=32&&c<=126?T[c-32]:556); }
+  return w*size/1000; }
+function pdfFold(s){ return String(s==null?'':s).normalize('NFKD').replace(/[̀-ͯ]/g,'')
+  .replace(/[“”]/g,'"').replace(/[‘’]/g,"'").replace(/[–—]/g,'-')
+  .replace(/…/g,'...').replace(/[^\x20-\x7e]/g,''); }
+function pdfEsc(s){ return pdfFold(s).replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)'); }
+function pdfWrap(txt,size,bold,maxW){ const words=pdfFold(txt).split(/\s+/).filter(Boolean); const lines=[]; let line='';
+  for(const wd of words){ const test=line?line+' '+wd:wd;
+    if(pdfWidth(test,size,bold)>maxW&&line){ lines.push(line); line=wd; } else line=test; }
+  if(line) lines.push(line); return lines.length?lines:['']; }
+
+function makeLeadPdf(data,state){
+  const m=state.meta, t=resolveTheme(m.theme);
+  const W=595,H=842, ML=56, MR=56, MT=58, MB=56, maxW=W-ML-MR;
+  const rgb=hex=>hexToRgb(hex).map(v=>(v/255).toFixed(3));
+  const PRI=rgb(t.primary), ACC=rgb(t.accent), INK=['0.102','0.110','0.129'], INK2=['0.36','0.40','0.46'];
+  let pages=[], ops=[], y=0, pageNo=0;
+  const put=o=>ops.push(o);
+  const rect=(x,yy,w,h,col,mode)=>{ put(`${col.join(' ')} ${mode==='S'?'RG':'rg'}`); put(`${x} ${yy} ${w} ${h} re ${mode||'f'}`); };
+  const text=(x,yy,str,size,bold,col)=>{ put(`${(col||INK).join(' ')} rg`);
+    put(`BT /${bold?'F2':'F1'} ${size} Tf ${x} ${yy} Td (${pdfEsc(str)}) Tj ET`); };
+  function footer(){
+    const fy=MB-14;
+    rect(ML,fy+18,maxW,0.6,INK2,'f');
+    const line=[m.businessName, (m.contact||{}).phone, ((m.seo||{}).canonical||'').replace(/^https?:\/\//,'')].filter(Boolean).join('   ·   ');
+    text(ML,fy,line.slice(0,90),8.5,false,INK2);
+    text(W-MR-pdfWidth('Page '+pageNo,8.5,false),fy,'Page '+pageNo,8.5,false,INK2);
+  }
+  function newPage(){ if(ops.length){ footer(); pages.push(ops.join('\n')); } ops=[]; pageNo++; y=H-MT;
+    // slim brand rule at the very top of every page
+    rect(0,H-6,W,6,PRI,'f');
+  }
+  function ensure(h){ if(y-h<MB+22){ newPage(); } }
+  function para(txt,size,bold,col,x,lead,gap){ x=x==null?ML:x; lead=lead||size*1.36;
+    pdfWrap(txt,size,bold,W-MR-x).forEach(l=>{ ensure(lead); text(x,y,l,size,bold,col); y-=lead; });
+    if(gap) y-=gap; }
+  function heading(txt){ y-=8; ensure(24); text(ML,y,pdfFold(txt),15,true,PRI); y-=6;
+    rect(ML,y,40,2,ACC,'f'); y-=16; }
+  function checkItem(txt){ const size=11, box=11, ind=ML+box+10;
+    const lines=pdfWrap(txt,size,false,W-MR-ind); ensure(Math.max(box+6,lines.length*size*1.34));
+    rect(ML,y-box+2,box,box,ACC,'S'); // hollow box
+    put(`0.7 w`);
+    lines.forEach((l,i)=>{ text(ind,y-(i? i*size*1.34:0),l,size,false,INK); });
+    y-=Math.max(box+8,lines.length*size*1.34+4); }
+  function bullet(txt){ const size=11, ind=ML+16;
+    const lines=pdfWrap(txt,size,false,W-MR-ind); ensure(lines.length*size*1.34);
+    rect(ML+3,y-6,3.4,3.4,PRI,'f');
+    lines.forEach((l,i)=>{ text(ind,y-i*size*1.34,l,size,false,INK); });
+    y-=lines.length*size*1.34+4; }
+
+  newPage();
+  // masthead
+  rect(ML,y-6,maxW,0,INK2,'f');
+  text(ML,y,pdfFold(m.businessName).toUpperCase(),12,true,ACC); y-=34;
+  para(data.title||'Your free guide',25,true,INK,ML,29,4);
+  if(data.subtitle) para(data.subtitle,13,false,INK2,ML,18,10);
+  if(data.intro) para(data.intro,11.5,false,INK,ML,16,8);
+  y-=6;
+  (Array.isArray(data.sections)?data.sections:[]).forEach(sec=>{
+    if(!sec) return;
+    if(sec.heading) heading(sec.heading);
+    if(sec.body) para(sec.body,11.5,false,INK,ML,16,6);
+    const items=Array.isArray(sec.items)?sec.items:[];
+    const kind=sec.type||'checklist';
+    items.forEach(it=>{ const s=typeof it==='string'?it:(it&&(it.text||it.item))||'';
+      if(!s) return;
+      if(kind==='prose') para(s,11.5,false,INK,ML,16,4);
+      else if(kind==='tips'||kind==='bullets') bullet(s);
+      else checkItem(s); });
+  });
+  if(data.cta){ y-=10; ensure(60);
+    rect(ML,y-42,maxW,52,PRI,'f');
+    const onP=bestOn(t.primary)==='#ffffff'?['1','1','1']:['0.06','0.06','0.06'];
+    para(data.cta,12.5,true,onP,ML+18,17,0); }
+  footer(); pages.push(ops.join('\n'));
+
+  // ---- assemble the file ----
+  const objs=[]; // 1-indexed content, we build strings then compute offsets
+  const fontObj=(n,base)=>`<< /Type /Font /Subtype /Type1 /BaseFont /${base} /Encoding /WinAnsiEncoding >>`;
+  // object numbering: 1 catalog, 2 pages, 3 F1, 4 F2, then per page: content + page
+  const N=pages.length;
+  const pageIds=[], contentIds=[];
+  let id=5;
+  pages.forEach(()=>{ contentIds.push(id++); pageIds.push(id++); });
+  const parts=[];
+  parts[1]=`<< /Type /Catalog /Pages 2 0 R >>`;
+  parts[2]=`<< /Type /Pages /Kids [${pageIds.map(i=>i+' 0 R').join(' ')}] /Count ${N} >>`;
+  parts[3]=fontObj(3,'Helvetica');
+  parts[4]=fontObj(4,'Helvetica-Bold');
+  pages.forEach((stream,i)=>{
+    const cid=contentIds[i], pid=pageIds[i];
+    parts[cid]=`<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`;
+    parts[pid]=`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${W} ${H}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${cid} 0 R >>`;
+  });
+  const total=parts.length-1;
+  let out='%PDF-1.4\n', offsets=[0];
+  for(let i=1;i<=total;i++){ offsets[i]=out.length; out+=`${i} 0 obj\n${parts[i]}\nendobj\n`; }
+  const xrefStart=out.length;
+  out+=`xref\n0 ${total+1}\n0000000000 65535 f \n`;
+  for(let i=1;i<=total;i++){ out+=String(offsets[i]).padStart(10,'0')+' 00000 n \n'; }
+  out+=`trailer\n<< /Size ${total+1} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`;
+  // ASCII only (we folded), so char length == byte length
+  const bytes=new Uint8Array(out.length);
+  for(let i=0;i<out.length;i++) bytes[i]=out.charCodeAt(i)&0xff;
+  return new Blob([bytes],{type:'application/pdf'});
+}
+
 function drawSocialCard(W,H,kind){
   const st=siteState, m=st.meta, t=resolveTheme(m.theme), p=pageOf(st,0);
   const c=document.createElement('canvas'); c.width=W; c.height=H;
@@ -7504,6 +7625,20 @@ Return ONLY raw JSON: {"sections":[{"area":string,"items":[{"check":string,"why"
 - "measure": 4 things to track, and how to know they moved.
 - No promises about rankings or timeframes. Nobody can honestly make those.
 - NEVER use an em dash.`},
+  leadmagnet:{label:'Lead magnet',btn:'btnLeadMagnet',pdf:true,
+    sys:b=>`You write a giveaway lead magnet for a small local business: a short, genuinely useful PDF the business hands out in exchange for an email address. It must help the reader whether or not they ever buy, which is what makes them trust the business.
+
+Return ONLY raw JSON:
+{"title":string,"subtitle":string,"intro":string,"sections":[{"heading":string,"type":"checklist"|"tips"|"prose","body":string,"items":[string]}],"cta":string,"filename":string}
+
+- Pick the format that suits this trade: a pre-hire checklist, a "what to look for" buyer's guide, a seasonal maintenance list, a "questions to ask before you sign" sheet. Choose one angle and do it well.
+- "title" is a benefit the reader wants, under 60 characters. "subtitle" is one line. "intro" is 2 to 3 sentences on what this covers and who it is for.
+- "sections": 3 to 5. "type" is "checklist" for things to tick off, "tips" for short pointers, "prose" for a paragraph of explanation. Use "items" for checklist and tips (5 to 8 short lines each), "body" for prose.
+- Every item must be concrete and usable by someone who has not hired this business. No self-promotion inside the items.
+- "cta" is one line at the end inviting them to get in touch, naming the business.
+- "filename" is a short kebab-case slug for the file, no extension.
+- Never invent prices, certifications or figures not in the brief.
+- NEVER use an em dash.`},
   proposal:{label:'Proposal & pricing',btn:'btnProposal',
     sys:b=>`You draft the proposal an agency sends this business after a first conversation, and the pricing to go with it.
 Return ONLY raw JSON: {"summary":string,"problem":string,"scope":[{"item":string,"detail":string}],"packages":[{"name":string,"price":string,"includes":[string],"best_for":string}],"timeline":[{"phase":string,"duration":string,"output":string}],"terms":[string],"close":string,"upsells":[{"service":string,"when":string,"why":string}]}
@@ -7600,6 +7735,17 @@ ${esc2(d.email.body)}</pre>`);
     html+=generic('What to sell next',d.upsells,x=>`<div class="gitem"><b>${esc2(x.service)}</b><div class="gmeta">${esc2(x.when)} · ${esc2(x.why)}</div></div>`);
     if(d.close) html+=box('Close',`<pre>${esc2(d.close)}</pre>`);
   }
+  if(kind==='leadmagnet'){
+    if(d.title) html+=box('Title',`<pre>${esc2(d.title)}${d.subtitle?'\n'+esc2(d.subtitle):''}</pre>`);
+    if(d.intro) html+=box('Intro',`<pre>${esc2(d.intro)}</pre>`);
+    (d.sections||[]).forEach(sec=>{
+      const items=(sec.items||[]).map(x=>`<div class="gitem">${sec.type==='checklist'?'☐ ':'• '}${esc2(x)}</div>`).join('');
+      html+=box(esc2(sec.heading||'')+(sec.type?` <span class="gmeta">${esc2(sec.type)}</span>`:''),
+        (sec.body?`<pre>${esc2(sec.body)}</pre>`:'')+items);
+    });
+    if(d.cta) html+=box('Closing line',`<pre>${esc2(d.cta)}</pre>`);
+    html+=`<div style="margin-bottom:10px"><button class="mini" id="btnDlPdf" type="button">Download the PDF</button></div>`;
+  }
   if(kind==='kw'){
     html+=box('Clusters',(d.clusters||[]).map(x=>`<div class="gitem"><b>${esc2(x.primary)}</b> <span class="gmeta">${esc2(x.intent)} · ${esc2(x.page)}</span>
       <div class="gmeta">${(x.secondary||[]).map(esc2).join(' · ')}</div></div>`).join(''));
@@ -7621,6 +7767,12 @@ ${esc2(d.email.body)}</pre>`);
     const slug=slugify(siteState.meta.businessName,'business');
     saveBlob(new Blob([JSON.stringify(d,null,2)],{type:'application/json'}),`${slug}-${kind}.json`);
   };
+  if(kind==='leadmagnet'&&$('btnDlPdf')){
+    $('btnDlPdf').onclick=()=>{
+      const slug=slugify(d.filename||siteState.meta.businessName+'-guide','lead-magnet');
+      saveBlob(makeLeadPdf(d,siteState),`${slug}.pdf`);
+    };
+  }
 }
 Object.entries(GROWTH).forEach(([kind,g])=>{
   $(g.btn).onclick=async()=>{
