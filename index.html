@@ -3823,9 +3823,19 @@ ${t.callBar?`.callbar{display:none}
   /* Before this, .nl was simply hidden and nothing replaced it, so every
      multi-page site was unnavigable on a phone — the pages existed but no
      visitor could reach them. */
-  .nav .w{flex-wrap:wrap;gap:10px}
-  .burger{display:flex;order:3}
-  .navcta{order:2;margin-left:auto}
+  /* Two explicit rows. Ordering alone was not enough: the logo and the CTA each
+     take most of the width, so the burger was pushed onto a third line of its
+     own and sat at the far left, nowhere near the menu it opens. Row one is
+     logo + burger, row two is the phone and the call to action. */
+  .nav .w{flex-wrap:wrap;gap:10px 12px}
+  /* basis 0, not auto. With flex-wrap the browser decides line breaks from each
+     item's base size BEFORE any shrinking, so an auto basis meant a long
+     business name claimed its full max-content width and bumped the burger onto
+     a line of its own. Basis 0 lets the name take the leftover space and wrap
+     its own text instead. */
+  .logo{order:1;flex:1 1 0;min-width:0}
+  .burger{display:flex;order:2;margin-left:auto;margin-right:-8px}
+  .navcta{order:3;flex-basis:100%;justify-content:flex-start;gap:14px}
   .nl{display:none;order:4;flex-basis:100%;flex-direction:column;gap:0;
     border-top:1px solid ${t.line};margin-top:4px}
   .navtoggle:checked~.nl{display:flex}
