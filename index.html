@@ -576,6 +576,33 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
 .shareBad{color:var(--bad)}
 
 .foot{padding:10px 14px;border-top:1px solid var(--stroke);font-size:11.5px;color:var(--txt-3);flex:none;display:flex;gap:10px;flex-wrap:wrap;align-items:center;background:var(--surface-2)}
+/* dashboard */
+#dashModal{position:fixed;inset:0;z-index:9998;display:grid;place-items:center;padding:20px;
+  background:rgba(8,8,10,.5);backdrop-filter:blur(3px);overflow:auto}
+.dashcard{width:min(620px,100%);max-height:90vh;overflow:auto;padding:28px 26px;border-radius:20px;position:relative;
+  background:var(--surface);border:1px solid var(--stroke);box-shadow:var(--shadow-lg)}
+.dashx{position:absolute;top:14px;right:16px;border:0;background:transparent;font-size:26px;line-height:1;color:var(--txt-3);cursor:pointer}
+.dashcard h2{font-size:22px;margin-bottom:4px}
+.dgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:8px}
+.dtile{padding:14px;border-radius:14px;background:var(--fill);border:1px solid var(--stroke);text-align:center}
+.dtile .dv{font-size:22px;font-weight:700;color:var(--txt-1)}
+.dtile .dl{font-size:11px;color:var(--txt-3);margin-top:2px}
+.dh{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--txt-3);margin:20px 0 10px}
+.dfeat{display:flex;flex-wrap:wrap;gap:8px}
+.dfeat span{padding:6px 11px;border-radius:99px;border:1px solid var(--stroke);background:var(--surface-2);font-size:12.5px;color:var(--txt-2)}
+.dfeat b{color:var(--txt-1)}
+.dactions{display:flex;gap:6px;flex-wrap:wrap;margin-top:20px}
+@media(max-width:520px){.dgrid{grid-template-columns:repeat(2,1fr)}}
+/* theme paywall */
+#payModal{position:fixed;inset:0;z-index:9998;display:grid;place-items:center;padding:20px;background:rgba(8,8,10,.5);backdrop-filter:blur(3px)}
+.paycard{width:min(380px,100%);padding:28px 26px;border-radius:20px;position:relative;background:var(--surface);border:1px solid var(--stroke);box-shadow:var(--shadow-lg);text-align:center}
+.paycard h2{font-size:20px;margin-bottom:6px}
+.paycard input{width:100%;margin-top:14px;padding:13px 15px;border-radius:12px;border:1px solid var(--stroke);background:var(--fill);color:var(--txt-1);font:inherit;font-size:16px;text-align:center;letter-spacing:.15em}
+.paycard input:focus{outline:2px solid var(--accent);border-color:var(--accent)}
+.paybtn{display:block;width:100%;margin-top:12px;padding:13px;border:0;border-radius:12px;background:var(--accent-fill);color:var(--on-accent);font:inherit;font-weight:600;font-size:15px;cursor:pointer;text-decoration:none;text-align:center}
+.paybuy{background:var(--good);color:#08210f}
+.payor{margin:14px 0 2px;font-size:12px;color:var(--txt-3);text-transform:uppercase;letter-spacing:.1em}
+#payErr{margin-top:10px;font-size:12.5px;color:var(--bad);min-height:16px}
 .hidden{display:none !important}
 .mtabs{display:none}
 
@@ -621,11 +648,17 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
     <svg viewBox="0 0 24 24"><path d="M21 2l-2 2m-7.6 7.6a5 5 0 1 1-7.1 7.1 5 5 0 0 1 7.1-7.1zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3"/></svg>
     <span>Add API key</span>
   </button>
-  <button class="icon-btn" id="btnTheme" title="Appearance" aria-label="Toggle light or dark appearance"></button>
-  <button class="hbtn" id="btnCopy" title="Copy the full HTML of the open page to the clipboard." disabled>
-    <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2.5"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-    <span id="copyLabel">Copy HTML</span>
+  <button class="icon-btn" id="btnDash" title="Dashboard: sites created, API usage and a technical report" aria-label="Dashboard">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="10" width="8" height="11" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/></svg>
   </button>
+  <button class="icon-btn" id="btnTheme" title="Appearance" aria-label="Toggle light or dark appearance"></button>
+if(location.hash.startsWith(REVIEW_PREFIX)){
+  renderProspectView(location.hash.slice(REVIEW_PREFIX.length),true);
+}else if(location.hash.startsWith(SHARE_PREFIX)){
+  renderProspectView(location.hash.slice(SHARE_PREFIX.length));
+}else{
+  bootDashboard();
+}
   <div class="dlwrap">
     <button class="hbtn hbtn-primary" id="btnDownload" title="Export: static HTML, a client review link, or an installable WordPress theme." disabled aria-haspopup="true" aria-expanded="false">
       <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg>
@@ -1043,7 +1076,21 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
           <input type="text" id="gtmId" placeholder="Google Tag Manager, GTM-XXXXXX" style="margin-top:6px">
           <input type="text" id="pixelId" placeholder="Meta Pixel ID" style="margin-top:6px">
           <input type="text" id="gadsId" placeholder="Google Ads conversion, AW-XXXXXXX" style="margin-top:6px">
+          <input type="text" id="tiktokId" placeholder="TikTok Pixel ID" style="margin-top:6px">
+          <input type="text" id="liId" placeholder="LinkedIn Partner ID" style="margin-top:6px">
+          <input type="text" id="bingId" placeholder="Microsoft (Bing) UET tag ID" style="margin-top:6px">
+          <input type="text" id="pinId" placeholder="Pinterest Tag ID" style="margin-top:6px">
+          <input type="text" id="hotjarId" placeholder="Hotjar Site ID" style="margin-top:6px">
+          <input type="text" id="plausibleId" placeholder="Plausible domain, e.g. yoursite.co.nz" style="margin-top:6px">
           <div class="tiny" id="trackNote"></div>
+        </div>
+
+        <div class="field">
+          <label>Sell the theme <span class="opt">white-label</span>
+            <span class="help" data-tip="The app is free to use; the theme download is gated behind a licence passcode. Add your own Stripe or PayPal payment link here so buyers can pay, then you give them the passcode. This is a soft gate, not DRM: anyone who opens the file can read the passcode.">?</span></label>
+          <input type="url" id="sellBuy" placeholder="Your Stripe or PayPal payment link">
+          <input type="text" id="sellPrice" placeholder="Price label, e.g. $25" style="margin-top:6px" maxlength="12">
+          <div class="tiny">Buyers pay through your link and you share the licence passcode with them. The passcode is set in the code (currently the one you chose).</div>
         </div>
       </div>
     </details>
@@ -2798,10 +2845,27 @@ async function callClaude(system,user){
     throw new ApiError(`Request failed with HTTP ${res.status}.`,body);
   }
   const data=await res.json();
+  recordUsage(data.usage);
   const text=(data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
   if(!text) throw new ApiError('Claude returned an empty response.',JSON.stringify(data).slice(0,2000));
   return text;
 }
+/* Local usage ledger. There is no server, so this lives in this browser only.
+   The API returns token counts on every call; we sum them and estimate cost at
+   published Sonnet rates so the number is honest about being an estimate. */
+const LS_USAGE='instantsite_usage';
+const SONNET_IN_PER_M=3, SONNET_OUT_PER_M=15;   // USD per million tokens
+function loadUsage(){ try{ return Object.assign({calls:0,inTok:0,outTok:0,sites:0,first:0,last:0},
+  JSON.parse(localStorage.getItem(LS_USAGE)||'{}')); }catch{ return {calls:0,inTok:0,outTok:0,sites:0,first:0,last:0}; } }
+function saveUsage(u){ try{ localStorage.setItem(LS_USAGE,JSON.stringify(u)); }catch{} }
+function recordUsage(usage){
+  const u=loadUsage(); u.calls++;
+  if(usage){ u.inTok+=usage.input_tokens||0; u.outTok+=usage.output_tokens||0; }
+  const now=Date.now(); if(!u.first) u.first=now; u.last=now;
+  saveUsage(u);
+}
+function bumpSites(){ const u=loadUsage(); u.sites=(u.sites||0)+1; saveUsage(u); }
+const usageCost=u=>u.inTok/1e6*SONNET_IN_PER_M+u.outTok/1e6*SONNET_OUT_PER_M;
 
 /* ==========================================================================
    7. PARSING + VALIDATION
@@ -4265,6 +4329,9 @@ function buildSite(state,mode,pageIdx){
   const okId=(v,re)=>{ v=String(v||'').trim(); return re.test(v)?v:''; };
   const ga4=okId(tk.ga4,/^G-[A-Z0-9]{6,}$/i), gtm=okId(tk.gtm,/^GTM-[A-Z0-9]{5,}$/i);
   const pixel=okId(tk.pixel,/^\d{8,20}$/), gads=okId(tk.gads,/^AW-\d{6,}$/i);
+  const tiktok=okId(tk.tiktok,/^[A-Z0-9]{18,24}$/i), li=okId(tk.li,/^\d{5,9}$/),
+        bing=okId(tk.bing,/^\d{6,10}$/), pinT=okId(tk.pin,/^\d{12,20}$/),
+        hotjar=okId(tk.hotjar,/^\d{6,9}$/), plausible=okId(tk.plausible,/^[a-z0-9.-]+\.[a-z]{2,}$/i);
   const trackingTags=[
     (ga4||gads)?`<script async src="https://www.googletagmanager.com/gtag/js?id=${esc(ga4||gads)}"><\/script>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());${
@@ -4275,7 +4342,13 @@ j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefo
     pixel?`<script>!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
 n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
 n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}
-(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','${esc(pixel)}');fbq('track','PageView');<\/script>`:''
+(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','${esc(pixel)}');fbq('track','PageView');<\/script>`:'',
+    tiktok?`<script>!function(w,d,t){w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie"];ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.load=function(e){var n="https://analytics.tiktok.com/i18n/pixel/events.js";ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=n,ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]={};var o=d.createElement("script");o.type="text/javascript",o.async=!0,o.src=n+"?sdkid="+e;var a=d.getElementsByTagName("script")[0];a.parentNode.insertBefore(o,a)};ttq.load('${esc(tiktok)}');ttq.page();}(window,document,'ttq');<\/script>`:'',
+    li?`<script>_linkedin_partner_id='${esc(li)}';window._linkedin_data_partner_ids=window._linkedin_data_partner_ids||[];window._linkedin_data_partner_ids.push(_linkedin_partner_id);(function(l){if(!l){window.lintrk=function(a,b){window.lintrk.q.push([a,b])};window.lintrk.q=[]}var s=document.getElementsByTagName('script')[0],b=document.createElement('script');b.type='text/javascript';b.async=true;b.src='https://snap.licdn.com/li.lms-analytics/insight.min.js';s.parentNode.insertBefore(b,s)})(window.lintrk);<\/script>`:'',
+    bing?`<script>(function(w,d,t,r,u){var f,n,i;w[u]=w[u]||[],f=function(){var o={ti:'${esc(bing)}'};o.q=w[u],w[u]=new UET(o),w[u].push('pageLoad')},n=d.createElement(t),n.src=r,n.async=1,n.onload=n.onreadystatechange=function(){var s=this.readyState;s&&s!=='loaded'&&s!=='complete'||(f(),n.onload=n.onreadystatechange=null)},i=d.getElementsByTagName(t)[0],i.parentNode.insertBefore(n,i)})(window,document,'script','//bat.bing.com/bat.js','uetq');<\/script>`:'',
+    pinT?`<script>!function(e){if(!window.pintrk){window.pintrk=function(){window.pintrk.queue.push(Array.prototype.slice.call(arguments))};var n=window.pintrk;n.queue=[],n.version='3.0';var t=document.createElement('script');t.async=!0,t.src=e;var r=document.getElementsByTagName('script')[0];r.parentNode.insertBefore(t,r)}}('https://s.pinimg.com/ct/core.js');pintrk('load','${esc(pinT)}');pintrk('page');<\/script>`:'',
+    hotjar?`<script>(function(h,o,t,j,a,r){h.hj=h.hj||function(){(h.hj.q=h.hj.q||[]).push(arguments)};h._hjSettings={hjid:${esc(hotjar)},hjsv:6};a=o.getElementsByTagName('head')[0];r=o.createElement('script');r.async=1;r.src=t+h._hjSettings.hjid+j+h._hjSettings.hjsv;a.appendChild(r)})(window,document,'https://static.hotjar.com/c/hotjar-','.js?sv=');<\/script>`:'',
+    plausible?`<script defer data-domain="${esc(plausible)}" src="https://plausible.io/js/script.js"><\/script>`:''
   ].filter(Boolean).join('\n');
   const socials=(seo.socials||'').split(/[\s,]+/).filter(u=>/^https?:\/\//.test(u));
   /* Social profiles were collected for the JSON-LD sameAs array and then never
@@ -4797,7 +4870,7 @@ function refreshStatus(){
   $('tagKey').className='tag '+(hasKey?'ok':'need');
   $('keyNotice').classList.toggle('hidden',hasKey);
   $('btnAddKey').classList.toggle('hidden',hasKey);   // always-reachable entry point
-  $('btnCopy').disabled=!siteState; $('btnDownload').disabled=!siteState;
+  $('btnDownload').disabled=!siteState;
   document.querySelectorAll('.regen').forEach(r=>r.disabled=!siteState);
 }
 
@@ -4823,6 +4896,7 @@ async function generate(brief){
     // other meta defaults exist before any panel reads them. Without this a
     // freshly generated site had no meta.form and loadLeadUI threw on web3key.
     migrate(siteState);
+    bumpSites();
     currentId='is_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
     lastShareURL=''; $('shareUrl').value=''; $('shareMeta').textContent='';
     stopLoading(); renderPreview(); renderThemeStrip(); renderChecks(); renderTips(); renderMediaPanel(); renderPages(); renderSections(); loadSeoFields(); loadLinkFields(); loadLeadUI(); renderCxPick(); renderHfPick(); pushHistory(siteState);
@@ -6149,17 +6223,21 @@ $('btnGen').onclick=()=>generate(readBrief());
 /* Cycling the whole library meant picking a vertical and then having the very
    next click throw it away. If a type is selected, the cycle stays inside it
    and only the other fields change. */
-const examplesFor=t=>{ const m=EXAMPLES.filter(e=>e.type===t); return m.length?m:EXAMPLES; };
 $('btnDemo').onclick=()=>{
+  // Fill example ALWAYS keeps the selected type. It used to change the type
+  // whenever the chosen vertical had no stock example, which is the bug: the
+  // dropdown would jump to whatever the fallback example happened to be.
   const want=$('bizType').value;
-  const pool=examplesFor(want);
-  const locked=pool!==EXAMPLES;
+  const pool=EXAMPLES.filter(e=>e.type===want);
+  if(!pool.length){
+    $('demoWhich').textContent=`No stock example for ${PACKS[want].label} yet — use "Invent one" to generate a fresh brief for this type.`;
+    return;
+  }
   const cur=pool.indexOf(EXAMPLES[exampleIdx]);
   const e=pool[(cur+1+pool.length)%pool.length];
   exampleIdx=EXAMPLES.indexOf(e);
   $('bizName').value=e.name;
-  if(!locked){ $('bizType').value=e.type; $('bizType').onchange(); }
-  $('bizTypeOther').value=locked?$('bizTypeOther').value:(e.other||'');
+  if(want==='other') $('bizTypeOther').value=e.other||'';   // type stays put
   $('location').value=e.loc; $('standout').value=e.stand;
   $('desc').value=e.desc; $('descCount').textContent=e.desc.length;
   $('bizKeyword').value=e.kw||''; $('bizEst').value=e.est||''; $('bizTeam').value=e.team||'';
@@ -6168,10 +6246,7 @@ $('btnDemo').onclick=()=>{
   $('cArea').value=e.area||''; $('cHours').value=e.hrs||''; $('cBook').value='';
   if(e.tone){ rememberTone(e.tone); setTone(e.tone); }
   syncOtherField();
-  const pos=pool.indexOf(e)+1;
-  $('demoWhich').textContent=locked
-    ? `${pos} of ${pool.length} ${PACKS[want].label} examples`
-    : `${pos} of ${pool.length}, click again for another`;
+  $('demoWhich').textContent=`${pool.indexOf(e)+1} of ${pool.length} ${PACKS[want].label} examples`;
   saveBrief(); refreshStatus();
 };
 
@@ -6245,20 +6320,60 @@ function selectTab(which){
 Object.keys(TABS).forEach(k=>{ $(TABS[k][0]).onclick=()=>selectTab(k); });
 $('segDesktop').onclick=()=>{ $('frameWrap').classList.remove('mobile'); $('segDesktop').classList.add('on'); $('segMobile').classList.remove('on'); };
 $('segMobile').onclick=()=>{ $('frameWrap').classList.add('mobile'); $('segMobile').classList.add('on'); $('segDesktop').classList.remove('on'); };
-$('btnCopy').onclick=copyHTML;
 // Download is now a menu: static HTML or an installable WordPress theme.
 const dlMenu=$('dlMenu');
 function closeDl(){ dlMenu.classList.remove('open'); $('btnDownload').setAttribute('aria-expanded','false'); }
+function openDlMenu(){
+  dlMenu.classList.add('open'); $('btnDownload').setAttribute('aria-expanded','true');
+  if(siteState){ const n=pageCount(siteState);
+    $('dlHtmlNote').textContent=n>1?`${n} linked pages as a .zip.`:'One self-contained file. Host it anywhere.'; }
+}
+/* ---- theme paywall ------------------------------------------------------
+   The app is free to use; the downloadable theme is the paid product. There is
+   no server, so this is an honest soft gate, NOT DRM: the licence is a passcode
+   the admin owns. The admin enters it to export free; a white-label buyer pays
+   through the admin's own Stripe or PayPal link and is given the same passcode.
+   Anyone who reads the source can find the passcode, so this deters, it does
+   not enforce. Real enforcement would need a backend, which this app does not
+   have. Once unlocked it stays unlocked in this browser. */
+const DL_PIN='122133';                       // admin / licence passcode
+function dlUnlocked(){ try{ return localStorage.getItem('instantsite_dl')==='1'; }catch{ return false; } }
+function paywall(){
+  const cfg=(()=>{ try{ return JSON.parse(localStorage.getItem('instantsite_sell')||'{}'); }catch{ return {}; } })();
+  const price=cfg.price||'$25', buy=(cfg.buy||'').trim();
+  const wrap=document.createElement('div'); wrap.id='payModal';
+  wrap.innerHTML=`<div class="paycard">
+    <button class="dashx" id="payX" aria-label="Close">&times;</button>
+    <h2>Unlock the theme download</h2>
+    <p class="tiny">Building and previewing is free. The exportable theme file is the paid product. Enter your licence passcode, or buy it once for ${esc(price)}.</p>
+    <input id="payPin" type="password" inputmode="numeric" autocomplete="off" placeholder="Licence passcode">
+    <button id="payGo" type="button" class="paybtn">Unlock downloads</button>
+    ${buy?`<div class="payor">or</div><a id="payBuy" href="${esc(buy)}" target="_blank" rel="noopener" class="paybtn paybuy">Buy the theme — ${esc(price)}</a>
+      <div class="tiny" style="margin-top:8px">After paying you will be given the passcode. Paste it above.</div>`
+        :`<div class="tiny" style="margin-top:10px">No buy link is set. The admin can add a Stripe or PayPal payment link under Settings › Sell the theme.</div>`}
+    <div id="payErr"></div>
+  </div>`;
+  document.body.appendChild(wrap);
+  const close=()=>wrap.remove();
+  wrap.querySelector('#payX').onclick=close;
+  wrap.addEventListener('click',e=>{ if(e.target===wrap) close(); });
+  const inp=wrap.querySelector('#payPin'), err=wrap.querySelector('#payErr');
+  const go=()=>{ if(inp.value.trim()===DL_PIN){ try{ localStorage.setItem('instantsite_dl','1'); }catch{}
+      close();
+      // Defer: this same click bubbles to the document outside-close handler,
+      // which would shut the menu the instant it opened.
+      setTimeout(openDlMenu,0); }
+    else { err.textContent='That passcode is not right.'; inp.value=''; inp.focus(); } };
+  wrap.querySelector('#payGo').onclick=go;
+  inp.addEventListener('keydown',e=>{ if(e.key==='Enter') go(); });
+  setTimeout(()=>inp.focus(),50);
+}
 $('btnDownload').onclick=e=>{
   if($('btnDownload').disabled) return;
   e.stopPropagation();
-  const open=!dlMenu.classList.contains('open');
-  dlMenu.classList.toggle('open',open);
-  $('btnDownload').setAttribute('aria-expanded',String(open));
-  if(open&&siteState){
-    const n=pageCount(siteState);
-    $('dlHtmlNote').textContent=n>1?`${n} linked pages as a .zip.`:'One self-contained file. Host it anywhere.';
-  }
+  if(dlMenu.classList.contains('open')){ closeDl(); return; }
+  if(!dlUnlocked()){ paywall(); return; }
+  openDlMenu();
 };
 document.addEventListener('click',e=>{ if(!e.target.closest('.dlwrap')) closeDl(); });
 document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeDl(); });
@@ -6380,6 +6495,13 @@ A sensible starting point for this theme is ${JSON.stringify({js:base.js,fx:base
     applyFXSuggestion(base,base.why+' (Claude could not be reached, so this is the theme default.)');
   }finally{ btn.disabled=false; btn.textContent=was; }
 };
+
+/* ---- sell-the-theme config (admin) ---- */
+function loadSell(){ try{ return JSON.parse(localStorage.getItem('instantsite_sell')||'{}'); }catch{ return {}; } }
+function saveSell(c){ try{ localStorage.setItem('instantsite_sell',JSON.stringify(c)); }catch{} }
+(()=>{ const c=loadSell(); if($('sellBuy')) $('sellBuy').value=c.buy||''; if($('sellPrice')) $('sellPrice').value=c.price||''; })();
+$('sellBuy')&&$('sellBuy').addEventListener('input',()=>{ const c=loadSell(); c.buy=$('sellBuy').value.trim(); saveSell(c); });
+$('sellPrice')&&$('sellPrice').addEventListener('input',()=>{ const c=loadSell(); c.price=$('sellPrice').value.trim(); saveSell(c); });
 
 $('secFind').addEventListener('input',renderSections);
 $('secFind').addEventListener('search',renderSections);
@@ -7043,9 +7165,10 @@ function makeLeadPdf(data,state){
   const PRI=rgb(t.primary), ACC=rgb(t.accent), INK=['0.102','0.110','0.129'], INK2=['0.36','0.40','0.46'];
   let pages=[], ops=[], y=0, pageNo=0;
   const put=o=>ops.push(o);
-  const rect=(x,yy,w,h,col,mode)=>{ put(`${col.join(' ')} ${mode==='S'?'RG':'rg'}`); put(`${x} ${yy} ${w} ${h} re ${mode||'f'}`); };
+  const R=n=>Math.round(n*100)/100;   // round coordinates: float drift bloats the stream
+  const rect=(x,yy,w,h,col,mode)=>{ put(`${col.join(' ')} ${mode==='S'?'RG':'rg'}`); put(`${R(x)} ${R(yy)} ${R(w)} ${R(h)} re ${mode||'f'}`); };
   const text=(x,yy,str,size,bold,col)=>{ put(`${(col||INK).join(' ')} rg`);
-    put(`BT /${bold?'F2':'F1'} ${size} Tf ${x} ${yy} Td (${pdfEsc(str)}) Tj ET`); };
+    put(`BT /${bold?'F2':'F1'} ${size} Tf ${R(x)} ${R(yy)} Td (${pdfEsc(str)}) Tj ET`); };
   function footer(){
     const fy=MB-14;
     rect(ML,fy+18,maxW,0.6,INK2,'f');
@@ -7209,6 +7332,145 @@ $('btnBioLink').onclick=()=>{
   renderPages(); renderPreview(); pushHistory(siteState); lastShareURL='';
   $('growthStatus').textContent='Bio-link page added. It is kept out of the main nav; link to it directly from your Instagram or TikTok profile. Its filename is links.html in the export.';
 };
+
+/* ==========================================================================
+   DASHBOARD
+   Usage lives in this browser only (no server), so this reports what this
+   machine has done: sites created, API calls, tokens, an estimated cost, and
+   a full inventory of what the tool can do, counted live from the config so it
+   can never drift. It exports a branded PDF, can add an AI analysis, and hands
+   you a ready-to-paste prompt for improving the tool in Claude Code.
+   ========================================================================== */
+function featureInventory(){
+  return {
+    'Output themes':THEME_IDS.length,
+    'Business types':Object.keys(PACKS).length,
+    'Fill examples':EXAMPLES.length,
+    'Writing tones':TONES.length,
+    'Closing-section layouts':CX_KEYS.length,
+    'Hero enquiry forms':HF_KEYS.length,
+    'JavaScript effects':Object.keys(FX).length,
+    'Growth-kit generators':Object.keys(GROWTH).length,
+    'Prospecting categories':Object.keys(CATS).length,
+    'Prospecting sources':Object.keys(PROSPECT_SOURCES).length,
+    'Photo libraries':Object.keys(STOCK_SOURCES).length,
+    'Lead-capture providers':Object.keys(LEAD_PROV).length,
+    'Policy-page kinds':Object.keys(LEGAL_KINDS).length
+  };
+}
+const APP_TECH=[
+  'Single self-contained index.html, vanilla JS, no build step and no runtime dependencies.',
+  'No backend. Runs entirely in the browser with a bring-your-own Anthropic key held in localStorage and sent only to api.anthropic.com.',
+  'Static export is one HTML file with zero JavaScript by default; opt-in JS covers scroll motion and the exit-intent pop-up only.',
+  'Exports: single HTML, multi-page ZIP up to '+PAGE_CAP+' pages, an installable WordPress classic theme, a client review link, a bio-link page and a lead-magnet PDF.',
+  'The ZIP writer, the PDF writer and the share-link compression are all hand-written rather than pulled from libraries.',
+  'Contrast is enforced at boot by three guards: verifyThemes, verifyAppTokens and a rendered-button check across every theme.',
+  'Lead capture wraps Web3Forms, Formspree or any webhook, with a hidden source_page field for attribution and an opt-in exit-intent pop-up.',
+  'Prospecting finds businesses with no website from OpenStreetMap (keyless), Google Places or Foursquare, then Claude analyses a pasted listing.'
+];
+function improvementPrompt(){
+  const inv=featureInventory(), u=loadUsage();
+  const invLine=Object.entries(inv).map(([k,v])=>`${v} ${k.toLowerCase()}`).join(', ');
+  return `You are improving "Instant Site", a commercial single-file, client-side, no-backend website generator for local service businesses. Read these facts before proposing anything, and do not suggest a backend unless you first say plainly what it would cost and how it breaks the "one file, host anywhere" promise.
+
+ARCHITECTURE
+${APP_TECH.map(x=>'- '+x).join('\n')}
+
+CURRENT CAPABILITIES
+- ${invLine}.
+
+MY USAGE ON THIS MACHINE
+- Sites generated: ${u.sites||0}
+- API calls: ${u.calls||0}
+- Tokens: ${(u.inTok||0).toLocaleString()} in, ${(u.outTok||0).toLocaleString()} out
+- Estimated spend at Sonnet rates: US$${usageCost(u).toFixed(2)}
+
+WHAT I WANT
+Propose the highest-leverage improvements to this tool, ranked, each with: the user problem it solves, whether it keeps the zero-backend and zero-JS-export promises, the rough build effort, and any honest downside. Prioritise things that help a non-technical owner sell and run more sites. Do not restate features I already have; check the capability list first. Where something needs a backend or breaks a core promise, say so up front and let me decide.`;
+}
+function dashData(analysis){
+  const u=loadUsage(), inv=featureInventory();
+  const fmt=n=>Number(n||0).toLocaleString();
+  const sections=[
+    {heading:'Your usage on this browser',type:'tips',items:[
+      `Sites generated: ${fmt(u.sites)}`,
+      `Sites saved in history now: ${loadHistory().length}`,
+      `API calls: ${fmt(u.calls)}`,
+      `Tokens in: ${fmt(u.inTok)}   ·   Tokens out: ${fmt(u.outTok)}`,
+      `Estimated spend at Sonnet rates: US$${usageCost(u).toFixed(2)}`,
+      u.first?`First use: ${new Date(u.first).toLocaleDateString()}   ·   Last: ${new Date(u.last).toLocaleDateString()}`:'No API calls recorded yet.']},
+    {heading:'What the tool can do',type:'checklist',items:Object.entries(inv).map(([k,v])=>`${v} ${k.toLowerCase()}`)},
+    {heading:'Technical summary',type:'tips',items:APP_TECH}
+  ];
+  if(analysis){
+    (Array.isArray(analysis.sections)?analysis.sections:[]).forEach(sec=>{
+      if(sec&&sec.heading) sections.push({heading:sec.heading,type:'prose',body:(sec.body||'')+(Array.isArray(sec.points)?'\n'+sec.points.map(p=>'- '+p).join('\n'):'')});
+    });
+  }
+  return {title:'Instant Site — usage and capability report',
+    subtitle:new Date().toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'}),
+    intro:analysis&&analysis.summary?analysis.summary:'A snapshot of what this copy of Instant Site has produced and everything it is capable of. Usage is measured in this browser only, since the app has no server.',
+    sections, cta:'', filename:'instant-site-report'};
+}
+const dashState=()=>({meta:{businessName:wl.on&&wl.name?wl.name:'Instant Site',theme:prefs.theme,contact:{},seo:{}}});
+let dashAnalysis=null;
+function openDash(){
+  const u=loadUsage(), inv=featureInventory();
+  const tile=(v,l)=>`<div class="dtile"><div class="dv">${v}</div><div class="dl">${l}</div></div>`;
+  const wrap=document.createElement('div'); wrap.id='dashModal';
+  wrap.innerHTML=`<div class="dashcard">
+    <button class="dashx" id="dashClose" aria-label="Close">&times;</button>
+    <h2>Dashboard</h2>
+    <div class="tiny" style="margin-bottom:14px">Everything here is measured in this browser only. There is no server, so the numbers reset if you clear site data (back them up under Settings).</div>
+    <div class="dgrid">
+      ${tile(Number(u.sites||0).toLocaleString(),'Sites generated')}
+      ${tile(loadHistory().length,'Saved in history')}
+      ${tile(Number(u.calls||0).toLocaleString(),'API calls')}
+      ${tile('US$'+usageCost(u).toFixed(2),'Est. spend')}
+      ${tile((Number(u.inTok||0)/1000).toFixed(1)+'k','Tokens in')}
+      ${tile((Number(u.outTok||0)/1000).toFixed(1)+'k','Tokens out')}
+    </div>
+    <h3 class="dh">What the tool can do</h3>
+    <div class="dfeat">${Object.entries(inv).map(([k,v])=>`<span><b>${v}</b> ${esc(k)}</span>`).join('')}</div>
+    <div class="dactions">
+      <button class="mini" id="dashPdf" type="button">Download branded PDF report</button>
+      <button class="mini" id="dashAi" type="button">✨ Add AI analysis</button>
+      <button class="mini" id="dashPrompt" type="button">Copy improvement prompt</button>
+      <button class="mini" id="dashReset" type="button">Reset counters</button>
+    </div>
+    <div id="dashNote" class="tiny" style="margin-top:8px"></div>
+    <textarea id="dashPromptBox" class="hidden" readonly rows="10" style="width:100%;margin-top:10px;font-size:12px"></textarea>
+  </div>`;
+  document.body.appendChild(wrap);
+  const close=()=>wrap.remove();
+  wrap.querySelector('#dashClose').onclick=close;
+  wrap.addEventListener('click',e=>{ if(e.target===wrap) close(); });
+  document.addEventListener('keydown',function esc(e){ if(e.key==='Escape'){ close(); document.removeEventListener('keydown',esc); } });
+  $('dashPdf').onclick=()=>{ saveBlob(makeLeadPdf(dashData(dashAnalysis),dashState()),'instant-site-report.pdf');
+    $('dashNote').textContent='PDF downloaded, in your current theme.'; };
+  $('dashPrompt').onclick=async()=>{ const box=$('dashPromptBox'); box.classList.remove('hidden'); box.value=improvementPrompt(); box.select();
+    try{ await navigator.clipboard.writeText(box.value); $('dashNote').textContent='Improvement prompt copied — paste it into Claude Code.'; }
+    catch{ $('dashNote').textContent='Select the text below and copy it into Claude Code.'; } };
+  $('dashReset').onclick=()=>{ if(!confirm('Reset the usage counters on this browser? This cannot be undone.')) return;
+    saveUsage({calls:0,inTok:0,outTok:0,sites:0,first:0,last:0}); close(); openDash(); };
+  $('dashAi').onclick=async()=>{
+    if(!getKey()){ $('dashNote').textContent='Add an API key under Settings to run the AI analysis.'; return; }
+    const btn=$('dashAi'), was=btn.textContent; btn.disabled=true; btn.textContent='Analysing…';
+    $('dashNote').textContent='Asking Claude to analyse your usage and the tool…';
+    const u=loadUsage(), inv=featureInventory();
+    const sys=`You are a product analyst. Given a usage snapshot and a capability list for a website-builder tool, write a short, honest analysis for the owner.
+Return ONLY raw JSON: {"summary":string,"sections":[{"heading":string,"body":string,"points":[string]}]}
+- "summary" is 2 sentences on where this owner is and the single biggest opportunity.
+- 3 to 4 sections: how they are using it, what to do more of, what to sell next, and one risk or gap. Each "body" is 2 to 3 sentences, "points" are 3 to 5 concrete actions.
+- Be specific and practical. Never invent numbers beyond those given. NEVER use an em dash.`;
+    const usr=`Usage: ${JSON.stringify({sites:u.sites,calls:u.calls,inTok:u.inTok,outTok:u.outTok,estCostUSD:+usageCost(u).toFixed(2)})}\nCapabilities: ${JSON.stringify(inv)}\n\nReturn the JSON now.`;
+    try{ const raw=await callClaude(sys,usr); dashAnalysis=cleanCopy(JSON.parse(stripFences(raw)));
+      $('dashNote').innerHTML='<b>Analysis added.</b> '+esc(dashAnalysis.summary||'')+' Download the PDF to keep it.';
+    }catch(e){ $('dashNote').textContent=e.message||'Could not run the analysis.'; }
+    finally{ btn.disabled=false; btn.textContent=was; }
+  };
+}
+$('btnDash').onclick=openDash;
 
 $('btnOgImage').onclick=()=>{
   if(!siteState){ $('seoScore').innerHTML='<div class="tiny">Generate a site first.</div>'; return; }
@@ -7859,8 +8121,10 @@ Object.entries(GROWTH).forEach(([kind,g])=>{
     finally{ btn.disabled=false; btn.textContent=was; }
   };
 });
-['gaId','gtmId','pixelId','gadsId'].forEach(id=>{
-  const key={gaId:'ga4',gtmId:'gtm',pixelId:'pixel',gadsId:'gads'}[id];
+const TRACK_IDS={gaId:'ga4',gtmId:'gtm',pixelId:'pixel',gadsId:'gads',tiktokId:'tiktok',
+  liId:'li',bingId:'bing',pinId:'pin',hotjarId:'hotjar',plausibleId:'plausible'};
+Object.keys(TRACK_IDS).forEach(id=>{
+  const key=TRACK_IDS[id];
   $(id).addEventListener('input',()=>{
     if(!siteState) return;
     siteState.meta.tracking=siteState.meta.tracking||{};
