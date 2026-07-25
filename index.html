@@ -6358,6 +6358,7 @@ async function download(){
       }catch(e){ console.warn('lead-magnet PDF failed for page',i,e); }
     }
     saveBlob(await makeZip(files),`${slug}.zip`);
+    logUsage('download',`${files.length} files, ${pageCount(siteState)} pages`);
     label.textContent=`${files.length} files`;
   }catch(e){
     console.warn('ZIP failed',e); label.textContent='Failed';
@@ -6753,7 +6754,31 @@ function openDlMenu(){
    Anyone who reads the source can find the passcode, so this deters, it does
    not enforce. Real enforcement would need a backend, which this app does not
    have. Once unlocked it stays unlocked in this browser. */
-const DL_PIN='122133';                       // admin / licence passcode
+const DL_PIN='122133';                       // your own owner passcode
+/* Your Cloudflare Worker, if you have deployed one. Set this and the Download
+   button will also accept per-customer licence keys, which you can revoke one
+   at a time from admin.html. Leave it empty and the app falls back to the
+   shared passcode above, which works offline but cannot be revoked for one
+   customer without changing it for everyone. */
+const LICENCE_API='https://instant-site-licence.digitalyticsagency.workers.dev';
+const LS_LIC='instantsite_licence';
+function savedLicence(){ try{ return localStorage.getItem(LS_LIC)||''; }catch{ return ''; } }
+/* Verified server-side, so a revoked key stops working on the next check even
+   though the passcode path stays offline-capable. */
+async function verifyLicence(key){
+  if(!LICENCE_API) return {ok:false,error:'No licence server is configured.'};
+  const r=await fetch(LICENCE_API.replace(/\/+$/,'')+'/verify',{method:'POST',
+    headers:{'content-type':'application/json'},body:JSON.stringify({key})});
+  return r.json();
+}
+function logUsage(kind,meta){
+  if(!LICENCE_API) return;
+  const ref=new URLSearchParams(location.search).get('ref')||'';
+  // fire and forget: usage reporting must never block or break a download
+  try{ fetch(LICENCE_API.replace(/\/+$/,'')+'/event',{method:'POST',keepalive:true,
+    headers:{'content-type':'application/json'},
+    body:JSON.stringify({key:savedLicence()||undefined,client:ref||undefined,kind,meta})}).catch(()=>{}); }catch{}
+}
 function dlUnlocked(){ try{ return localStorage.getItem('instantsite_dl')==='1'; }catch{ return false; } }
 function paywall(){
   const cfg=(()=>{ try{ return JSON.parse(localStorage.getItem('instantsite_sell')||'{}'); }catch{ return {}; } })();
@@ -6763,7 +6788,7 @@ function paywall(){
     <button class="dashx" id="payX" aria-label="Close">&times;</button>
     <h2>Unlock the theme download</h2>
     <p class="tiny">Building and previewing is free. The exportable theme file is the paid product. Enter your licence passcode, or buy it once for ${esc(price)}.</p>
-    <input id="payPin" type="password" inputmode="numeric" autocomplete="off" placeholder="Licence passcode">
+    <input id="payPin" type="text" autocomplete="off" spellcheck="false" placeholder="${LICENCE_API?'Licence key or passcode':'Licence passcode'}">
     <button id="payGo" type="button" class="paybtn">Unlock downloads</button>
     ${buy?`<div class="payor">or</div><a id="payBuy" href="${esc(buy)}" target="_blank" rel="noopener" class="paybtn paybuy">Buy the theme — ${esc(price)}</a>
       <div class="tiny" style="margin-top:8px">After paying you will be given the passcode. Paste it above.</div>`
@@ -6775,13 +6800,33 @@ function paywall(){
   wrap.querySelector('#payX').onclick=close;
   wrap.addEventListener('click',e=>{ if(e.target===wrap) close(); });
   const inp=wrap.querySelector('#payPin'), err=wrap.querySelector('#payErr');
-  const go=()=>{ if(inp.value.trim()===DL_PIN){ setAdmin();   // the passcode owner is the admin
-      close(); if(typeof renderAdminRow==='function') renderAdminRow();
-      // Defer: this same click bubbles to the document outside-close handler,
-      // which would shut the menu the instant it opened.
-      setTimeout(openDlMenu,0); }
-    else { err.textContent='That passcode is not right.'; inp.value=''; inp.focus(); } };
-  wrap.querySelector('#payGo').onclick=go;
+  const btn=wrap.querySelector('#payGo');
+  const unlock=()=>{
+    close(); if(typeof renderAdminRow==='function') renderAdminRow();
+    // Defer: this same click bubbles to the document outside-close handler,
+    // which would shut the menu the instant it opened.
+    setTimeout(openDlMenu,0);
+  };
+  const go=async()=>{
+    const v=inp.value.trim();
+    if(!v){ err.textContent='Enter your licence key or passcode.'; inp.focus(); return; }
+    if(v===DL_PIN){ setAdmin(); unlock(); return; }   // the passcode owner is the admin
+    if(!LICENCE_API){ err.textContent='That passcode is not right.'; inp.value=''; inp.focus(); return; }
+    /* A customer key unlocks downloads but does NOT make them an admin: they
+       get the export, not the reseller's pricing and white-label controls. */
+    err.textContent=''; btn.disabled=true; const was=btn.textContent; btn.textContent='Checking…';
+    try{
+      const r=await verifyLicence(v);
+      if(!r.ok){ err.textContent=r.error||'That licence key is not recognised.'; inp.select(); return; }
+      try{ localStorage.setItem(LS_LIC,v.toUpperCase()); localStorage.setItem('instantsite_dl','1'); }catch{}
+      logUsage('unlock',r.label||'');
+      unlock();
+    }catch(e){
+      // offline or the Worker is down: never strand a paying customer
+      err.textContent='Could not reach the licence server. Check your connection and try again.';
+    }finally{ btn.disabled=false; btn.textContent=was; }
+  };
+  btn.onclick=go;
   inp.addEventListener('keydown',e=>{ if(e.key==='Enter') go(); });
   setTimeout(()=>inp.focus(),50);
 }

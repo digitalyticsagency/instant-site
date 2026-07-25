@@ -60,6 +60,31 @@ a{color:var(--accent)}
   </div>
 
   <div class="card">
+    <h2>Licence keys</h2>
+    <p class="note">Issue one key per customer. Each key can be revoked on its own, so a leaked key costs you that customer and not every customer. Keys are stored in your Cloudflare database, not in this page.</p>
+    <label for="wurl">Worker URL</label>
+    <input id="wurl" type="url" placeholder="https://instant-site-licence.….workers.dev">
+    <label for="wtok">Admin token</label>
+    <input id="wtok" type="password" placeholder="The ADMIN_TOKEN you set with wrangler" autocomplete="off">
+    <div class="row">
+      <button class="ghost" id="wsave">Remember in this browser</button>
+      <button class="ghost" id="wtest">Test connection</button>
+    </div>
+    <div class="status" id="wOut"></div>
+    <hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
+    <label for="lname">Customer name or company</label>
+    <input id="lname" placeholder="e.g. Auckland reseller" maxlength="60">
+    <label for="lmail">Their email (optional, for your records)</label>
+    <input id="lmail" type="email" placeholder="them@example.com" autocomplete="off">
+    <div class="row"><button id="lgen">Issue a licence key</button><button class="ghost" id="lcopy">Copy key</button></div>
+    <div class="out" id="lkey">—</div>
+    <div class="status" id="lOut"></div>
+    <div class="row"><button class="ghost" id="llist">Show all licences</button></div>
+    <div id="ltable"></div>
+    <div class="warn">This gates the download and gives you real per-customer usage. It is not DRM: the theme is built in the customer's own browser, so the Worker never handles the file and cannot withhold it from someone who edits the app's JavaScript.</div>
+  </div>
+
+  <div class="card">
     <h2>Client links</h2>
     <p class="note">A client link opens the full builder so a white-label developer can design and preview, but hides the download, the dashboard and the admin settings. Add a label so you can tell links apart in your own records.</p>
     <label for="cname">Client label (optional)</label>
@@ -129,6 +154,84 @@ $('lock').onclick=()=>{
   $('unlockOut').textContent='Signed out. Downloads in this browser will ask for the passcode again.';
   refresh();
 };
+/* ---- licence keys, via the Cloudflare Worker ----------------------------
+   The admin token lives in this browser's localStorage and is sent only to
+   your own Worker. It is not in the page source, so a copy of admin.html on
+   its own grants nothing. Anyone with access to this browser profile can read
+   it, which is the same trust boundary as the API key in the builder. */
+const LS_W='instantsite_worker';
+function wcfg(){ try{ return JSON.parse(localStorage.getItem(LS_W)||'{}'); }catch{ return {}; } }
+function wsave(c){ try{ localStorage.setItem(LS_W,JSON.stringify(c)); }catch{} }
+(()=>{ const c=wcfg(); $('wurl').value=c.url||''; $('wtok').value=c.token||''; })();
+const wbase=()=>($('wurl').value.trim()||'').replace(/\/+$/,'');
+async function wapi(path,opts){
+  const url=wbase(); const token=$('wtok').value.trim();
+  if(!url) throw new Error('Add your Worker URL first.');
+  if(!token) throw new Error('Add your admin token first.');
+  const r=await fetch(url+path,Object.assign({headers:Object.assign(
+    {'x-admin-token':token,'content-type':'application/json'},(opts||{}).headers||{})},opts||{}));
+  let j={}; try{ j=await r.json(); }catch{}
+  if(r.status===401) throw new Error('The Worker rejected that admin token.');
+  if(!r.ok||j.ok===false) throw new Error(j.error||`The Worker returned ${r.status}.`);
+  return j;
+}
+$('wsave').onclick=()=>{ wsave({url:wbase(),token:$('wtok').value.trim()});
+  $('wOut').textContent='Saved in this browser.'; };
+$('wtest').onclick=async()=>{
+  $('wOut').textContent='Checking…';
+  try{ const r=await fetch(wbase()+'/health'); const j=await r.json();
+    if(!j.ok) throw new Error('Health check failed.');
+    await wapi('/admin/licences');
+    $('wOut').textContent='Connected, and the admin token works.';
+  }catch(e){ $('wOut').textContent=e.message; }
+};
+$('lgen').onclick=async()=>{
+  const label=$('lname').value.trim();
+  if(!label){ $('lOut').textContent='Give the customer a name first, so you can tell keys apart later.'; return; }
+  $('lOut').textContent='Issuing…';
+  try{
+    const j=await wapi('/admin/licence',{method:'POST',
+      body:JSON.stringify({label,email:$('lmail').value.trim()||undefined})});
+    $('lkey').textContent=j.key;
+    $('lOut').textContent=`Issued for ${j.label}. Send them this key — they paste it on the Download button.`;
+    $('lname').value=''; $('lmail').value='';
+    listLicences();
+  }catch(e){ $('lOut').textContent=e.message; }
+};
+$('lcopy').onclick=async()=>{
+  const k=$('lkey').textContent.trim();
+  if(!k||k==='—'){ $('lOut').textContent='Issue a key first.'; return; }
+  try{ await navigator.clipboard.writeText(k); $('lOut').textContent='Key copied.'; }
+  catch{ $('lOut').textContent='Copy failed — select the key and copy it manually.'; }
+};
+async function listLicences(){
+  try{
+    const j=await wapi('/admin/licences');
+    const rows=j.licences||[];
+    if(!rows.length){ $('ltable').innerHTML='<div class="note">No licences issued yet.</div>'; return; }
+    $('ltable').innerHTML=`<table style="width:100%;border-collapse:collapse;margin-top:12px;font-size:13px">
+      <thead><tr style="text-align:left">
+        <th style="padding:6px 4px">Key</th><th>Customer</th><th>Status</th><th>Uses</th><th></th>
+      </tr></thead><tbody>${rows.map(l=>`<tr style="border-top:1px solid var(--line)">
+        <td style="padding:8px 4px;font-family:ui-monospace,monospace">${esc(l.key)}</td>
+        <td>${esc(l.label||'')}</td>
+        <td>${esc(l.status)}</td>
+        <td>${l.uses||0}</td>
+        <td><button class="ghost" data-k="${esc(l.key)}" data-s="${l.status==='active'?'revoked':'active'}"
+          style="padding:5px 10px;font-size:12px">${l.status==='active'?'Revoke':'Reactivate'}</button></td>
+      </tr>`).join('')}</tbody></table>`;
+    $('ltable').querySelectorAll('button[data-k]').forEach(b=>b.onclick=async()=>{
+      b.disabled=true;
+      try{ await wapi('/admin/revoke',{method:'POST',
+        body:JSON.stringify({key:b.dataset.k,status:b.dataset.s})});
+        $('lOut').textContent=`${b.dataset.k} is now ${b.dataset.s}.`; listLicences();
+      }catch(e){ $('lOut').textContent=e.message; b.disabled=false; }
+    });
+  }catch(e){ $('ltable').innerHTML=''; $('lOut').textContent=e.message; }
+}
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+$('llist').onclick=listLicences;
+
 $('gen').onclick=()=>{
   const label=$('cname').value.trim();
   const url=base+'?client=1'+(label?'&ref='+encodeURIComponent(label):'');
