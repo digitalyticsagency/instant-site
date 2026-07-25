@@ -489,6 +489,22 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
 .edithint b{color:var(--txt)}
 .edithint span{flex:1;min-width:0}
 .savestate{font-size:11.5px;color:var(--txt-3);white-space:nowrap}
+.verwrap{position:relative;display:flex;gap:4px}
+.vermenu{position:absolute;right:0;top:calc(100% + 6px);z-index:60;display:none;
+  min-width:250px;max-height:340px;overflow-y:auto;padding:6px;border-radius:12px;
+  background:var(--surface);border:1px solid var(--stroke);box-shadow:var(--shadow-lg)}
+.vermenu.open{display:block}
+/* On a phone the toolbar sits at the left edge, so a right-anchored 250px menu
+   hung off the left of the screen and its first rows were unreachable. */
+@media(max-width:600px){
+  .vermenu{right:auto;left:0;min-width:0;width:min(300px,calc(100vw - 28px))}
+}
+.vermenu button{display:block;width:100%;text-align:left;padding:8px 10px;border-radius:8px;
+  font-size:12.5px;color:var(--txt);line-height:1.35}
+.vermenu button:hover{background:var(--fill)}
+.vermenu button b{display:block;font-weight:600}
+.vermenu button span{color:var(--txt-3);font-size:11.5px}
+.vermenu .verempty{padding:10px;font-size:12px;color:var(--txt-3)}
 .savestate.ok::before{content:'✓ ';color:var(--good)}
 .savestate.bad{color:var(--bad)}
 .statusBad{color:var(--bad)!important}
@@ -1278,6 +1294,11 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
         <button id="tabShare" title="Share links and client sign-off.">Share</button>
       </div>
       <div class="spacer"></div>
+      <div class="verwrap">
+        <button id="btnUndo" class="mini" type="button" title="Step back to how the site was before your last change." disabled>↶ Undo</button>
+        <button id="btnVersions" class="mini" type="button" title="Every version from this session. Click one to go back to it." disabled>Versions</button>
+        <div class="vermenu" id="verMenu"></div>
+      </div>
       <span class="savestate" id="saveState"></span>
       <div class="tabs">
         <button id="segDesktop" title="Preview at desktop width." class="on">Desktop</button>
@@ -3428,9 +3449,15 @@ section:hover>.edsec{opacity:1;pointer-events:auto}
 .nav{position:sticky;top:0;z-index:30;background:${t.bg};border-bottom:1px solid ${t.line}}
 .nav .w{display:flex;align-items:center;justify-content:space-between;gap:18px;padding-top:15px;padding-bottom:15px}
 .logo{font-family:${t.displayFont},sans-serif;font-weight:${t.weight};font-size:20px;color:${t.primary};${t.caps?'text-transform:uppercase;letter-spacing:.04em;':''}}
-.nl{display:flex;gap:26px;font-size:15px;font-weight:500;min-width:0;flex-wrap:nowrap}
+.nl{display:flex;gap:26px;font-size:15px;font-weight:500;min-width:0;flex-wrap:nowrap;flex:0 1 auto;overflow:hidden}
 .nl a{color:${t.ink2};text-decoration:none;transition:color .2s;white-space:nowrap}
-.logo{flex:none}
+/* Shrink order matters in the band just above the mobile breakpoint, where the
+   nav links are still shown but space is tight. Nothing could shrink, so a long
+   business name pushed the call to action clean off the right edge. The logo
+   gives way first and ellipsises, the links give way next, and the CTA never
+   shrinks — losing the button is the one outcome that costs a lead. */
+.logo{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.navcta{flex:none}
 /* The checkbox is the entire mobile menu mechanism. Exports ship no JavaScript,
    and a nav that only opens with JS would break that for every visitor with a
    blocked script. Off-screen rather than display:none so it stays keyboard
@@ -3833,7 +3860,7 @@ ${t.callBar?`.callbar{display:none}
      business name claimed its full max-content width and bumped the burger onto
      a line of its own. Basis 0 lets the name take the leftover space and wrap
      its own text instead. */
-  .logo{order:1;flex:1 1 0;min-width:0}
+  .logo{order:1;flex:1 1 0;min-width:0;white-space:normal;overflow:visible;text-overflow:clip}
   .burger{display:flex;order:2;margin-left:auto;margin-right:-8px}
   .navcta{order:3;flex-basis:100%;justify-content:flex-start;gap:14px}
   .nl{display:none;order:4;flex-basis:100%;flex-direction:column;gap:0;
@@ -5062,7 +5089,90 @@ function setMediaStatus(msg,bad){
 function schedulePersist(){
   clearTimeout(persistTimer);
   $('saveState').textContent='Saving…'; $('saveState').className='savestate';
-  persistTimer=setTimeout(()=>{ pushHistory(siteState); renderChecks(); renderTips(); lastShareURL=''; },700);
+  persistTimer=setTimeout(()=>{ snapshotVersion(); pushHistory(siteState); renderChecks(); renderTips(); lastShareURL=''; },700);
+}
+
+/* ---- version history ------------------------------------------------------
+   pushHistory() overwrites the current site's single saved entry on every
+   change, so there was nothing to go back to: one bad edit or a regenerate you
+   disliked was permanent. This keeps the prior states.
+
+   Deliberately in memory only. A site with photos is hundreds of KB of base64
+   and localStorage is about 5 MB total, so persisting thirty of them would
+   evict the user's actual saved sites to make room for undo. The trade is
+   stated in the UI rather than hidden: versions last for this session.
+   ------------------------------------------------------------------------- */
+const VER_CAP=30;
+let versions=[], redoStack=[], verBase=null;
+const verLabel=st=>{
+  const n=pageCount(st);
+  return `${st.meta.businessName||'Untitled'} · ${st.meta.theme} · ${n} page${n===1?'':'s'}`;
+};
+function resetVersions(){
+  versions=[]; redoStack=[];
+  verBase=siteState?JSON.stringify(siteState):null;
+  renderVersions();
+}
+function snapshotVersion(){
+  if(!siteState) return;
+  const now=JSON.stringify(siteState);
+  if(verBase===null){ verBase=now; renderVersions(); return; }
+  if(now===verBase) return;                 // nothing actually changed
+  versions.unshift({t:Date.now(),json:verBase,label:verLabel(JSON.parse(verBase))});
+  if(versions.length>VER_CAP) versions.length=VER_CAP;
+  redoStack=[];                             // a fresh edit ends the redo branch
+  verBase=now;
+  renderVersions();
+}
+function applyVersion(json){
+  siteState=migrate(JSON.parse(json));
+  verBase=JSON.stringify(siteState);
+  if(currentPage>=pageCount(siteState)) currentPage=0;
+  prefs.theme=siteState.meta.theme; savePrefs();
+  lastShareURL=''; $('shareUrl').value=''; $('shareMeta').textContent='';
+  loadBriefFromSite();
+  renderPreview(); renderThemeGrid(); renderThemeStrip(); renderChecks(); renderTips();
+  renderMediaPanel(); renderPages(); renderSections(); loadSeoFields(); loadLinkFields();
+  loadLeadUI(); renderCxPick(); renderHfPick();
+  pushHistory(siteState); renderVersions(); refreshStatus();
+}
+function undoVersion(){
+  if(!versions.length) return;
+  redoStack.unshift({t:Date.now(),json:JSON.stringify(siteState),label:verLabel(siteState)});
+  applyVersion(versions.shift().json);
+}
+function renderVersions(){
+  const u=$('btnUndo'), v=$('btnVersions'), menu=$('verMenu');
+  if(!u||!v||!menu) return;
+  u.disabled=!versions.length;
+  v.disabled=!versions.length&&!redoStack.length;
+  v.textContent=versions.length?`Versions ${versions.length}`:'Versions';
+  const row=(x,i,kind)=>`<button type="button" data-kind="${kind}" data-i="${i}">
+    <b>${esc(x.label)}</b><span>${new Date(x.t).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'})}${kind==='redo'?' · undone':''}</span></button>`;
+  menu.innerHTML=(versions.length||redoStack.length)
+    ? (redoStack.length?redoStack.map((x,i)=>row(x,i,'redo')).join(''):'')
+      +versions.map((x,i)=>row(x,i,'undo')).join('')
+      +`<div class="verempty">Versions are kept for this session only, so they never crowd out your saved sites.</div>`
+    : '<div class="verempty">No earlier versions yet. Make a change and one appears here.</div>';
+  menu.querySelectorAll('button[data-i]').forEach(b=>b.onclick=()=>{
+    const i=+b.dataset.i;
+    if(b.dataset.kind==='redo'){
+      const pick=redoStack.splice(i,1)[0];
+      versions.unshift({t:Date.now(),json:JSON.stringify(siteState),label:verLabel(siteState)});
+      applyVersion(pick.json);
+    }else{
+      /* Jumping back N steps. Redo must read forward from where you land, so
+         the skipped states go on oldest-first with the state you left sitting
+         newest. Unshifting them one at a time reversed that order and made the
+         first redo skip past the step you'd expect. */
+      const skipped=versions.splice(0,i+1);
+      const pick=skipped[skipped.length-1];
+      const here={t:Date.now(),json:JSON.stringify(siteState),label:verLabel(siteState)};
+      redoStack=[...skipped.slice(0,-1).reverse(),here,...redoStack];
+      applyVersion(pick.json);
+    }
+    menu.classList.remove('open');
+  });
 }
 
 /* ==========================================================================
@@ -5278,6 +5388,7 @@ async function generate(brief){
     // other meta defaults exist before any panel reads them. Without this a
     // freshly generated site had no meta.form and loadLeadUI threw on web3key.
     migrate(siteState);
+    resetVersions();   // a brand new site starts its own undo stack
     bumpSites();
     currentId='is_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
     lastShareURL=''; $('shareUrl').value=''; $('shareMeta').textContent='';
@@ -6396,6 +6507,7 @@ function renderHistory(){
   $('histList').querySelectorAll('.hist-item').forEach(b=>b.onclick=()=>{
     const e=loadHistory().find(x=>x.id===b.dataset.id); if(!e) return;
     siteState=migrate(e.siteState); currentId=e.id; currentPage=0;
+    resetVersions();   // a different site starts its own undo stack
     prefs.theme=siteState.meta.theme; savePrefs();
     lastShareURL=''; $('shareUrl').value=''; $('shareMeta').textContent='';
     loadBriefFromSite();   // panel must describe the site you just opened
@@ -9844,6 +9956,13 @@ function applyRole(){
 function bootDashboard(){
 applyRole();
 renderAdminRow();
+renderVersions();
+$('btnUndo')&&($('btnUndo').onclick=()=>undoVersion());
+$('btnVersions')&&($('btnVersions').onclick=e=>{
+  e.stopPropagation(); renderVersions(); $('verMenu').classList.toggle('open');
+});
+document.addEventListener('click',e=>{ if(!e.target.closest('.verwrap')) $('verMenu')&&$('verMenu').classList.remove('open'); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') $('verMenu')&&$('verMenu').classList.remove('open'); });
 $('btnAdminIn')&&($('btnAdminIn').onclick=()=>paywall());
 $('btnAdminOut')&&($('btnAdminOut').onclick=()=>{ clearAdmin(); renderAdminRow(); refreshStatus(); });
 $('apiKey').value=getKey();
