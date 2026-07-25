@@ -4310,7 +4310,7 @@ function buildSite(state,mode,pageIdx){
   const mailtoForm=!formAction&&c.email;
   const canForm=!!(formAction||c.email);
   const pageTag=pageIdx?pageTitle(state,pageIdx):'Home';
-  const providerHidden=(source)=>{
+  const providerHidden=(source,redirectTo)=>{
     let h='';
     if(prov==='web3forms') h+=`<input type="hidden" name="access_key" value="${esc((fp.web3key||'').trim())}">`
       +`<input type="hidden" name="from_name" value="${esc(m.businessName)} website">`;
@@ -4319,7 +4319,9 @@ function buildSite(state,mode,pageIdx){
         +`<input type="hidden" name="subject" value="Website enquiry from the ${esc(pageTag)} page — ${esc(m.businessName)}">`
         +`<input type="hidden" name="source_page" value="${esc(pageTag)}">`
         +(source?`<input type="hidden" name="source" value="${esc(source)}">`:'')
-        +((fp.thankyou||'').trim()?`<input type="hidden" name="redirect" value="${esc((fp.thankyou||'').trim())}">`:'')
+        /* A content upgrade passes the guide's own URL here, so the provider
+           captures the lead and then sends the reader straight to the file. */
+        +((redirectTo||(fp.thankyou||'').trim())?`<input type="hidden" name="redirect" value="${esc(redirectTo||(fp.thankyou||'').trim())}"><input type="hidden" name="_next" value="${esc(redirectTo||(fp.thankyou||'').trim())}">`:'')
         +`<input type="checkbox" name="botcheck" style="display:none" tabindex="-1" autocomplete="off">`;
     }
     return h;
@@ -4425,6 +4427,13 @@ function buildSite(state,mode,pageIdx){
   const guideFile=(bd&&bd.leadMagnet&&Array.isArray(bd.leadMagnet.sections)&&bd.leadMagnet.sections.length)
     ? `${slugify(s.slug||'guide','guide')}-guide.pdf` : '';
   const guideHref=guideFile?`../guides/${guideFile}`:'';
+  /* Absolute form of the same file. Form providers redirect to a full URL only,
+     so gating the guide behind an email is possible exactly when the site URL
+     is known. */
+  /* Read m.seo directly: `canon` belongs to buildBioPage, and this function's
+     own `seo` const is declared further down, so naming either here throws. */
+  const guideBase=((m.seo&&m.seo.canonical)||'').trim().replace(/\/+$/,'');
+  const guideAbs=(guideFile&&guideBase)?`${guideBase}/guides/${guideFile}`:'';
   const upgradeForm=(u)=>{
     if(!u) return '';
     const post=formAction?` action="${esc(formAction)}" method="post"`:c.email?` action="mailto:${esc(c.email)}" method="post" enctype="text/plain"`:'';
@@ -4432,26 +4441,38 @@ function buildSite(state,mode,pageIdx){
       <div class="autag">Free download</div>
       <h3>${esc(u.title||'Free guide')}</h3>
       <p>${esc(u.blurb||'')}</p>
-      ${(formAction||c.email)?`<form class="aupform"${post}>
+      ${(()=>{
+        /* Exactly one button, always. It briefly had two — the form's submit
+           and a separate download link — which asked the reader to work out
+           which one gave them the PDF, on the one element whose whole job is to
+           be obvious.
+
+           Gating on an email needs the provider to send the reader onward to
+           the file after it captures them, and that redirect has to be an
+           absolute URL, which is only knowable once the site URL is set in the
+           SEO panel. So: with a form provider and a site URL, one button
+           captures the lead and lands on the PDF. Without them the guide simply
+           downloads on click. Never a form that silently fails to deliver. */
+        const gated=guideFile&&formAction&&guideAbs;
+        if(gated) return `<form class="aupform"${post}>
         <input type="email" name="email" required placeholder="Your email" autocomplete="email">
-        ${providerHidden('blog-upgrade')}
-        ${guideFile?`<input type="hidden" name="guide" value="${esc(guideFile)}">`:''}
+        ${providerHidden('blog-upgrade',guideAbs)}
         <input type="text" name="_gotcha" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px">
         <button type="submit">${esc(u.cta||'Send it to me')}</button>
-      </form>`
-      :''}
-      ${guideFile
-        /* The old copy promised "we will email you the PDF" and nothing ever
-           did — there is no backend to send it and the file was never even
-           written into the export, so every visitor who handed over an email
-           got nothing. The guide now ships in the ZIP and downloads on click,
-           which is a promise a static site can actually keep. The email form
-           above still captures the lead. */
-        ? `<a class="aupbtn" href="${esc(inApp?'#':guideHref)}" download>Download the ${esc(u.format||'guide')} (PDF)</a>
-           <p class="aupnote">Downloads straight away.${(formAction||c.email)?' Leave your email above and we will send the follow-up too.':''}</p>`
-        : (formAction||c.email)
-          ? `<p class="aupnote">We will be in touch with the guide. No spam.</p>`
-          : `<a class="aupbtn" href="#contact">${esc(u.cta||'Get the guide')}</a>`}
+      </form><p class="aupnote">Enter your email and the ${esc(u.format||'guide')} downloads straight away.</p>`;
+        /* The author's call to action is written for the email flow ("Send it
+           to me"), which reads as nonsense on a link that downloads on click,
+           so this case gets its own wording. */
+        if(guideFile) return `<a class="aupbtn" href="${esc(inApp?'#':guideHref)}"${inApp?'':' download'}>Download the ${esc(u.format||'guide')} (PDF)</a>
+      <p class="aupnote">Downloads straight away, no email needed.</p>`;
+        if(formAction||c.email) return `<form class="aupform"${post}>
+        <input type="email" name="email" required placeholder="Your email" autocomplete="email">
+        ${providerHidden('blog-upgrade')}
+        <input type="text" name="_gotcha" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px">
+        <button type="submit">${esc(u.cta||'Send it to me')}</button>
+      </form><p class="aupnote">We will be in touch with the guide. No spam.</p>`;
+        return `<a class="aupbtn" href="#contact">${esc(u.cta||'Get the guide')}</a>`;
+      })()}
     </aside>`;
   };
   const articleHTML=!bd?'':`
@@ -5222,6 +5243,18 @@ function renderChecks(){
           : !listOn
             ? `The <b>Blog article</b> section is switched off on your Blog page, so it shows no posts even though you have <b>${posts.length}</b>. Turn it back on under Sections while that page is open.`
             : `<b>${posts.length}</b> post${posts.length===1?'':'s'} listed on the Blog page, each under <code>/blog/</code>.`});
+  }
+  /* Whether the guide is gated is decided by two settings the owner may not
+     realise are connected, so spell out which one is missing. */
+  const withGuide=posts.filter(i=>{const d=pageOf(siteState,i).blogData;
+    return d&&d.leadMagnet&&Array.isArray(d.leadMagnet.sections)&&d.leadMagnet.sections.length;});
+  if(withGuide.length){
+    const hasProv=!!((siteState.meta.form||{}).provider);
+    const hasUrl=!!((siteState.meta.seo||{}).canonical||'').trim();
+    items.push({ok:hasProv&&hasUrl,title:'Content upgrade',
+      body:(hasProv&&hasUrl)
+        ? `<b>${withGuide.length}</b> guide${withGuide.length===1?'':'s'} gated behind an email: the reader submits, your form provider captures them, then the PDF downloads.`
+        : `<b>${withGuide.length}</b> guide${withGuide.length===1?'':'s'} download on click without capturing an email. Gating needs both a form provider${hasProv?' (set)':' — <b>not set</b>'} and your site URL${hasUrl?' (set)':' in the SEO panel — <b>not set</b>'}, because providers can only redirect to a full address.`});
   }
   const c=siteState.meta.contact||{};
   const missing=[]; if(!c.phone)missing.push('phone'); if(!c.email)missing.push('email');
