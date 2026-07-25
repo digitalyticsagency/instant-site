@@ -320,7 +320,7 @@ select{appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%
 .gout .gitem{padding:7px 0;border-bottom:1px solid var(--stroke);font-size:12.5px}
 .gout .gitem:last-child{border-bottom:0}
 .gout .gmeta{font-size:10.5px;color:var(--txt-3)}
-.cxgridpick{display:grid;grid-template-columns:1fr 1fr;gap:6px;max-height:250px;overflow-y:auto;padding:2px;margin:-2px;scrollbar-width:thin;align-content:start;grid-auto-rows:min-content}
+.cxgridpick{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .cxbtn{padding:9px 11px;border-radius:10px;border:1px solid var(--stroke);background:var(--surface);
   text-align:left;font-size:12px;transition:all .16s var(--ease)}
 .cxbtn:hover{background:var(--fill)}
@@ -336,11 +336,15 @@ select{appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%
 /* 36 themes at two columns ran to ~4000px, a third of the whole panel. Three
    tighter columns in a capped, internally scrolling box keeps every theme
    reachable while the section itself stays a sensible height. */
-/* align-content:start and min-content rows are load-bearing: without them a
-   grid inside a capped box shares the height between rows and squashes every
-   card to a couple of pixels instead of overflowing into a scroll. */
-.themes{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;max-height:270px;overflow-y:auto;
-  padding:2px;margin:-2px;scrollbar-width:thin;align-content:start;grid-auto-rows:min-content}
+/* No inner scrollbox. A capped, scrolling grid swallowed the wheel whenever the
+   cursor was over it, which made the whole middle column feel stuck. A
+   show-more reveal keeps the section short by default and never traps scroll. */
+.themes{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.themes.short>.theme:nth-child(n+10){display:none}
+.cxgridpick.short>.cxbtn:nth-child(n+7){display:none}
+.moreBtn{width:100%;margin-top:6px;padding:7px;border-radius:9px;border:1px dashed var(--stroke);
+  background:transparent;color:var(--txt-2);font-size:12px;font-weight:500;cursor:pointer}
+.moreBtn:hover{background:var(--fill);color:var(--txt)}
 .theme{padding:0;border-radius:13px;border:1px solid var(--stroke);background:var(--surface);overflow:hidden;text-align:left;transition:all .2s var(--ease)}
 .theme:hover{border-color:var(--stroke-2);transform:translateY(-1px);box-shadow:var(--shadow)}
 .theme.on{border-color:var(--accent);box-shadow:0 0 0 3px var(--ring)}
@@ -1881,7 +1885,19 @@ const PAGE_CAP=50;
 const pageOf=(st,i)=>(!i?st:(st.pages||[])[i-1])||st;
 const pageCount=st=>1+((st&&st.pages||[]).length);
 const slugify=(s,fallback)=>String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40)||fallback||'page';
-const pageHref=(st,i)=>i===0?'index.html':`${(pageOf(st,i).slug)||'page'}.html`;
+/* Blog posts always live under /blog/, which is what people expect and what
+   keeps a growing archive from cluttering the site root. Everything else stays
+   flat at the top level. */
+const pageHref=(st,i)=>{
+  if(i===0) return 'index.html';
+  const pg=pageOf(st,i), slug=pg.slug||'page';
+  return pg.blog?`blog/${slug}.html`:`${slug}.html`;
+};
+// Depth-aware prefix so a page inside /blog/ can still link back to the root.
+const pageRel=(st,from,to)=>{
+  const up=pageOf(st,from).blog?'../':'';
+  return up+pageHref(st,to);
+};
 const pageTitle=(st,i)=>i===0?'Home':(pageOf(st,i).title||'Untitled');
 // Slugs become filenames in the ZIP, so they must be unique.
 function uniqueSlug(st,want,ignoreIdx){
@@ -4505,7 +4521,7 @@ function buildSite(state,mode,pageIdx){
         .slice(0,7)
         .map(i=>inApp
           ? `<a href="#" data-page="${i}"${i===pageIdx?' class="here"':''}>${esc(pageTitle(state,i))}</a>`
-          : `<a href="${esc(pageHref(state,i))}"${i===pageIdx?' class="here"':''}>${esc(pageTitle(state,i))}</a>`)
+          : `<a href="${esc(pageRel(state,pageIdx,i))}"${i===pageIdx?' class="here"':''}>${esc(pageTitle(state,i))}</a>`)
         .join('')
     : anchorLinks;
 
@@ -4596,7 +4612,7 @@ n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0
   const legalPages=Array.from({length:pageCount(state)},(_,i)=>i).filter(i=>i>0&&pageOf(state,i).legal);
   const pageLink=i=>inApp
     ? `<a href="#" data-page="${i}">${esc(pageTitle(state,i))}</a>`
-    : `<a href="${esc(pageHref(state,i))}">${esc(pageTitle(state,i))}</a>`;
+    : `<a href="${esc(pageRel(state,pageIdx,i))}">${esc(pageTitle(state,i))}</a>`;
   const footNav=footPages.length>1
     ? `<div class="footcol"><h4>Pages</h4>${footPages.map(i=>`<div>${pageLink(i)}</div>`).join('')}</div>`
     : (anchorLinksRaw.length?`<div class="footcol"><h4>On this page</h4>${anchorLinksRaw.map(k=>
@@ -5179,6 +5195,7 @@ function renderThemeGrid(){
   $('themeGrid').querySelectorAll('.theme').forEach(b=>b.onclick=()=>setTheme(b.dataset.t));
   // Derived, never hardcoded: the count drifted to 14 while the library grew to 36.
   const tt=$('tagTheme'); if(tt) tt.textContent=`${THEME_IDS.length} themes`;
+  mountMore($('themeGrid'),9,'theme',n=>`Show all ${n} themes`);
   if(typeof renderHfPick==='function') renderHfPick();
 }
 
@@ -6803,6 +6820,22 @@ $('btnVidClear').onclick=()=>{
   $('vidStatus').textContent='Video removed from this page.';
 };
 
+/* Collapse a long pick-grid to its first N items with a reveal button. Keeps
+   the panel short without an inner scrollbox, which would eat the wheel. */
+function mountMore(grid,keep,itemCls,label){
+  if(!grid) return;
+  const items=grid.querySelectorAll('.'+itemCls).length;
+  const old=grid.parentNode.querySelector('.moreBtn'); if(old) old.remove();
+  grid.classList.remove('short');
+  if(items<=keep) return;
+  grid.classList.add('short');
+  const b=document.createElement('button');
+  b.type='button'; b.className='moreBtn'; b.textContent=label(items);
+  b.onclick=()=>{ const short=grid.classList.toggle('short');
+    b.textContent=short?label(items):'Show fewer'; };
+  grid.insertAdjacentElement('afterend',b);
+}
+
 /* ---- panel quick filter ----
    Matches a section by its title AND the text of everything inside it, so
    "video", "leads", "stripe" or "schema" all land on the right panel. Matching
@@ -7319,7 +7352,9 @@ $('btnSiteAudit').onclick=()=>{
       // Relative only. An absolute .html in the canonical or og:url is not an
       // internal link, and counting it flagged every page as linking to a
       // page that does not exist.
-      links:[...h.matchAll(/href="(?!https?:|\/\/|#|mailto:|tel:)([^"]+\.html)"/g)].map(m=>m[1]),
+      // Normalise ../ and folder prefixes so a /blog/ page's links still match.
+      links:[...h.matchAll(/href="(?!https?:|\/\/|#|mailto:|tel:)([^"]+\.html)"/g)]
+        .map(m=>m[1].replace(/^\.\.\//,'')),
       h1:(h.match(/<h1[^>]*>([\s\S]*?)<\/h1>/)||[])[1]||'',
       // <style> has to go too, or the CSS is counted as prose and every page
       // reports three thousand words.
@@ -7772,6 +7807,10 @@ function openDash(){
       ${tile((Number(u.inTok||0)/1000).toFixed(1)+'k','Tokens in')}
       ${tile((Number(u.outTok||0)/1000).toFixed(1)+'k','Tokens out')}
     </div>
+    <h3 class="dh">Your sites</h3>
+    <div id="dashSites" class="tiny"></div>
+    <h3 class="dh">Storage</h3>
+    <div id="dashStore"></div>
     <h3 class="dh">What the tool can do</h3>
     <div class="dfeat">${Object.entries(inv).map(([k,v])=>`<span><b>${v}</b> ${esc(k)}</span>`).join('')}</div>
     <h3 class="dh">Share with clients</h3>
@@ -7795,6 +7834,41 @@ function openDash(){
   wrap.querySelector('#dashClose').onclick=close;
   wrap.addEventListener('click',e=>{ if(e.target===wrap) close(); });
   document.addEventListener('keydown',function esc(e){ if(e.key==='Escape'){ close(); document.removeEventListener('keydown',esc); } });
+  // ---- saved sites, with a per-site view and one-click open ----
+  (()=>{
+    const hist=loadHistory();
+    if(!hist.length){ $('dashSites').textContent='No saved sites yet.'; }
+    else{
+      const rows=hist.slice(0,8).map((h,i)=>{
+        const st=h.siteState||{}, m=st.meta||{};
+        const pages=1+((st.pages||[]).length);
+        const blogs=(st.pages||[]).filter(p=>p.blog).length;
+        const kb=Math.round(JSON.stringify(st).length/1024);
+        return `<div class="scorerow"><span class="dot" style="background:var(--good)"></span>
+          <span style="flex:1"><b>${esc(m.businessName||'Untitled')}</b>
+          <div class="gmeta">${pages} page${pages===1?'':'s'}${blogs?` · ${blogs} blog`:''} · ${esc((THEMES[m.theme]||{}).label||m.theme||'')} · ${kb} KB · ${new Date(h.timestamp||Date.now()).toLocaleDateString()}</div></span>
+          <button class="mini" data-open="${i}" type="button">Open</button></div>`;
+      }).join('');
+      $('dashSites').innerHTML=`<div class="gout">${rows}${hist.length>8?`<div class="gmeta" style="padding-top:8px">and ${hist.length-8} more in the history rail.</div>`:''}</div>`;
+      $('dashSites').querySelectorAll('[data-open]').forEach(b2=>b2.onclick=()=>{
+        const h=loadHistory()[+b2.dataset.open]; if(!h) return;
+        // Reuse the history rail's own open path rather than duplicating it.
+        const target=document.querySelector(`#histList .hist-item[data-id="${h.id}"]`);
+        wrap.remove();
+        if(target) target.click();
+      });
+    }
+  })();
+  // ---- storage pressure: localStorage is ~5MB and images eat it fast ----
+  (()=>{
+    let used=0; try{ for(const k in localStorage) if(Object.prototype.hasOwnProperty.call(localStorage,k)) used+=((localStorage[k]||'').length+k.length)*2; }catch(e){}
+    const mb=used/1048576, cap=5, pct=Math.min(100,Math.round(mb/cap*100));
+    const col=pct>85?'var(--bad)':pct>60?'var(--warn)':'var(--good)';
+    $('dashStore').innerHTML=`<div class="gout">
+      <div class="scorebar"><i style="width:${pct}%;background:${col}"></i></div>
+      <div class="gmeta">${mb.toFixed(2)} MB of roughly ${cap} MB used in this browser (${pct}%).
+      ${pct>85?'<b>Nearly full.</b> Back up under Settings, then clear old sites from the history rail.':'Images are stored inside each saved site, so this fills up faster than you would expect.'}</div></div>`;
+  })();
   $('dashCopyLink').onclick=async()=>{ const i=$('dashClientLink'); i.select();
     try{ await navigator.clipboard.writeText(i.value); $('dashNote').textContent='Client link copied. Share it with a white-label customer.'; }
     catch{ $('dashNote').textContent='Select the link and copy it.'; } };
@@ -8751,6 +8825,7 @@ function renderCxPick(){
   host.innerHTML=CX_KEYS.map(k=>
     `<button type="button" class="cxbtn${k===cur?' on':''}" data-cx="${k}" title="${esc(CX_META[k][1])}"><b>${esc(CX_META[k][0])}</b><span>${esc(CX_META[k][1])}</span></button>`).join('');
   host.querySelectorAll('[data-cx]').forEach(b=>b.onclick=()=>setContactLayout(b.dataset.cx,''));
+  mountMore(host,6,'cxbtn',n=>`Show all ${n} layouts`);
 }
 renderCxPick();
 $('btnCycleCx').onclick=()=>{
