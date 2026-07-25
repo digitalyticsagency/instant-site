@@ -862,6 +862,24 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
         <div id="pageStatus" class="tiny"></div>
 
         <div class="legalbox">
+          <b style="font-size:13px">Blog posts</b>
+          <div class="tiny" style="margin-top:5px;line-height:1.6">Added as real pages: full articles with visuals, stats, tables and a free-download lead magnet that captures emails. Zero JavaScript in the export.</div>
+          <div style="display:flex;gap:6px;margin-top:10px">
+            <input type="text" id="blogTopic" placeholder="Topic, or leave blank" maxlength="80" style="flex:1">
+            <div class="combo" style="width:130px"><select id="blogFmt2" style="width:100%">
+              <option value="auto">Best fit</option><option value="how-to">How-to</option><option value="listicle">List / top 10</option>
+              <option value="comparison">Comparison</option><option value="case-study">Case study</option><option value="guide">Ultimate guide</option>
+            </select></div>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+            <button class="mini" id="btnBlogIdeas" title="Ask Claude for the 10 best-performing blog topics for this business, ranked by search demand and lead value." type="button">🔎 Top 10 topic ideas</button>
+            <button class="mini" id="btnBlogWrite" title="Write the post and add it to the site as a page." type="button">Write &amp; add as page</button>
+          </div>
+          <div id="blogIdeas"></div>
+          <div id="blogStatus" class="tiny" style="margin-top:8px"></div>
+        </div>
+
+        <div class="legalbox">
           <b style="font-size:13px">Policy pages</b>
           <div class="tiny" style="margin-top:5px;line-height:1.6">Linked in the footer, kept out of the main nav. Written from the business details you have already entered.</div>
           <div class="chips" id="legalPick" style="margin-top:10px"></div>
@@ -1065,10 +1083,6 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
             <button class="mini" id="btnSocialKit" title="Generate an Instagram post and a LinkedIn banner in this site's theme, as PNGs. No design work needed." type="button">Social image kit</button>
             <button class="mini" id="btnBioLink" title="Add a mobile-first link-in-bio page listing your site, socials, phone, email and booking link, styled to match." type="button">Add bio-link page</button>
             <button class="mini" id="btnLeadMagnet" title="Generate a branded PDF lead magnet — a checklist or short guide from your brief — to give away in exchange for an email." type="button">Lead magnet PDF</button>
-            <button class="mini" id="btnBlog" title="Write a full blog post (comparison, case study or how-to) built to convert readers into leads. Editable, then export as HTML for your CMS or as a PDF." type="button">Blog post</button>
-          </div>
-          <div class="tabs" id="blogFmt" style="margin-top:6px;display:none">
-            <button data-bf="auto" class="on">Auto</button><button data-bf="how-to">How-to</button><button data-bf="comparison">Comparison</button><button data-bf="case-study">Case study</button>
           </div>
           <div id="growthStatus" class="tiny" style="margin-top:8px"></div>
         </div>
@@ -1835,7 +1849,7 @@ const blankPage=(title,st)=>({
   services:[],about:'',testimonials:[],faqs:[],stats:[],process:[],areas:[],
   contact_cta:'Get in touch and we will come straight back to you.',
   seo_meta_description:'',seo_title:'',keyword:'',page_intent:'',headings:{},
-  legal:false,legalBody:[],bio:false,contactLayout:'',
+  legal:false,legalBody:[],bio:false,blog:false,blogData:null,contactLayout:'',
   media:blankMedia(),
   sections:{order:SECTION_ORDER.slice(),hidden:['stats','services','process','about','gallery','reviews','faq','areas']}
 });
@@ -2335,7 +2349,7 @@ function motionRuntime(level,t){
 }
 
 /* Page sections, in default order. Reorderable and hideable per page. */
-const SECTION_ORDER=['hero','stats','services','process','about','gallery','reviews','faq','areas','legal','contact'];
+const SECTION_ORDER=['hero','stats','services','process','about','gallery','reviews','faq','areas','article','legal','contact'];
 const NAV_LABELS={services:'Services',process:'How it works',about:'About',gallery:'Work',reviews:'Reviews',faq:'FAQ',areas:'Areas',contact:'Contact'};
 const SECTION_META={
   hero:{label:'Hero',always:true,note:'Headline, buttons and trust row'},
@@ -2348,6 +2362,7 @@ const SECTION_META={
   faq:{label:'FAQ',note:'Objection handling plus schema'},
   areas:{label:'Service areas',note:'Suburb list — helps local search'},
   legal:{label:'Policy text',note:'Long-form legal body, used by policy pages'},
+  article:{label:'Blog article',note:'Rich blog post body, used by blog pages'},
   contact:{label:'Closing CTA',always:true,note:'Final call to action'}
 };
 const INTENT_LABEL={transactional:'built to convert',informational:'built to answer',
@@ -3015,7 +3030,8 @@ const MEDIA_SLOTS={
   logo: {label:'Logo',            max:512,  quality:.92, minW:200,  targetKB:45,  hint:'Square or wide, transparent PNG works best.'},
   // Gallery images share a tighter budget — six of them at hero size would
   // put the export well past a megabyte.
-  gallery:{label:'Recent work photo', max:1100, quality:.78, minW:600, targetKB:85, hint:'Finished jobs, before and after.'}
+  gallery:{label:'Recent work photo', max:1100, quality:.78, minW:600, targetKB:85, hint:'Finished jobs, before and after.'},
+  article:{label:'Blog image', max:1400, quality:.80, minW:640, targetKB:120, hint:'A relevant photo for the top of the post.'}
 };
 const GALLERY_MAX=6;
 const blankMedia=()=>({hero:{src:'',alt:'',credit:null},about:{src:'',alt:'',credit:null},logo:{src:'',alt:'',credit:null},gallery:[]});
@@ -3508,6 +3524,56 @@ section{padding:${d}px 0}
 .footcta:hover{background:${t.primary};color:${onPrimary}!important}
 @media(max-width:820px){.foot .footgrid{grid-template-columns:1fr;gap:34px}}
 .legal .w{max-width:760px}
+/* ---- blog article ---- */
+.article .w{max-width:760px}
+.article .acat{display:inline-block;font-size:12.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:${t.primary};margin-bottom:12px}
+.article .atitle{font-size:clamp(28px,4.4vw,42px);line-height:1.14;margin-bottom:12px}
+.article .abyline{font-size:14px;color:${t.ink2};margin-bottom:26px}
+.article .alead{font-size:20px;line-height:1.6;color:${t.ink};margin-bottom:26px}
+.article h2{font-size:clamp(22px,2.8vw,28px);margin:36px 0 12px}
+.article h3{font-size:20px;margin:24px 0 8px}
+.article p{font-size:17.5px;line-height:1.75;margin-bottom:16px;color:${t.ink2}}
+.article .alist{margin:0 0 18px 2px;padding-left:22px}
+.article .alist li{font-size:17px;line-height:1.7;margin-bottom:8px;color:${t.ink2}}
+.article .alist.check{list-style:none;padding-left:0}
+.article .alist.check li{position:relative;padding-left:30px}
+.article .alist.check li::before{content:'';position:absolute;left:0;top:7px;width:16px;height:16px;border-radius:50%;background:${t.primary};
+  -webkit-mask:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>') center/12px no-repeat;
+  mask:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>') center/12px no-repeat}
+.article .astats{display:grid;gap:16px;margin:26px 0;padding:24px;border-radius:14px;background:${t.panel};border:1px solid ${t.line}}
+.article .anum{font-family:${t.displayFont},sans-serif;font-weight:${t.weight};font-size:30px;color:${t.primary}}
+.article .abar{height:8px;border-radius:99px;background:${rgba(t.ink,.08)};margin:6px 0 4px;overflow:hidden}
+.article .abar i{display:block;height:100%;border-radius:99px;background:${t.primary}}
+.article .alab{font-size:14.5px;color:${t.ink2}}
+.article .acallout{margin:24px 0;padding:20px 24px;border-left:4px solid ${t.accent};background:${rgba(t.accent,.07)};border-radius:0 12px 12px 0;font-size:17px;line-height:1.6}
+.article .aquote{margin:30px 0;padding:0 0 0 22px;border-left:4px solid ${t.primary};font-family:${t.displayFont},sans-serif;font-weight:${t.weight};font-size:23px;line-height:1.4;color:${t.ink}}
+.article .aquote cite{display:block;font-family:${t.bodyFont},sans-serif;font-weight:400;font-size:15px;color:${t.ink2};margin-top:8px;font-style:normal}
+.article .atwrap{overflow-x:auto;margin:24px 0}
+.article .atable{width:100%;border-collapse:collapse;font-size:15.5px}
+.article .atable th,.article .atable td{text-align:left;padding:11px 14px;border-bottom:1px solid ${t.line}}
+.article .atable th{background:${t.panel};font-weight:600;color:${t.ink}}
+.article .atable td{color:${t.ink2}}
+.article .aimg{margin:26px 0;border-radius:14px;overflow:hidden}
+.article .aimg img{width:100%;display:block}
+.article .aimg.ph{aspect-ratio:16/9;display:grid;place-items:center;background:linear-gradient(135deg,${t.primary},${t.accent});color:#fff}
+.article .aimg.ph svg{width:56px;height:56px;opacity:.85}
+.article .aimg figcaption{font-size:13.5px;color:${t.ink2};padding:8px 4px 0}
+.article .atakeaway{margin:30px 0;padding:24px;border-radius:14px;background:${t.panel};border:1px solid ${t.line}}
+.article .atakeaway h3{margin-top:0}
+.article .aupgrade{margin:36px 0;padding:30px;border-radius:18px;background:linear-gradient(135deg,${t.primary},${t.accent});color:${onPrimary}}
+.article .autag{display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;background:rgba(255,255,255,.2);padding:5px 11px;border-radius:99px;margin-bottom:12px}
+.article .aupgrade h3{color:inherit;margin:0 0 6px;font-size:23px}
+.article .aupgrade p{color:inherit;opacity:.92;font-size:16px;margin-bottom:16px}
+.article .aupform{display:flex;gap:10px;flex-wrap:wrap}
+.article .aupform input[type=email]{flex:1;min-width:200px;padding:13px 15px;border-radius:${t.radius};border:0;font:inherit;font-size:16px}
+.article .aupform button{padding:13px 22px;border:0;border-radius:${t.radius};background:${t.bg};color:${t.ink};font-family:${t.displayFont},sans-serif;font-weight:${t.weight};font-size:16px;cursor:pointer}
+.article .aupnote{font-size:13px!important;opacity:.85;margin:10px 0 0}
+.article .aupbtn{display:inline-block;margin-top:6px;background:${t.bg};color:${t.ink};padding:13px 24px;border-radius:99px;text-decoration:none;font-weight:600}
+.article .afaq{margin-top:40px;border-top:1px solid ${t.line};padding-top:16px}
+.article .afaq details{border-bottom:1px solid ${t.line};padding:6px 0}
+.article .afaq summary{cursor:pointer;font-weight:600;font-size:17px;padding:12px 0;list-style:none}
+.article .afaq summary::-webkit-details-marker{display:none}
+.article .afaq p{padding:0 0 14px}
 .legal h2{font-size:clamp(21px,2.4vw,27px);margin:38px 0 12px;font-family:${t.displayFont},sans-serif;font-weight:${t.weight};color:${t.ink}}
 .legal h2:first-child{margin-top:0}
 .legal p{font-size:16.5px;line-height:1.72;margin-bottom:14px;color:${t.ink2}}
@@ -3980,6 +4046,12 @@ function buildSite(state,mode,pageIdx){
   ${s.legalUpdated?`<p class="lastmod">Last updated: ${esc(s.legalUpdated)}</p>`:''}
 </div></section>`;
 
+  /* ---- blog article ------------------------------------------------------
+     A rich, engagement-shaped post rendered from s.blogData. Everything is
+     CSS-only: stat bars, comparison tables, callouts, pull quotes, key-takeaway
+     boxes and an image placeholder, so the export stays script-free. The
+     content-upgrade box carries an email form that posts to the lead endpoint,
+     offering the free PDF the owner generated alongside it. */
   const servicesSection=!s.services.length?'':`
 <section id="services"${t.services!=='list'?' class="alt"':''}>
   <div class="w">
@@ -4090,6 +4162,59 @@ function buildSite(state,mode,pageIdx){
     <p class="ff wide"><button type="submit" class="b">${esc(btnLabel||s.hero.cta_text)}</button></p>
     ${mailtoForm?`<p class="ff wide fnote">This opens your email app with the details filled in.</p>`:''}
   </form>`;
+
+  const bd=s.blogData||null;
+  const artBlock=blk=>{
+    if(!blk||typeof blk!=='object') return '';
+    const T=blk.type;
+    if(T==='section') return `${isStr(blk.heading)?`<h2>${esc(blk.heading)}</h2>`:''}${String(blk.body||'').split(/\n{2,}/).filter(Boolean).map(x=>`<p>${esc(x.trim())}</p>`).join('')}`;
+    if(T==='list'){ const tag=blk.style==='number'?'ol':'ul';
+      return `${isStr(blk.heading)?`<h2>${esc(blk.heading)}</h2>`:''}<${tag} class="alist ${blk.style==='check'?'check':''}">${(blk.items||[]).map(it=>`<li>${esc(it)}</li>`).join('')}</${tag}>`; }
+    if(T==='stats'){ const mx=Math.max(1,...(blk.items||[]).map(x=>+x.value||0));
+      return `${isStr(blk.heading)?`<h2>${esc(blk.heading)}</h2>`:''}<div class="astats">${(blk.items||[]).map(x=>`
+        <div class="astat"><div class="anum">${esc(x.value)}${esc(x.suffix||'')}</div><div class="abar"><i style="width:${Math.round((+x.value||0)/mx*100)}%"></i></div><div class="alab">${esc(x.label)}</div></div>`).join('')}</div>`; }
+    if(T==='callout') return `<div class="acallout">${esc(blk.text||'')}</div>`;
+    if(T==='quote') return `<blockquote class="aquote">${esc(blk.text||'')}${blk.cite?`<cite>${esc(blk.cite)}</cite>`:''}</blockquote>`;
+    if(T==='table'){ const cols=blk.columns||[], rows=blk.rows||[];
+      return `${isStr(blk.heading)?`<h2>${esc(blk.heading)}</h2>`:''}<div class="atwrap"><table class="atable"><thead><tr>${cols.map(c=>`<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${(r||[]).map(cell=>`<td>${esc(cell)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`; }
+    if(T==='image'){ const im=mediaOf(s,'article');
+      return im.src?`<figure class="aimg"><img src="${im.src}" alt="${esc(blk.caption||bd.title||'')}" loading="lazy">${blk.caption?`<figcaption>${esc(blk.caption)}</figcaption>`:''}</figure>`
+        :`<figure class="aimg ph"${slot('article','Add an image')}>${iconSVG('camera')}${blk.caption?`<figcaption>${esc(blk.caption)}</figcaption>`:''}</figure>`; }
+    return '';
+  };
+  const readMins=bd&&bd.readMins?bd.readMins:Math.max(3,Math.round((JSON.stringify(bd||{}).length)/1400));
+  const upgradeForm=(u)=>{
+    if(!u) return '';
+    const post=formAction?` action="${esc(formAction)}" method="post"`:c.email?` action="mailto:${esc(c.email)}" method="post" enctype="text/plain"`:'';
+    return `<aside class="aupgrade">
+      <div class="autag">Free download</div>
+      <h3>${esc(u.title||'Free guide')}</h3>
+      <p>${esc(u.blurb||'')}</p>
+      ${(formAction||c.email)?`<form class="aupform"${post}>
+        <input type="email" name="email" required placeholder="Your email" autocomplete="email">
+        ${providerHidden('blog-upgrade')}
+        <input type="text" name="_gotcha" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px">
+        <button type="submit">${esc(u.cta||'Send it to me')}</button>
+      </form><p class="aupnote">We will email you the PDF. No spam.</p>`
+      :`<a class="aupbtn" href="#contact">${esc(u.cta||'Get the guide')}</a>`}
+    </aside>`;
+  };
+  const articleHTML=!bd?'':`
+<section id="article" class="article"><div class="w">
+  ${bd.category?`<div class="acat">${esc(bd.category)}</div>`:''}
+  ${ed('blogData.title','h1','atitle',bd.title||pageTitle(state,pageIdx))}
+  <div class="abyline">${esc(m.businessName)}${m.location?' · '+esc(m.location):''} · ${readMins} min read</div>
+  ${bd.intro?`<p class="alead">${esc(bd.intro)}</p>`:''}
+  ${(Array.isArray(bd.blocks)?bd.blocks:[]).map((blk,i)=>{
+    const html=artBlock(blk);
+    // drop the upgrade in after roughly the first third, where readers are hooked
+    return html;
+  }).join('')}
+  ${(bd.takeaways&&bd.takeaways.length)?`<div class="atakeaway"><h3>Key takeaways</h3><ul class="alist check">${bd.takeaways.map(t2=>`<li>${esc(t2)}</li>`).join('')}</ul></div>`:''}
+  ${upgradeForm(bd.upgrade)}
+  ${(bd.faqs&&bd.faqs.length)?`<div class="afaq"><h2>Frequently asked</h2>${bd.faqs.map(f=>`<details><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`).join('')}</div>`:''}
+</div></section>`;
+
   /* ---- opt-in exit-intent / inline pop-up --------------------------------
      The ONE place a static export gains JavaScript, and only when the owner
      turns it on AND a real endpoint exists (a pop-up posting to mailto is
@@ -4259,6 +4384,7 @@ function buildSite(state,mode,pageIdx){
      drops out on its own. Declared after heroHTML — referencing it earlier is
      a temporal dead zone error. */
   const SECTION_HTML={hero:heroHTML,stats:statsHTML,services:servicesSection,process:processHTML,
+    article:articleHTML,
     about:aboutSection,gallery:galleryHTML,reviews:reviewsSection,faq:faqHTML,areas:areasHTML,
     legal:legalHTML,contact:contactSection};
   const secCfg=s.sections||m.sections||{};
@@ -4422,6 +4548,10 @@ n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0
       itemListElement:s.services.map(sv=>({'@type':'Offer',
         itemOffered:{'@type':'Service',name:sv.title,description:sv.description}}))}};
   Object.keys(ld).forEach(k=>ld[k]===undefined&&delete ld[k]);
+  const articleLd=(s.blog&&bd)?{'@context':'https://schema.org','@type':'Article',
+    headline:bd.title||pageTitle(state,pageIdx), description:s.seo_meta_description||bd.metaDescription||'',
+    author:{'@type':'Organization',name:m.businessName}, publisher:{'@type':'Organization',name:m.businessName},
+    datePublished:(s.blogDate||new Date().toISOString().slice(0,10))}:null;
   const faqLd=faqs.length?{'@context':'https://schema.org','@type':'FAQPage',
     mainEntity:faqs.map(f=>({'@type':'Question',name:f.question,acceptedAnswer:{'@type':'Answer',text:f.answer}}))}:null;
   const year=new Date().getFullYear();
@@ -4463,6 +4593,7 @@ ${trackingTags}
 <script type="application/ld+json">${JSON.stringify(ld)}<\/script>
 ${faqLd?`<script type="application/ld+json">${JSON.stringify(faqLd)}<\/script>`:''}
 ${breadcrumbLd?`<script type="application/ld+json">${JSON.stringify(breadcrumbLd)}<\/script>`:''}
+${articleLd?`<script type="application/ld+json">${JSON.stringify(articleLd)}<\/script>`:''}
 </head>
 <body>
 <nav class="nav"><div class="w">
@@ -6069,6 +6200,8 @@ function migrate(s){
     if(typeof pg.keyword!=='string') pg.keyword='';
     if(typeof pg.contactLayout!=='string') pg.contactLayout='';
     pg.bio=pg.bio===true;
+    pg.blog=pg.blog===true;
+    if(pg.blog&&(!pg.blogData||typeof pg.blogData!=='object')) pg.blog=false;
     const mm=blankMedia(); pg.media=Object.assign(mm,pg.media||{});
     Object.keys(mm).forEach(k=>{ if(k!=='gallery'&&(!pg.media[k]||typeof pg.media[k]!=='object')) pg.media[k]={src:'',alt:'',credit:null}; });
     if(!Array.isArray(pg.media.gallery)) pg.media.gallery=[];
@@ -7550,156 +7683,118 @@ $('btnDash').onclick=openDash;
    exported HTML is self-contained and theme-styled, carries a content-upgrade
    CTA and FAQ schema, and a CSS-only stats bar when the model returns figures,
    so it needs no JavaScript. */
-let blogFormat='auto', blogData=null;
-document.querySelectorAll('#blogFmt [data-bf]').forEach(b=>b.onclick=()=>{
-  blogFormat=b.dataset.bf;
-  document.querySelectorAll('#blogFmt [data-bf]').forEach(x=>x.classList.toggle('on',x===b));
-});
-$('btnBlog').onclick=async()=>{
-  if(!siteState){ $('growthStatus').textContent='Generate a site first.'; return; }
-  if(!getKey()){ $('growthStatus').textContent='Add an API key under Settings first.'; return; }
-  $('blogFmt').style.display='flex';
-  const btn=$('btnBlog'), was=btn.textContent; btn.disabled=true; btn.textContent='Writing…';
-  $('growthStatus').textContent='Writing the blog post…';
+/* ---- BLOG POSTS (Pages panel) -------------------------------------------
+   A blog post is added to the site as a real page (pg.blog + pg.blogData),
+   rendered by the article section with CSS-only visuals. The panel suggests the
+   ten best topics for the business, writes the chosen one, and generates a
+   matching lead-magnet PDF the owner can host and deliver through the upgrade
+   form. */
+let blogTopicPick='';
+$('btnBlogIdeas').onclick=async()=>{
+  if(!siteState){ $('blogStatus').textContent='Generate a site first.'; return; }
+  if(!getKey()){ $('blogStatus').textContent='Add an API key under Settings first.'; return; }
+  const btn=$('btnBlogIdeas'), was=btn.textContent; btn.disabled=true; btn.textContent='Thinking…';
+  $('blogStatus').textContent='Finding the ten best topics for this business…'; $('blogIdeas').innerHTML='';
   const b=briefFromMeta();
-  const fmtLine=blogFormat==='auto'
-    ? 'Choose whichever of these three formats will convert best for this business: a how-to guide, a comparison, or a case study.'
-    : `Write it as a ${blogFormat.replace('-',' ')}.`;
-  const sys=`You are an SEO content writer for a small local business. Write ONE blog post that is genuinely useful and built to convert a reader into a lead, using real specifics rather than generic claims.
-
-${fmtLine}
-
-Return ONLY raw JSON:
-{"title":string,"slug":string,"metaDescription":string,"intro":string,
- "sections":[{"heading":string,"body":string}],
- "stats":[{"label":string,"value":number,"suffix":string}],
- "upgrade":{"title":string,"blurb":string,"cta":string},
- "faqs":[{"q":string,"a":string}],"keyword":string}
-
-- "title" under 65 characters, benefit-led, with the search phrase near the front.
-- "intro" is 2 to 3 sentences that promise the payoff and name who it is for.
-- "sections": 4 to 6, each "body" 2 to 4 short paragraphs (use double newlines between paragraphs). Concrete, specific to this trade and area. No filler.
-- "stats": 0 to 4 simple figures a reader would find useful, ONLY if you can derive them honestly from the brief; otherwise return []. "value" is a plain number, "suffix" like "%", "days", "" .
-- "upgrade" is a content upgrade to capture the email: a checklist or template named in "title", "blurb" one sentence, "cta" the button text.
-- "faqs": 3 to 4 real questions with 1 to 2 sentence answers.
-- Never invent prices, certifications or figures not supported by the brief.
+  const existing=Array.from({length:pageCount(siteState)},(_,i)=>pageTitle(siteState,i)).join(', ');
+  const sys=`You are an SEO content strategist for a small local business. Propose the ten best blog post topics, ranked by a mix of search demand and how well they turn a reader into a lead.
+Return ONLY raw JSON: {"topics":[{"title":string,"angle":string,"format":"how-to"|"listicle"|"comparison"|"case-study"|"guide","keyword":string}]}
+- "title" is the post title a reader would click, under 65 characters.
+- "angle" is one sentence on why it wins and who it is for.
+- Prefer high-intent, locally relevant topics over generic filler.
+- Do not repeat these existing pages: ${existing}.
 - NEVER use an em dash.`;
   try{
     const raw=await callClaude(sys,`${userPrompt(b,null,null)}\n\nReturn the JSON now.`);
-    blogData=cleanCopy(JSON.parse(stripFences(raw)));
-    renderBlog();
-    $('growthStatus').textContent='Blog post ready. Edit the draft if you like, then export.';
-  }catch(e){ $('growthStatus').textContent=e.message||'Could not write the post.'; }
+    const list=(JSON.parse(stripFences(raw)).topics||[]).filter(x=>x&&isStr(x.title)).slice(0,10);
+    if(!list.length) throw new ApiError('No topics came back.',raw);
+    $('blogIdeas').innerHTML=`<div class="sugg">${list.map((tp,i)=>
+      `<button type="button" class="suggrow" data-bi="${i}"><span class="suggt">${esc(tp.title)}</span>
+        <span class="suggw">${esc(tp.angle||'')}</span>
+        <span class="suggs">${esc(tp.format||'')}${tp.keyword?' · '+esc(tp.keyword):''}</span></button>`).join('')}</div>`;
+    $('blogIdeas').querySelectorAll('.suggrow').forEach(bt=>bt.onclick=()=>{
+      const tp=list[+bt.dataset.bi];
+      $('blogTopic').value=tp.title; blogTopicPick=tp.keyword||'';
+      if(tp.format) $('blogFmt2').value=tp.format;
+      $('blogStatus').textContent=`"${tp.title}" chosen. Press "Write & add as page".`;
+    });
+    $('blogStatus').textContent='Ten topics, ranked. Click one, then write it.';
+  }catch(e){ $('blogStatus').textContent=e.message||'Could not get topics.'; }
   finally{ btn.disabled=false; btn.textContent=was; }
 };
-function blogToMarkdown(d){
-  let out=`# ${d.title}\n\n${d.intro||''}\n\n`;
-  (d.sections||[]).forEach(s=>{ out+=`## ${s.heading}\n\n${s.body}\n\n`; });
-  if(d.upgrade) out+=`> ${d.upgrade.title}\n> ${d.upgrade.blurb} [${d.upgrade.cta}]\n\n`;
-  (d.faqs||[]).forEach(f=>{ out+=`### ${f.q}\n\n${f.a}\n\n`; });
-  return out.trim();
-}
-function markdownToBlog(md){
-  // Parse the editable draft back into the data model so edits survive export.
-  const d={title:'',intro:'',sections:[],upgrade:blogData&&blogData.upgrade,faqs:[],
-    stats:blogData?blogData.stats:[],slug:blogData?blogData.slug:'',metaDescription:blogData?blogData.metaDescription:'',keyword:blogData?blogData.keyword:''};
-  const lines=md.split(/\n/); let cur=null, intro=[];
-  lines.forEach(l=>{
-    let m;
-    if((m=l.match(/^#\s+(.*)/))){ d.title=m[1].trim(); cur='intro'; }
-    else if((m=l.match(/^##\s+(.*)/))){ cur={heading:m[1].trim(),body:''}; d.sections.push(cur); }
-    else if((m=l.match(/^###\s+(.*)/))){ cur={q:m[1].trim(),a:''}; d.faqs.push(cur); }
-    else if(l.startsWith('>')){ /* keep existing upgrade */ }
-    else { if(cur==='intro') intro.push(l);
-      else if(cur&&'body' in cur) cur.body+=(cur.body?'\n':'')+l;
-      else if(cur&&'a' in cur) cur.a+=(cur.a?'\n':'')+l; }
-  });
-  d.intro=intro.join('\n').trim();
-  d.sections.forEach(s=>s.body=s.body.trim());
-  d.faqs.forEach(f=>f.a=f.a.trim());
-  return d;
-}
-function renderBlog(){
-  const d=blogData; if(!d) return;
-  const esc2=x=>esc(String(x==null?'':x));
-  const box=(h,inner)=>`<div class="gout"><h5>${h}</h5>${inner}</div>`;
-  let html=box('Draft (editable)',`<textarea id="blogDraft" rows="14" style="width:100%;font-size:12.5px;line-height:1.5" spellcheck="false"></textarea>
-    <div class="tiny" style="margin-top:6px">Markdown-style. Edits here flow into both exports.</div>`);
-  html+=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
-    <button class="mini" id="blogHtml" type="button">Download as HTML</button>
-    <button class="mini" id="blogPdf" type="button">Download as PDF</button>
-    <button class="mini" id="blogRewrite" type="button">✨ Rewrite</button></div>`;
-  $('growthOut').innerHTML=html;
-  $('blogDraft').value=blogToMarkdown(d);
-  const sync=()=>{ blogData=markdownToBlog($('blogDraft').value); };
-  $('blogDraft').addEventListener('input',sync);
-  $('blogHtml').onclick=()=>{ sync(); const slug=slugify(blogData.slug||blogData.title,'post');
-    saveBlob(new Blob([blogHTML(blogData,siteState)],{type:'text/html'}),`${slug}.html`); };
-  $('blogPdf').onclick=()=>{ sync(); const slug=slugify(blogData.slug||blogData.title,'post');
-    saveBlob(makeLeadPdf(blogToPdfData(blogData),dashState()),`${slug}.pdf`); };
-  $('blogRewrite').onclick=()=>$('btnBlog').click();
-}
-function blogToPdfData(d){
-  return {title:d.title,subtitle:'',intro:d.intro,
-    sections:(d.sections||[]).map(s=>({heading:s.heading,type:'prose',body:s.body}))
-      .concat((d.faqs||[]).length?[{heading:'FAQ',type:'prose',body:(d.faqs||[]).map(f=>f.q+'\n'+f.a).join('\n\n')}]:[]),
-    cta:d.upgrade?d.upgrade.title+' — '+d.upgrade.cta:'',filename:slugify(d.slug||d.title,'post')};
-}
-function blogHTML(d,state){
-  const m=state.meta, t=resolveTheme(m.theme), c=m.contact||{};
-  const useSys=prefs.systemFonts;
-  const disp=useSys?t.sysDisplay:`'${(t.display||'').replace(/'/g,'')}',${t.sysDisplay}`;
-  const body=useSys?t.sysBody:`'${(t.body||'').replace(/'/g,'')}',${t.sysBody}`;
-  const fontLink=(!useSys&&t.google)?`<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=${t.google}&display=swap">`:'';
-  const para=x=>String(x||'').split(/\n{2,}/).map(pp=>`<p>${esc(pp.trim())}</p>`).join('');
-  const maxV=Math.max(1,...(d.stats||[]).map(s=>+s.value||0));
-  const statsHTML=(d.stats&&d.stats.length)?`<div class="bstats">${d.stats.map(s=>`
-    <div class="bstat"><div class="bnum">${esc(s.value)}${esc(s.suffix||'')}</div>
-      <div class="bbar"><i style="width:${Math.round((+s.value||0)/maxV*100)}%"></i></div>
-      <div class="blab">${esc(s.label)}</div></div>`).join('')}</div>`:'';
-  const faqLd=(d.faqs&&d.faqs.length)?`<script type="application/ld+json">${JSON.stringify({'@context':'https://schema.org','@type':'FAQPage',mainEntity:d.faqs.map(f=>({'@type':'Question',name:f.q,acceptedAnswer:{'@type':'Answer',text:f.a}}))})}<\/script>`:'';
-  const artLd=`<script type="application/ld+json">${JSON.stringify({'@context':'https://schema.org','@type':'Article',headline:d.title,description:d.metaDescription||'',author:{'@type':'Organization',name:m.businessName},publisher:{'@type':'Organization',name:m.businessName},datePublished:new Date().toISOString().slice(0,10)})}<\/script>`;
-  const cta=c.book?esc(c.book):c.phone?telHref(c.phone):c.email?'mailto:'+esc(c.email):'#';
-  return `<!DOCTYPE html>
-<html lang="${(LOCALES[m.locale]&&LOCALES[m.locale].tag)||'en'}">
-<head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(d.title)}</title>
-<meta name="description" content="${esc(d.metaDescription||'')}">
-${fontLink}
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:${t.bg};color:${t.ink};font-family:${body};line-height:1.7;font-size:18px}
-.wrap{max-width:720px;margin:0 auto;padding:56px 22px}
-h1{font-family:${disp};font-weight:${t.weight};font-size:clamp(28px,5vw,40px);line-height:1.15;margin-bottom:18px;${t.caps?'text-transform:uppercase;':''}}
-h2{font-family:${disp};font-weight:${t.weight};font-size:clamp(22px,3vw,27px);margin:38px 0 12px}
-h3{font-size:20px;margin:26px 0 8px}
-p{margin-bottom:16px;color:${t.ink2}}
-.lead{font-size:20px;color:${t.ink};margin-bottom:28px}
-.bstats{display:grid;gap:16px;margin:30px 0;padding:24px;border-radius:14px;background:${t.panel};border:1px solid ${t.line}}
-.bnum{font-family:${disp};font-weight:${t.weight};font-size:28px;color:${t.primary}}
-.bbar{height:8px;border-radius:99px;background:${rgba(t.ink,.08)};margin:6px 0 4px;overflow:hidden}
-.bbar i{display:block;height:100%;border-radius:99px;background:${t.primary}}
-.blab{font-size:14px;color:${t.ink2}}
-.upgrade{margin:36px 0;padding:28px;border-radius:16px;background:linear-gradient(135deg,${t.primary},${t.accent});color:${bestOn(t.primary)}}
-.upgrade h3{color:inherit;margin-top:0;font-size:22px}
-.upgrade p{color:inherit;opacity:.92}
-.upgrade a{display:inline-block;margin-top:10px;background:${t.bg};color:${t.ink};padding:12px 22px;border-radius:99px;text-decoration:none;font-weight:600}
-.faq{margin-top:40px;border-top:1px solid ${t.line};padding-top:20px}
-.byline{font-size:14px;color:${t.ink2};margin-bottom:30px}
-</style>${artLd}${faqLd}
-</head>
-<body><article class="wrap">
-  <h1>${esc(d.title)}</h1>
-  <div class="byline">${esc(m.businessName)}${m.location?' · '+esc(m.location):''}</div>
-  ${d.intro?`<p class="lead">${esc(d.intro)}</p>`:''}
-  ${statsHTML}
-  ${(d.sections||[]).map(sec=>`<h2>${esc(sec.heading)}</h2>${para(sec.body)}`).join('')}
-  ${d.upgrade?`<div class="upgrade"><h3>${esc(d.upgrade.title)}</h3><p>${esc(d.upgrade.blurb)}</p><a href="${cta}">${esc(d.upgrade.cta)}</a></div>`:''}
-  ${(d.faqs&&d.faqs.length)?`<div class="faq"><h2>Questions</h2>${d.faqs.map(f=>`<h3>${esc(f.q)}</h3><p>${esc(f.a)}</p>`).join('')}</div>`:''}
-</article></body>
-</html>`;
-}
+
+$('btnBlogWrite').onclick=async()=>{
+  if(!siteState){ $('blogStatus').textContent='Generate a site first.'; return; }
+  if(!getKey()){ $('blogStatus').textContent='Add an API key under Settings first.'; return; }
+  if(pageCount(siteState)>=PAGE_CAP){ $('blogStatus').textContent=`Limit is ${PAGE_CAP} pages.`; return; }
+  const btn=$('btnBlogWrite'), was=btn.textContent; btn.disabled=true; btn.textContent='Writing…';
+  const topic=$('blogTopic').value.trim(), fmt=$('blogFmt2').value;
+  $('blogStatus').textContent='Writing the post and building the lead magnet…';
+  const b=briefFromMeta();
+  const fmtLine=fmt==='auto'?'Choose whichever format converts best: how-to, top-10 list, comparison, case study or ultimate guide.':`Write it as a ${fmt.replace('-',' ')}.`;
+  const sys=`You are an SEO content writer for a small local business. Write ONE engaging, genuinely useful blog post built to convert a reader into a lead, using real specifics rather than generic claims.
+${fmtLine}
+${topic?`The topic is: "${topic}".`:'Pick the single best topic for this business.'}
+
+Return ONLY raw JSON:
+{"title":string,"category":string,"slug":string,"metaDescription":string,"readMins":number,"intro":string,
+ "blocks":[ ONE OR MORE OF:
+   {"type":"section","heading":string,"body":string},
+   {"type":"list","style":"bullet"|"number"|"check","heading":string,"items":[string]},
+   {"type":"stats","heading":string,"items":[{"label":string,"value":number,"suffix":string}]},
+   {"type":"callout","text":string},
+   {"type":"quote","text":string,"cite":string},
+   {"type":"table","heading":string,"columns":[string],"rows":[[string]]},
+   {"type":"image","caption":string} ],
+ "takeaways":[string],
+ "upgrade":{"title":string,"blurb":string,"cta":string},
+ "faqs":[{"q":string,"a":string}],
+ "leadMagnet":{"title":string,"subtitle":string,"intro":string,"sections":[{"heading":string,"type":"checklist"|"tips"|"prose","body":string,"items":[string]}]}}
+
+- 6 to 9 blocks, MIXING types for engagement: prose sections, a stat block, at least one list, a callout or quote, and where it genuinely helps a comparison table and one image placeholder.
+- "body" fields: 2 to 4 short paragraphs separated by double newlines. Concrete and specific to this trade and area.
+- "stats" values must be honest numbers derivable from the brief, or plausible category figures a reader would recognise; never fabricate this business's own results.
+- "upgrade" is the content upgrade that captures the email: name a specific free PDF the reader wants.
+- "leadMagnet" is that PDF's actual content: a checklist or short guide, 3 to 4 sections. This is what the reader downloads.
+- "faqs": 3 to 5 real questions.
+- "title" under 65 characters, search phrase near the front. "readMins" a small integer.
+- Never invent prices, certifications or figures not supported by the brief. NEVER use an em dash.
+${LOCALES[b.locale].promptHint}`;
+  try{
+    const raw=await callClaude(sys,`${userPrompt(b,null,null)}\n\nReturn the JSON now.`);
+    const d=cleanCopy(JSON.parse(stripFences(raw)));
+    if(!isStr(d.title)||!Array.isArray(d.blocks)) throw new ApiError('The post came back incomplete.',raw);
+    const title=d.title.trim();
+    const pg=blankPage(title,siteState);
+    pg.blog=true; pg.blogData=d; pg.inNav=true;
+    pg.slug=uniqueSlug(siteState,d.slug||title);
+    pg.blogDate=new Date().toISOString().slice(0,10);
+    pg.hero={headline:title,subheadline:d.metaDescription||'',cta_text:(siteState.hero&&siteState.hero.cta_text)||'Get in touch'};
+    pg.seo_title=`${title} | ${siteState.meta.businessName}`;
+    pg.seo_meta_description=(d.metaDescription||'').slice(0,160);
+    pg.keyword=blogTopicPick||d.keyword||'';
+    pg.page_intent='informational';
+    // Blog pages show only the article and the closing CTA.
+    pg.sections={order:['article','contact',...SECTION_ORDER.filter(k=>!['article','contact'].includes(k))],
+                 hidden:SECTION_ORDER.filter(k=>!['article','contact'].includes(k))};
+    pg.headings={contact:{h:'Ready to talk?'}};
+    pg.services=[];pg.testimonials=[];pg.faqs=[];pg.stats=[];pg.process=[];pg.areas=[];pg.about='';
+    pg.contact_cta=`Enjoyed this? ${siteState.meta.contact.phone?'Call '+siteState.meta.contact.phone+' or ':''}get in touch and we will help.`;
+    siteState.pages=siteState.pages||[]; siteState.pages.push(pg);
+    gotoPage(pageCount(siteState)-1);
+    renderPages(); renderPreview(); renderChecks(); renderTips(); pushHistory(siteState); lastShareURL='';
+    // companion lead-magnet PDF, if the model wrote one
+    if(d.leadMagnet&&Array.isArray(d.leadMagnet.sections)){
+      const lm=Object.assign({filename:slugify(pg.slug,'guide')},d.leadMagnet);
+      lm.cta=(d.upgrade&&d.upgrade.cta)||'Get in touch';
+      window.__blogPdf=()=>saveBlob(makeLeadPdf(lm,siteState),`${slugify(pg.slug,'guide')}.pdf`);
+    } else window.__blogPdf=null;
+    $('blogStatus').innerHTML=`"${esc(title)}" added as a page with ${(d.blocks||[]).length} content blocks.`
+      +(window.__blogPdf?` <button class="mini" id="blogGetPdf" type="button">Download the lead-magnet PDF</button>`:'');
+    const gp=$('blogGetPdf'); if(gp) gp.onclick=()=>window.__blogPdf&&window.__blogPdf();
+  }catch(e){ $('blogStatus').textContent=e.message||'Could not write the post.'; }
+  finally{ btn.disabled=false; btn.textContent=was; }
+};
 
 
 $('btnOgImage').onclick=()=>{
@@ -8815,6 +8910,7 @@ function sectionHasContent(k){
     case 'faq':     return (s.faqs||[]).length>0;
     case 'gallery': return ((s.media&&s.media.gallery)||[]).length>0;
     case 'legal':   return (s.legalBody||[]).length>0;
+    case 'article': return !!(s.blogData&&Array.isArray(s.blogData.blocks)&&s.blogData.blocks.length);
     default: return true;
   }
 }
