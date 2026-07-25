@@ -1917,7 +1917,25 @@ const FALLBACK_ICON='sparkles';
 const PAGE_CAP=50;
 const pageOf=(st,i)=>(!i?st:(st.pages||[])[i-1])||st;
 const pageCount=st=>1+((st&&st.pages||[]).length);
-const slugify=(s,fallback)=>String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40)||fallback||'page';
+/* Trim on a word boundary, not a character count. Slicing blindly at 40 turned
+   "…fixed-fee-vs-hourly-billing" into "…fixed-fee-vs-ho", which is what the
+   visitor sees in the address bar, what the file is called in the ZIP, and what
+   the lead-magnet PDF inherits. Falling back to the hard slice keeps a single
+   very long word from returning an empty slug. */
+const slugify=(s,fallback)=>{
+  /* Fold accents to ASCII first. Stripping them as punctuation turned Kāpiti
+     into "k-piti" and Ōtaki into "-taki", which matters here: macrons are
+     ordinary in New Zealand place and business names. */
+  const base=String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'')
+    // NFD splits a letter from its accent, but these are separate letters with
+    // no accent to strip, so they need naming outright.
+    .replace(/ø/gi,'o').replace(/æ/gi,'ae').replace(/œ/gi,'oe')
+    .replace(/đ|ð/gi,'d').replace(/þ/gi,'th').replace(/ß/g,'ss').replace(/ł/gi,'l')
+    .toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+  if(base.length<=40) return base||fallback||'page';
+  const cut=base.slice(0,40), at=cut.lastIndexOf('-');
+  return (at>=12?cut.slice(0,at):cut).replace(/-+$/,'')||fallback||'page';
+};
 /* Blog posts always live under /blog/, which is what people expect and what
    keeps a growing archive from cluttering the site root. Everything else stays
    flat at the top level. */
@@ -5190,6 +5208,21 @@ function renderChecks(){
   const p=siteState.palette||{primary:t.primary,accent:t.accent,background:t.bg};
   items.push({ok:true,title:'AI colour suggestion (not applied)',body:
     `Claude proposed <code>${p.primary}</code> / <code>${p.accent}</code> on <code>${p.background}</code> (${contrast(p.primary,p.background).toFixed(2)}:1 and ${contrast(p.accent,p.background).toFixed(2)}:1). Themes ship hand-tuned palettes instead, so this is reference only.`});
+  /* A Blog link in the nav that leads to a page listing no posts is the kind of
+     thing you only notice after handing the site over, so say it here. */
+  const posts=blogPosts(siteState), bi=blogIndexIdx(siteState);
+  if(posts.length||bi!==undefined){
+    const ip=bi!==undefined?pageOf(siteState,bi):null;
+    const listOn=ip&&!(ip.sections&&(ip.sections.hidden||[]).includes('article'));
+    items.push({ok:!!(ip&&listOn&&posts.length),title:'Blog index',
+      body: !ip
+        ? `You have <b>${posts.length}</b> post${posts.length===1?'':'s'} but no Blog page, so nothing links to ${posts.length===1?'it':'them'}. Reload the app and one is created for you.`
+        : !posts.length
+          ? 'The Blog page exists but there are no posts yet, so it will render an empty list. Write one from the Growth kit.'
+          : !listOn
+            ? `The <b>Blog article</b> section is switched off on your Blog page, so it shows no posts even though you have <b>${posts.length}</b>. Turn it back on under Sections while that page is open.`
+            : `<b>${posts.length}</b> post${posts.length===1?'':'s'} listed on the Blog page, each under <code>/blog/</code>.`});
+  }
   const c=siteState.meta.contact||{};
   const missing=[]; if(!c.phone)missing.push('phone'); if(!c.email)missing.push('email');
   if(!c.area)missing.push('service area'); if(!c.hours)missing.push('hours');
@@ -9487,7 +9520,14 @@ function sectionHasContent(k){
     case 'faq':     return (s.faqs||[]).length>0;
     case 'gallery': return ((s.media&&s.media.gallery)||[]).length>0;
     case 'legal':   return (s.legalBody||[]).length>0;
-    case 'article': return !!(s.blogData&&Array.isArray(s.blogData.blocks)&&s.blogData.blocks.length);
+    /* On a blog index the article slot holds the list of posts, not an article,
+       so it has no blogData and was reported as empty. The panel then told the
+       owner their post list had nothing in it, which invites switching it off —
+       and a Blog page with the list switched off still says Blog in the nav
+       while showing no posts at all. */
+    case 'article': return pageOf(siteState,currentPage).blogIndex
+      ? blogPosts(siteState).length>0
+      : !!(s.blogData&&Array.isArray(s.blogData.blocks)&&s.blogData.blocks.length);
     case 'video':   return !!(s.video&&s.video.url);
     default: return true;
   }
