@@ -221,7 +221,19 @@ header .spacer{flex:1}
 .col{min-height:0;overflow-y:auto;overflow-x:hidden}
 .rail{border-right:1px solid var(--stroke);padding:12px 10px;transition:opacity .2s}
 .app.norail .rail{opacity:0;pointer-events:none;padding:0}
-.panel{border-right:1px solid var(--stroke);padding:14px 14px 24px;position:relative;background:var(--bg)}
+.panel{border-right:1px solid var(--stroke);padding:12px 12px 24px;position:relative;background:var(--bg)}
+/* Quick filter. Eleven sections is a lot to scan; typing here shows only the
+   matching ones and opens them, which beats scrolling for the panel you want. */
+.secfind{position:sticky;top:0;z-index:5;margin:-12px -12px 8px;padding:10px 12px;background:var(--bg);
+  border-bottom:1px solid var(--stroke)}
+.secfind input{width:100%;padding:8px 11px 8px 30px;font-size:13px;border-radius:var(--r-pill);
+  background:var(--fill);border:1px solid transparent}
+.secfind input:focus{background:var(--surface);border-color:var(--accent)}
+.secfind .mag{position:absolute;left:22px;top:50%;transform:translateY(-50%);width:14px;height:14px;
+  opacity:.5;pointer-events:none;stroke:var(--txt-3);fill:none;stroke-width:2}
+.sec.filtered{display:none}
+.secfind .fcount{font-size:11px;color:var(--txt-3);padding:4px 2px 0;display:none}
+.secfind.on .fcount{display:block}
 .work{display:flex;flex-direction:column;min-height:0;overflow:hidden;background:var(--surface-2)}
 
 /* ---------- rail ---------- */
@@ -235,29 +247,33 @@ header .spacer{flex:1}
 .hist-empty{padding:20px 10px;font-size:12.5px;color:var(--txt-3);text-align:center;line-height:1.6}
 
 /* ---------- panel sections ---------- */
-.sec{border:1px solid var(--stroke);border-radius:var(--r-card);margin-bottom:10px;background:var(--surface);overflow:hidden;box-shadow:var(--shadow)}
-.sec>summary{padding:13px 15px;cursor:pointer;font-size:14px;font-weight:600;list-style:none;display:flex;align-items:center;gap:9px;user-select:none;letter-spacing:-.018em}
+/* ---------- density ----------
+   The panel grew to eleven sections and ~14,000px when fully expanded. This
+   tightens the vertical rhythm everywhere without shrinking a single control's
+   hit area below ~32px, so nothing gets harder to tap. */
+.sec{border:1px solid var(--stroke);border-radius:var(--r-card);margin-bottom:7px;background:var(--surface);overflow:hidden;box-shadow:var(--shadow)}
+.sec>summary{padding:10px 14px;cursor:pointer;font-size:13.5px;font-weight:600;list-style:none;display:flex;align-items:center;gap:9px;user-select:none;letter-spacing:-.018em}
 .sec>summary::-webkit-details-marker{display:none}
 .sec>summary::before{content:'';width:6px;height:6px;border-right:1.7px solid var(--txt-3);border-bottom:1.7px solid var(--txt-3);transform:rotate(-45deg);transition:transform .25s var(--ease);flex:none;margin-left:2px}
 .sec[open]>summary::before{transform:rotate(45deg)}
 .sec>summary .tag{margin-left:auto;font-size:11px;font-weight:500;padding:2.5px 9px;border-radius:var(--r-pill);background:var(--fill);color:var(--txt-3)}
 .sec>summary .tag.ok{color:var(--good);background:var(--good-bg)}
 .sec>summary .tag.need{color:var(--warn);background:var(--warn-bg)}
-.sec .body{padding:2px 15px 16px;display:grid;gap:13px}
-.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.sec .body{padding:2px 14px 13px;display:grid;gap:10px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 
-.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
 label{font-size:12px;font-weight:500;color:var(--txt-2);display:flex;align-items:center;gap:5px}
 label .opt{font-weight:400;color:var(--txt-3);font-size:11.5px}
-input[type=text],input[type=password],textarea,select{
-  width:100%;padding:9px 11px;border-radius:var(--r-fld);
+input[type=text],input[type=password],input[type=email],input[type=url],input[type=tel],input[type=search],textarea,select{
+  width:100%;padding:8px 11px;border-radius:var(--r-fld);
   background:var(--bg);border:1px solid var(--stroke);
   transition:border-color .18s var(--ease),box-shadow .18s var(--ease);outline:none;font-size:13.5px;
 }
 :root[data-theme="dark"] input,:root[data-theme="dark"] textarea,:root[data-theme="dark"] select{background:#000}
 input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 4px var(--ring)}
 input::placeholder,textarea::placeholder{color:var(--txt-3);opacity:.75}
-textarea{resize:vertical;min-height:78px;line-height:1.5}
+textarea{resize:vertical;min-height:66px;line-height:1.45}
 select{appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%236e6e73' stroke-width='2.6' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 11px center;padding-right:32px}
 .chips{display:flex;gap:6px;flex-wrap:wrap}
 .chip{padding:6px 13px;border-radius:var(--r-pill);font-size:12.5px;font-weight:500;border:1px solid var(--stroke);background:var(--surface);transition:all .18s var(--ease)}
@@ -304,7 +320,7 @@ select{appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%
 .gout .gitem{padding:7px 0;border-bottom:1px solid var(--stroke);font-size:12.5px}
 .gout .gitem:last-child{border-bottom:0}
 .gout .gmeta{font-size:10.5px;color:var(--txt-3)}
-.cxgridpick{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.cxgridpick{display:grid;grid-template-columns:1fr 1fr;gap:6px;max-height:250px;overflow-y:auto;padding:2px;margin:-2px;scrollbar-width:thin;align-content:start;grid-auto-rows:min-content}
 .cxbtn{padding:9px 11px;border-radius:10px;border:1px solid var(--stroke);background:var(--surface);
   text-align:left;font-size:12px;transition:all .16s var(--ease)}
 .cxbtn:hover{background:var(--fill)}
@@ -312,31 +328,46 @@ select{appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%
 .cxbtn b{display:block;font-size:12.5px;font-weight:600}
 .cxbtn span{display:block;font-size:10.5px;color:var(--txt-3);margin-top:2px;line-height:1.35}
 .cxbtn.on span{color:var(--accent);opacity:.8}
-.legalbox,.leadbox{margin-top:14px;padding:13px;border:1px solid var(--stroke);border-radius:12px;background:var(--surface-2)}
+.legalbox,.leadbox{margin-top:10px;padding:11px;border:1px solid var(--stroke);border-radius:12px;background:var(--surface-2)}
 .legalwarn{margin-top:9px;padding:8px 10px;border-radius:8px;background:color-mix(in srgb,var(--warn) 12%,transparent);
   color:var(--warn);line-height:1.55}
 
 /* theme cards */
-.themes{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+/* 36 themes at two columns ran to ~4000px, a third of the whole panel. Three
+   tighter columns in a capped, internally scrolling box keeps every theme
+   reachable while the section itself stays a sensible height. */
+/* align-content:start and min-content rows are load-bearing: without them a
+   grid inside a capped box shares the height between rows and squashes every
+   card to a couple of pixels instead of overflowing into a scroll. */
+.themes{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;max-height:270px;overflow-y:auto;
+  padding:2px;margin:-2px;scrollbar-width:thin;align-content:start;grid-auto-rows:min-content}
 .theme{padding:0;border-radius:13px;border:1px solid var(--stroke);background:var(--surface);overflow:hidden;text-align:left;transition:all .2s var(--ease)}
 .theme:hover{border-color:var(--stroke-2);transform:translateY(-1px);box-shadow:var(--shadow)}
 .theme.on{border-color:var(--accent);box-shadow:0 0 0 3px var(--ring)}
-.swatch{height:44px;display:flex;align-items:flex-end;gap:4px;padding:7px 9px;position:relative}
+.swatch{height:34px;display:flex;align-items:flex-end;gap:3px;padding:5px 7px;position:relative}
 .swatch i{width:13px;height:13px;border-radius:3px;display:block}
 .swatch em{position:absolute;top:6px;left:9px;font-style:normal;font-size:14px;font-weight:700;letter-spacing:-.03em}
-.theme-meta{padding:8px 10px 10px;border-top:1px solid var(--stroke)}
-.theme-name{font-size:12.5px;font-weight:600;letter-spacing:-.015em}
-.theme-for{font-size:10.5px;color:var(--txt-3);margin-top:1px;line-height:1.35}
+.theme-meta{padding:6px 8px 7px;border-top:1px solid var(--stroke)}
+.theme-name{font-size:11.5px;font-weight:600;letter-spacing:-.015em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.theme-for{font-size:9.5px;color:var(--txt-3);margin-top:1px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 
 /* switch — Apple/iOS proportions */
-.row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .row .lbl{font-size:12.5px;color:var(--txt-3);line-height:1.45}
 .row .lbl b{color:var(--txt);display:block;font-size:13.5px;font-weight:500;letter-spacing:-.015em;margin-bottom:1px}
 .switch{width:46px;height:28px;border-radius:var(--r-pill);background:var(--fill-2);position:relative;flex:none;transition:background .28s var(--ease);border:1px solid transparent}
 .switch::after{content:'';position:absolute;top:2px;left:2px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.2);transition:transform .28s var(--ease)}
 .switch.on{background:var(--accent)}
 .switch.on::after{transform:translateX(18px)}
-.tiny{font-size:11.5px;color:var(--txt-3);line-height:1.55}
+.tiny{font-size:11.5px;color:var(--txt-3);line-height:1.5}
+/* Long help text is the single biggest source of panel height. Clamp it to two
+   lines and let a click expand it, so the guidance is still there for anyone
+   who wants it but does not push every control down the page. */
+.tiny.clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer;position:relative}
+.tiny.clamp::after{content:'more';position:absolute;right:0;bottom:0;padding-left:16px;font-weight:600;color:var(--accent);
+  background:linear-gradient(90deg,transparent,var(--surface) 40%)}
+.tiny.clamp.open{display:block;-webkit-line-clamp:unset;cursor:default}
+.tiny.clamp.open::after{content:none}
 .tiny code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--fill);padding:1px 5px;border-radius:4px;font-size:11px}
 .logo-prev{width:38px;height:38px;border-radius:9px;object-fit:cover;border:1px solid var(--stroke)}
 .mini{padding:6px 13px;border-radius:var(--r-pill);font-size:12.5px;font-weight:500;border:1px solid var(--stroke);background:var(--surface);transition:all .18s var(--ease)}
@@ -707,6 +738,11 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
 
   <!-- ===== COLUMN 2 — everything you control ===== -->
   <section class="col panel" id="panel">
+    <div class="secfind" id="secFindWrap">
+      <svg class="mag" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input type="search" id="panelFind" placeholder="Find a setting… (business, blog, video, SEO, leads)" autocomplete="off" aria-label="Filter panel sections">
+      <div class="fcount" id="panelFindCount"></div>
+    </div>
     <div id="errSlot"></div>
     <div id="keyNotice" class="notice notice-warn hidden" style="margin-bottom:10px">
       <svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
@@ -845,7 +881,7 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
       </div>
     </details>
 
-    <details class="sec" id="secPages" open>
+    <details class="sec" id="secPages">
       <summary>Pages <span class="tag" id="tagPages">1</span></summary>
       <div class="body">
         <div class="tiny">One page exports as a single HTML file. Two or more export as a ZIP of linked pages — up to <b>50</b>.</div>
@@ -6766,6 +6802,48 @@ $('btnVidClear').onclick=()=>{
   $('vidUrl').value=''; $('vidCaption').value='';
   $('vidStatus').textContent='Video removed from this page.';
 };
+
+/* ---- panel quick filter ----
+   Matches a section by its title AND the text of everything inside it, so
+   "video", "leads", "stripe" or "schema" all land on the right panel. Matching
+   sections open automatically; clearing restores whatever was open before. */
+(()=>{
+  // Clamp only genuinely long notes; short ones read better in full.
+  document.querySelectorAll('#panel .sec .body .tiny').forEach(el=>{
+    if(el.id||el.querySelector('button,input,a')) return;      // leave status lines and interactive notes alone
+    if((el.textContent||'').trim().length<110) return;
+    el.classList.add('clamp');
+    el.addEventListener('click',()=>el.classList.toggle('open'));
+  });
+})();
+(()=>{
+  const inp=$('panelFind'), wrap=$('secFindWrap'), count=$('panelFindCount');
+  if(!inp) return;
+  const secs=()=>[...document.querySelectorAll('#panel details.sec')];
+  let preOpen=null;
+  inp.addEventListener('input',()=>{
+    const q=inp.value.trim().toLowerCase();
+    const list=secs();
+    if(!q){
+      wrap.classList.remove('on');
+      list.forEach((d,i)=>{ d.classList.remove('filtered'); if(preOpen) d.open=!!preOpen[i]; });
+      preOpen=null; return;
+    }
+    if(!preOpen) preOpen=list.map(d=>d.open);
+    let hits=0;
+    list.forEach(d=>{
+      const extra=[...d.querySelectorAll('[placeholder],[title],[data-tip]')]
+        .map(el=>(el.getAttribute('placeholder')||'')+' '+(el.getAttribute('title')||'')+' '+(el.getAttribute('data-tip')||'')).join(' ');
+      const hay=((d.querySelector('summary')||{}).textContent+' '+d.textContent+' '+extra).toLowerCase();
+      const hit=hay.includes(q);
+      d.classList.toggle('filtered',!hit);
+      if(hit){ d.open=true; hits++; }
+    });
+    wrap.classList.add('on');
+    count.textContent=hits?`${hits} section${hits===1?'':'s'} match “${inp.value.trim()}”.`:`Nothing matches “${inp.value.trim()}”.`;
+  });
+  inp.addEventListener('keydown',e=>{ if(e.key==='Escape'){ inp.value=''; inp.dispatchEvent(new Event('input')); } });
+})();
 
 $('secFind').addEventListener('input',renderSections);
 $('secFind').addEventListener('search',renderSections);
