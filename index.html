@@ -1168,7 +1168,7 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
           <label>Sell the theme <span class="opt">white-label</span>
             <span class="help" data-tip="The app is free to use; the theme download is gated behind a licence passcode. Add your own Stripe or PayPal payment link here so buyers can pay, then you give them the passcode. This is a soft gate, not DRM: anyone who opens the file can read the passcode.">?</span></label>
           <input type="url" id="sellBuy" placeholder="Your Stripe or PayPal payment link">
-          <input type="text" id="sellPrice" placeholder="Price label, e.g. $25" style="margin-top:6px" maxlength="12">
+          <input type="text" id="sellPrice" placeholder="Price label, e.g. $49" style="margin-top:6px" maxlength="12">
           <div class="tiny">Buyers pay through your link and you share the licence passcode with them. The passcode is set in the code (currently the one you chose).</div>
         </div>
       </div>
@@ -6627,7 +6627,7 @@ const DL_PIN='122133';                       // admin / licence passcode
 function dlUnlocked(){ try{ return localStorage.getItem('instantsite_dl')==='1'; }catch{ return false; } }
 function paywall(){
   const cfg=(()=>{ try{ return JSON.parse(localStorage.getItem('instantsite_sell')||'{}'); }catch{ return {}; } })();
-  const price=cfg.price||'$25', buy=(cfg.buy||'').trim();
+  const price=cfg.price||'$49', buy=(cfg.buy||'').trim();
   const wrap=document.createElement('div'); wrap.id='payModal';
   wrap.innerHTML=`<div class="paycard">
     <button class="dashx" id="payX" aria-label="Close">&times;</button>
