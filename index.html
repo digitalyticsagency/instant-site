@@ -1164,7 +1164,7 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
           <div class="tiny" id="trackNote"></div>
         </div>
 
-        <div class="field">
+        <div class="field" id="sellField">
           <label>Sell the theme <span class="opt">white-label</span>
             <span class="help" data-tip="The app is free to use; the theme download is gated behind a licence passcode. Add your own Stripe or PayPal payment link here so buyers can pay, then you give them the passcode. This is a soft gate, not DRM: anyone who opens the file can read the passcode.">?</span></label>
           <input type="url" id="sellBuy" placeholder="Your Stripe or PayPal payment link">
@@ -1208,7 +1208,7 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
           <div class="tiny">All optional. Prospecting works with none of them via OpenStreetMap.</div>
           <div class="tiny">Free keys from <a href="https://www.pexels.com/api/" target="_blank" rel="noopener">pexels.com/api</a> and <a href="https://unsplash.com/developers" target="_blank" rel="noopener">unsplash.com/developers</a>. Both optional, photo search works without them.</div>
         </div>
-        <div class="field">
+        <div class="field" id="workspaceField">
           <label>Workspace</label>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
             <button class="mini" id="btnExportAll" type="button" title="Download every saved site, your preferences and your white-label settings as one .json backup.">Back up everything</button>
@@ -1247,7 +1247,7 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
           <div class="lbl"><b>System fonts only</b>Drops Google Fonts from exports — zero external requests.</div>
           <div class="switch" id="fontSwitch" role="switch" tabindex="0"></div>
         </div>
-        <div class="row">
+        <div class="row" id="wlRow">
           <div class="lbl"><b>White-label mode</b>Your agency's name in the header. Exports carry no Instant Site branding either way.</div>
           <div class="switch" id="wlSwitch" role="switch" tabindex="0"></div>
         </div>
@@ -1903,13 +1903,18 @@ const slugify=(s,fallback)=>String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,'-
 const pageHref=(st,i)=>{
   if(i===0) return 'index.html';
   const pg=pageOf(st,i), slug=pg.slug||'page';
+  if(pg.blogIndex) return 'blog/index.html';
   return pg.blog?`blog/${slug}.html`:`${slug}.html`;
 };
 // Depth-aware prefix so a page inside /blog/ can still link back to the root.
 const pageRel=(st,from,to)=>{
-  const up=pageOf(st,from).blog?'../':'';
+  const f=pageOf(st,from);
+  const up=(f.blog||f.blogIndex)?'../':'';
   return up+pageHref(st,to);
 };
+const isBlogPost=pg=>!!(pg&&pg.blog&&!pg.blogIndex);
+const blogPosts=st=>Array.from({length:pageCount(st)},(_,i)=>i).filter(i=>isBlogPost(pageOf(st,i)));
+const blogIndexIdx=st=>Array.from({length:pageCount(st)},(_,i)=>i).find(i=>pageOf(st,i).blogIndex&&i!==0);
 const pageTitle=(st,i)=>i===0?'Home':(pageOf(st,i).title||'Untitled');
 /* A nav bar is not a heading. A blog title like "7 Warning Signs Your Home
    Needs Rewiring Now" is exactly right in <h1> and exactly wrong in a nav strip
@@ -3638,6 +3643,21 @@ section{padding:${d}px 0}
 .vidcap{text-align:center;font-size:14.5px;color:${t.ink2};margin-top:12px}
 .article .w{max-width:760px}
 .article .acat{display:inline-block;font-size:12.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:${t.primary};margin-bottom:12px}
+.blgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px;margin-top:28px}
+.blcard{padding:22px;border:1px solid ${t.line};border-radius:14px;background:${t.card||t.bg};transition:border-color .2s,transform .2s}
+.blcard:hover{border-color:${t.primary};transform:translateY(-2px)}
+.blcard h2{font-size:20px;line-height:1.3;margin:0 0 8px}
+.blcard h2 a{color:${t.ink};text-decoration:none}
+.blcard h2 a:hover{color:${t.primary}}
+.blcard p{font-size:15px;color:${t.ink2};margin:0 0 10px}
+.blmeta{font-size:13px;color:${t.ink2};opacity:.8}
+.amore{margin-top:44px;padding-top:28px;border-top:1px solid ${t.line}}
+.amore h2{font-size:19px;margin:0 0 16px}
+.amorelist{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+.amorecard{display:block;padding:16px;border:1px solid ${t.line};border-radius:12px;text-decoration:none;transition:border-color .2s}
+.amorecard:hover{border-color:${t.primary}}
+.amoretitle{display:block;font-weight:600;color:${t.ink};font-size:15.5px;line-height:1.35}
+.amoredek{display:block;margin-top:6px;font-size:13.5px;color:${t.ink2}}
 .article .atitle{font-size:clamp(28px,4.4vw,42px);line-height:1.14;margin-bottom:12px}
 .article .abyline{font-size:14px;color:${t.ink2};margin-bottom:26px}
 .article .alead{font-size:20px;line-height:1.6;color:${t.ink};margin-bottom:26px}
@@ -4313,25 +4333,43 @@ function buildSite(state,mode,pageIdx){
 </div></section>`;
 
   const bd=s.blogData||null;
-  const artBlock=blk=>{
+  /* Blog bodies are editable in place like every other section. Before this the
+     post title was the only editable thing on the page, so fixing a typo in a
+     paragraph meant regenerating the whole article. `b` is the block's index,
+     which turns each field into a real data-path the editor writes back. */
+  const artBlock=(blk,b)=>{
     if(!blk||typeof blk!=='object') return '';
-    const T=blk.type;
-    if(T==='section') return `${isStr(blk.heading)?`<h2>${esc(blk.heading)}</h2>`:''}${String(blk.body||'').split(/\n{2,}/).filter(Boolean).map(x=>`<p>${esc(x.trim())}</p>`).join('')}`;
+    const T=blk.type, P=`blogData.blocks.${b}`;
+    const head=isStr(blk.heading)?ed(`${P}.heading`,'h2','',blk.heading):'';
+    if(T==='section') return `${head}${String(blk.body||'').split(/\n{2,}/).filter(Boolean).map((x,pi)=>
+      // paragraphs are stored as one string, so only a single-paragraph body is
+      // safely editable in place; multi-paragraph bodies stay read-only rather
+      // than silently dropping the other paragraphs on save
+      (String(blk.body||'').split(/\n{2,}/).filter(Boolean).length===1
+        ? ed(`${P}.body`,'p','',x.trim())
+        : `<p>${esc(x.trim())}</p>`)).join('')}`;
     if(T==='list'){ const tag=blk.style==='number'?'ol':'ul';
-      return `${isStr(blk.heading)?`<h2>${esc(blk.heading)}</h2>`:''}<${tag} class="alist ${blk.style==='check'?'check':''}">${(blk.items||[]).map(it=>`<li>${esc(it)}</li>`).join('')}</${tag}>`; }
+      return `${head}<${tag} class="alist ${blk.style==='check'?'check':''}">${(blk.items||[]).map((it,ii)=>
+        ed(`${P}.items.${ii}`,'li','',it)).join('')}</${tag}>`; }
     if(T==='stats'){ const mx=Math.max(1,...(blk.items||[]).map(x=>+x.value||0));
-      return `${isStr(blk.heading)?`<h2>${esc(blk.heading)}</h2>`:''}<div class="astats">${(blk.items||[]).map(x=>`
-        <div class="astat"><div class="anum">${esc(x.value)}${esc(x.suffix||'')}</div><div class="abar"><i style="width:${Math.round((+x.value||0)/mx*100)}%"></i></div><div class="alab">${esc(x.label)}</div></div>`).join('')}</div>`; }
-    if(T==='callout') return `<div class="acallout">${esc(blk.text||'')}</div>`;
-    if(T==='quote') return `<blockquote class="aquote">${esc(blk.text||'')}${blk.cite?`<cite>${esc(blk.cite)}</cite>`:''}</blockquote>`;
+      return `${head}<div class="astats">${(blk.items||[]).map((x,ii)=>`
+        <div class="astat"><div class="anum">${esc(x.value)}${esc(x.suffix||'')}</div><div class="abar"><i style="width:${Math.round((+x.value||0)/mx*100)}%"></i></div>${ed(`${P}.items.${ii}.label`,'div','alab',x.label)}</div>`).join('')}</div>`; }
+    if(T==='callout') return ed(`${P}.text`,'div','acallout',blk.text||'');
+    if(T==='quote') return `<blockquote class="aquote">${ed(`${P}.text`,'span','',blk.text||'')}${blk.cite?ed(`${P}.cite`,'cite','',blk.cite):''}</blockquote>`;
     if(T==='table'){ const cols=blk.columns||[], rows=blk.rows||[];
-      return `${isStr(blk.heading)?`<h2>${esc(blk.heading)}</h2>`:''}<div class="atwrap"><table class="atable"><thead><tr>${cols.map(c=>`<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${(r||[]).map(cell=>`<td>${esc(cell)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`; }
+      return `${head}<div class="atwrap"><table class="atable"><thead><tr>${cols.map((c,ci)=>ed(`${P}.columns.${ci}`,'th','',c)).join('')}</tr></thead><tbody>${rows.map((r,ri)=>`<tr>${(r||[]).map((cell,ci)=>ed(`${P}.rows.${ri}.${ci}`,'td','',cell)).join('')}</tr>`).join('')}</tbody></table></div>`; }
     if(T==='image'){ const im=mediaOf(s,'article');
-      return im.src?`<figure class="aimg"><img src="${im.src}" alt="${esc(blk.caption||bd.title||'')}" loading="lazy">${blk.caption?`<figcaption>${esc(blk.caption)}</figcaption>`:''}</figure>`
-        :`<figure class="aimg ph"${slot('article','Add an image')}>${iconSVG('camera')}${blk.caption?`<figcaption>${esc(blk.caption)}</figcaption>`:''}</figure>`; }
+      const cap=blk.caption?ed(`${P}.caption`,'figcaption','',blk.caption):'';
+      return im.src?`<figure class="aimg"><img src="${im.src}" alt="${esc(blk.caption||bd.title||'')}" loading="lazy">${cap}</figure>`
+        :`<figure class="aimg ph"${slot('article','Add an image')}>${iconSVG('camera')}${cap}</figure>`; }
     return '';
   };
   const readMins=bd&&bd.readMins?bd.readMins:Math.max(3,Math.round((JSON.stringify(bd||{}).length)/1400));
+  /* Written into the ZIP by downloadSite(); the href climbs out of /blog/ the
+     same way page links do. */
+  const guideFile=(bd&&bd.leadMagnet&&Array.isArray(bd.leadMagnet.sections)&&bd.leadMagnet.sections.length)
+    ? `${slugify(s.slug||'guide','guide')}-guide.pdf` : '';
+  const guideHref=guideFile?`../guides/${guideFile}`:'';
   const upgradeForm=(u)=>{
     if(!u) return '';
     const post=formAction?` action="${esc(formAction)}" method="post"`:c.email?` action="mailto:${esc(c.email)}" method="post" enctype="text/plain"`:'';
@@ -4342,10 +4380,23 @@ function buildSite(state,mode,pageIdx){
       ${(formAction||c.email)?`<form class="aupform"${post}>
         <input type="email" name="email" required placeholder="Your email" autocomplete="email">
         ${providerHidden('blog-upgrade')}
+        ${guideFile?`<input type="hidden" name="guide" value="${esc(guideFile)}">`:''}
         <input type="text" name="_gotcha" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px">
         <button type="submit">${esc(u.cta||'Send it to me')}</button>
-      </form><p class="aupnote">We will email you the PDF. No spam.</p>`
-      :`<a class="aupbtn" href="#contact">${esc(u.cta||'Get the guide')}</a>`}
+      </form>`
+      :''}
+      ${guideFile
+        /* The old copy promised "we will email you the PDF" and nothing ever
+           did — there is no backend to send it and the file was never even
+           written into the export, so every visitor who handed over an email
+           got nothing. The guide now ships in the ZIP and downloads on click,
+           which is a promise a static site can actually keep. The email form
+           above still captures the lead. */
+        ? `<a class="aupbtn" href="${esc(inApp?'#':guideHref)}" download>Download the ${esc(u.format||'guide')} (PDF)</a>
+           <p class="aupnote">Downloads straight away.${(formAction||c.email)?' Leave your email above and we will send the follow-up too.':''}</p>`
+        : (formAction||c.email)
+          ? `<p class="aupnote">We will be in touch with the guide. No spam.</p>`
+          : `<a class="aupbtn" href="#contact">${esc(u.cta||'Get the guide')}</a>`}
     </aside>`;
   };
   const articleHTML=!bd?'':`
@@ -4354,14 +4405,40 @@ function buildSite(state,mode,pageIdx){
   ${ed('blogData.title','h1','atitle',bd.title||pageTitle(state,pageIdx))}
   <div class="abyline">${esc(m.businessName)}${m.location?' · '+esc(m.location):''} · ${readMins} min read</div>
   ${bd.intro?`<p class="alead">${esc(bd.intro)}</p>`:''}
-  ${(Array.isArray(bd.blocks)?bd.blocks:[]).map((blk,i)=>{
-    const html=artBlock(blk);
-    // drop the upgrade in after roughly the first third, where readers are hooked
-    return html;
-  }).join('')}
+  ${(Array.isArray(bd.blocks)?bd.blocks:[]).map((blk,i)=>artBlock(blk,i)).join('')}
   ${(bd.takeaways&&bd.takeaways.length)?`<div class="atakeaway"><h3>Key takeaways</h3><ul class="alist check">${bd.takeaways.map(t2=>`<li>${esc(t2)}</li>`).join('')}</ul></div>`:''}
   ${upgradeForm(bd.upgrade)}
   ${(bd.faqs&&bd.faqs.length)?`<div class="afaq"><h2>Frequently asked</h2>${bd.faqs.map(f=>`<details><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`).join('')}</div>`:''}
+  ${(()=>{ const others=blogPosts(state).filter(i=>i!==pageIdx).slice(0,3);
+    if(!others.length) return '';
+    return `<nav class="amore"><h2>Keep reading</h2><div class="amorelist">${others.map(i=>{
+      const p2=pageOf(state,i), d2=p2.blogData||{};
+      const href=inApp?`#" data-page="${i}`:esc(pageRel(state,pageIdx,i));
+      return `<a class="amorecard" href="${href}">
+        <span class="amoretitle">${esc(d2.title||pageTitle(state,i))}</span>
+        ${d2.metaDescription?`<span class="amoredek">${esc(String(d2.metaDescription).slice(0,110))}</span>`:''}
+      </a>`;}).join('')}</div></nav>`;})()}
+</div></section>`;
+
+  /* The blog index. Posts are no longer top-level nav items, so this page is
+     how a reader gets from "Blog" to any given post. Without it the posts
+     existed as files with nothing linking to them. */
+  const posts=blogPosts(state);
+  const blogIndexHTML=!s.blogIndex?'':`
+<section id="bloglist" class="article bloglist"><div class="w">
+  <h1 class="atitle">${esc(s.title||'Blog')}</h1>
+  ${s.blogIntro?`<p class="alead">${esc(s.blogIntro)}</p>`:''}
+  ${posts.length?`<div class="blgrid">${posts.map(i=>{
+    const p2=pageOf(state,i), d2=p2.blogData||{};
+    const href=inApp?`#" data-page="${i}`:esc(pageRel(state,pageIdx,i));
+    const mins=Math.max(1,Math.round((JSON.stringify(d2.blocks||[]).length||900)/900));
+    return `<article class="blcard">
+      ${d2.category?`<div class="acat">${esc(d2.category)}</div>`:''}
+      <h2><a href="${href}">${esc(d2.title||pageTitle(state,i))}</a></h2>
+      ${d2.metaDescription?`<p>${esc(d2.metaDescription)}</p>`:''}
+      <div class="blmeta">${p2.blogDate?esc(p2.blogDate)+' · ':''}${mins} min read</div>
+    </article>`;}).join('')}</div>`
+    :`<p class="alead">No posts yet. Write one from Growth kit and it will appear here.</p>`}
 </div></section>`;
 
   /* ---- opt-in exit-intent / inline pop-up --------------------------------
@@ -4533,7 +4610,7 @@ function buildSite(state,mode,pageIdx){
      drops out on its own. Declared after heroHTML — referencing it earlier is
      a temporal dead zone error. */
   const SECTION_HTML={hero:heroHTML,stats:statsHTML,services:servicesSection,process:processHTML,
-    article:articleHTML,video:videoHTML,
+    article:(s.blogIndex?blogIndexHTML:articleHTML),video:videoHTML,
     about:aboutSection,gallery:galleryHTML,reviews:reviewsSection,faq:faqHTML,areas:areasHTML,
     legal:legalHTML,contact:contactSection};
   const secCfg=s.sections||m.sections||{};
@@ -4566,12 +4643,16 @@ function buildSite(state,mode,pageIdx){
      carry data-page so the host app can switch pages — real .html filenames
      only make sense in the exported ZIP. */
   const multi=Array.from({length:pageCount(state)},(_,i)=>i)
-    .filter(i=>i===0||(pageOf(state,i).inNav!==false&&!pageOf(state,i).legal)).length>1;
+    .filter(i=>i===0||(pageOf(state,i).inNav!==false&&!pageOf(state,i).legal&&!isBlogPost(pageOf(state,i)))).length>1;
   const anchorLinksRaw=order.filter(k=>k!=='hero'&&!hidden.has(k)&&SECTION_HTML[k]&&NAV_LABELS[k]).slice(0,5);
   const anchorLinks=anchorLinksRaw.map(k=>`<a href="#${k}">${NAV_LABELS[k]}</a>`).join('');
+  /* Individual posts are NOT top-level nav items. Five posts used to mean five
+     nav entries, which overflowed the header into the phone number and pushed
+     the real pages off the bar. Posts are reached from the blog index, which is
+     how every publication on the web does it. */
   const navLinks=multi
     ? Array.from({length:pageCount(state)},(_,i)=>i)
-        .filter(i=>i===0||(pageOf(state,i).inNav!==false&&!pageOf(state,i).legal))
+        .filter(i=>i===0||(pageOf(state,i).inNav!==false&&!pageOf(state,i).legal&&!isBlogPost(pageOf(state,i))))
         .slice(0,7)
         .map(i=>{
           const lbl=esc(navLabel(state,i)), ttl=esc(pageTitle(state,i));
@@ -6253,6 +6334,19 @@ async function download(){
   label.textContent='Zipping…'; btn.disabled=true;
   try{
     const files=Array.from({length:n},(_,i)=>({name:pageHref(siteState,i),text:exportHTML(i)})).concat(extras);
+    /* Lead-magnet PDFs. Each blog post that has one gets its guide written into
+       /guides/ so the download link on the post actually resolves. Before this
+       the link had nowhere to point and the visitor got nothing for their
+       email. */
+    for(const i of blogPosts(siteState)){
+      const pg=pageOf(siteState,i), lm=pg.blogData&&pg.blogData.leadMagnet;
+      if(!lm||!Array.isArray(lm.sections)||!lm.sections.length) continue;
+      try{
+        const name=`${slugify(pg.slug||'guide','guide')}-guide.pdf`;
+        const blob=makeLeadPdf(Object.assign({filename:name,cta:(pg.blogData.upgrade&&pg.blogData.upgrade.cta)||'Get in touch'},lm),siteState);
+        files.push({name:`guides/${name}`,bytes:new Uint8Array(await blob.arrayBuffer())});
+      }catch(e){ console.warn('lead-magnet PDF failed for page',i,e); }
+    }
     saveBlob(await makeZip(files),`${slug}.zip`);
     label.textContent=`${files.length} files`;
   }catch(e){
@@ -6357,8 +6451,12 @@ function migrate(s){
     if(typeof pg.contactLayout!=='string') pg.contactLayout='';
     pg.bio=pg.bio===true;
     pg.blog=pg.blog===true;
+    pg.blogIndex=pg.blogIndex===true;
     if(pg.video&&typeof pg.video!=='object') pg.video=null;
-    if(pg.blog&&(!pg.blogData||typeof pg.blogData!=='object')) pg.blog=false;
+    /* The index carries no blogData of its own, so it must be exempt from the
+       demotion rule below or it would be stripped back to an ordinary page on
+       every load. */
+    if(pg.blog&&!pg.blogIndex&&(!pg.blogData||typeof pg.blogData!=='object')) pg.blog=false;
     const mm=blankMedia(); pg.media=Object.assign(mm,pg.media||{});
     Object.keys(mm).forEach(k=>{ if(k!=='gallery'&&(!pg.media[k]||typeof pg.media[k]!=='object')) pg.media[k]={src:'',alt:'',credit:null}; });
     if(!Array.isArray(pg.media.gallery)) pg.media.gallery=[];
@@ -6367,6 +6465,20 @@ function migrate(s){
     SECTION_ORDER.forEach(k=>{ if(!pg.sections.order.includes(k)) pg.sections.order.push(k); });
     if(!Array.isArray(pg.sections.hidden)) pg.sections.hidden=[];
   });
+  /* Sites saved before the blog index existed have posts but nothing linking
+     to them, because posts are no longer top-level nav items. Backfill one so
+     those posts stay reachable instead of becoming orphan files. */
+  if(blogPosts(s).length&&blogIndexIdx(s)===undefined&&s.pages.length<PAGE_CAP-1){
+    s.pages.push({title:'Blog',slug:'blog',blogIndex:true,blog:false,inNav:true,legal:false,bio:false,
+      legalBody:[],blogData:null,video:null,contactLayout:'',keyword:'',seo_title:`Blog | ${s.meta.businessName}`,
+      seo_meta_description:`Guides and advice from ${s.meta.businessName}.`,
+      hero:{headline:'Blog',subheadline:'',cta_text:(s.hero&&s.hero.cta_text)||'Get in touch'},
+      services:[],testimonials:[],faqs:[],stats:[],process:[],areas:[],about:'',
+      contact_cta:s.contact_cta||'Get in touch',headings:{contact:{h:'Ready to talk?'}},
+      media:blankMedia(),
+      sections:{order:['article','contact',...SECTION_ORDER.filter(k=>!['article','contact'].includes(k))],
+                hidden:SECTION_ORDER.filter(k=>!['article','contact'].includes(k))}});
+  }
   // Home keeps its own section config so pages are independent.
   if(!s.sections) s.sections=s.meta.sections;
   return s;
@@ -8061,7 +8173,23 @@ ${LOCALES[b.locale].promptHint}`;
     pg.headings={contact:{h:'Ready to talk?'}};
     pg.services=[];pg.testimonials=[];pg.faqs=[];pg.stats=[];pg.process=[];pg.areas=[];pg.about='';
     pg.contact_cta=`Enjoyed this? ${siteState.meta.contact.phone?'Call '+siteState.meta.contact.phone+' or ':''}get in touch and we will help.`;
-    siteState.pages=siteState.pages||[]; siteState.pages.push(pg);
+    siteState.pages=siteState.pages||[];
+    /* The index is created with the first post, not up front, so a site that
+       never blogs never grows an empty Blog tab. */
+    if(blogIndexIdx(siteState)===undefined){
+      const idx=blankPage('Blog',siteState);
+      idx.blogIndex=true; idx.slug='blog'; idx.inNav=true;
+      idx.hero={headline:'Blog',subheadline:'',cta_text:(siteState.hero&&siteState.hero.cta_text)||'Get in touch'};
+      idx.seo_title=`Blog | ${siteState.meta.businessName}`;
+      idx.seo_meta_description=`Guides and advice from ${siteState.meta.businessName}.`;
+      idx.sections={order:['article','contact',...SECTION_ORDER.filter(k=>!['article','contact'].includes(k))],
+                    hidden:SECTION_ORDER.filter(k=>!['article','contact'].includes(k))};
+      idx.headings={contact:{h:'Ready to talk?'}};
+      idx.services=[];idx.testimonials=[];idx.faqs=[];idx.stats=[];idx.process=[];idx.areas=[];idx.about='';
+      idx.contact_cta=siteState.contact_cta||'Get in touch';
+      siteState.pages.push(idx);
+    }
+    siteState.pages.push(pg);
     gotoPage(pageCount(siteState)-1);
     renderPages(); renderPreview(); renderChecks(); renderTips(); pushHistory(siteState); lastShareURL='';
     // companion lead-magnet PDF, if the model wrote one
@@ -9638,10 +9766,19 @@ function renderAdminRow(){
 function clientLink(){ return location.origin+location.pathname+'?client=1'; }
 function applyRole(){
   if(!IS_CLIENT) return;
-  // Hide the download, the dashboard and the admin-only settings from clients.
-  ['btnDownload','btnDash'].forEach(id=>{ const el=$(id); if(el) el.style.display='none'; });
-  document.querySelectorAll('#secSettings .field, #secSettings .row').forEach(el=>{
-    if(/Sell the theme|Workspace|Back up/.test(el.textContent)) el.style.display='none';
+  /* The download stays VISIBLE for clients and is gated by the paywall instead
+     of being hidden. Hiding it removed the only path to buying: a client could
+     build a whole site and then find no way to pay for it, which is the exact
+     moment they are most willing to. The paywall already refuses without a
+     passcode, so showing the button costs nothing and is the entire funnel. */
+  const dash=$('btnDash'); if(dash) dash.style.display='none';
+  /* Anything that reveals this is a resold, white-labelled tool. These were
+     matched by text against #secSettings before, but "Sell the theme" lives in
+     the Growth kit and the white-label switch never matched the pattern, so a
+     client could read the reseller's own pricing and branding controls. IDs do
+     not silently stop matching when copy is reworded. */
+  ['sellField','wlRow','wlFields','workspaceField','adminField'].forEach(id=>{
+    const el=$(id); if(el) el.style.display='none';
   });
   // A light, honestly-cosmetic deterrent against casual copying.
   document.addEventListener('contextmenu',e=>{ if(!e.target.closest('input,textarea,[contenteditable]')) e.preventDefault(); });
