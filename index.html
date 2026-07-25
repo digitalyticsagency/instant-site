@@ -612,9 +612,13 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
   .app.showrail .rail{opacity:1;pointer-events:auto}
 }
 @media(max-width:900px){
-  html,body{overflow:auto}
-  .app{grid-template-columns:1fr;height:auto}
-  .col{overflow:visible}
+  /* Reset the desktop height:100%;overflow:hidden that pins the page to the
+     viewport. Leaving height:100% made the body a clamped scroll container, so
+     the stacked columns overflowed with nothing scrolling them. Normal document
+     flow + auto height means the window scrolls the whole stack. */
+  html,body{height:auto;min-height:100%;overflow:visible}
+  .app{grid-template-columns:1fr;height:auto;min-height:0}
+  .col{overflow:visible;min-height:0}
   .panel{border-right:0;border-bottom:1px solid var(--stroke);padding-bottom:14px}
   .work{height:auto}
   .wbody{height:76vh}
@@ -652,13 +656,6 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
     <svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="10" width="8" height="11" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/></svg>
   </button>
   <button class="icon-btn" id="btnTheme" title="Appearance" aria-label="Toggle light or dark appearance"></button>
-if(location.hash.startsWith(REVIEW_PREFIX)){
-  renderProspectView(location.hash.slice(REVIEW_PREFIX.length),true);
-}else if(location.hash.startsWith(SHARE_PREFIX)){
-  renderProspectView(location.hash.slice(SHARE_PREFIX.length));
-}else{
-  bootDashboard();
-}
   <div class="dlwrap">
     <button class="hbtn hbtn-primary" id="btnDownload" title="Export: static HTML, a client review link, or an installable WordPress theme." disabled aria-haspopup="true" aria-expanded="false">
       <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg>
@@ -6366,7 +6363,7 @@ function paywall(){
   wrap.querySelector('#payX').onclick=close;
   wrap.addEventListener('click',e=>{ if(e.target===wrap) close(); });
   const inp=wrap.querySelector('#payPin'), err=wrap.querySelector('#payErr');
-  const go=()=>{ if(inp.value.trim()===DL_PIN){ try{ localStorage.setItem('instantsite_dl','1'); }catch{}
+  const go=()=>{ if(inp.value.trim()===DL_PIN){ setAdmin();   // the passcode owner is the admin
       close();
       // Defer: this same click bubbles to the document outside-close handler,
       // which would shut the menu the instant it opened.
@@ -6380,8 +6377,8 @@ $('btnDownload').onclick=e=>{
   if($('btnDownload').disabled) return;
   e.stopPropagation();
   if(dlMenu.classList.contains('open')){ closeDl(); return; }
-  if(!dlUnlocked()){ paywall(); return; }
-  openDlMenu();
+  if(isAdmin()||dlUnlocked()){ openDlMenu(); return; }   // admin never pays
+  paywall();
 };
 document.addEventListener('click',e=>{ if(!e.target.closest('.dlwrap')) closeDl(); });
 document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeDl(); });
@@ -7497,6 +7494,13 @@ function openDash(){
     </div>
     <h3 class="dh">What the tool can do</h3>
     <div class="dfeat">${Object.entries(inv).map(([k,v])=>`<span><b>${v}</b> ${esc(k)}</span>`).join('')}</div>
+    <h3 class="dh">Share with clients</h3>
+    <div class="tiny" style="margin-bottom:8px">This link gives a client the whole builder to design and preview with, but hides the download and the admin tools, so they cannot take the theme file. ${isAdmin()?'You are signed in as the admin, so your own downloads are free.':'Enter the passcode once on Download to unlock your own free downloads.'}</div>
+    <div style="display:flex;gap:6px">
+      <input id="dashClientLink" readonly value="${esc(clientLink())}" style="flex:1;padding:9px 12px;border-radius:10px;border:1px solid var(--stroke);background:var(--fill);color:var(--txt-1);font-size:12.5px">
+      <button class="mini" id="dashCopyLink" type="button">Copy</button>
+    </div>
+    <div class="tiny" style="margin-top:6px">To host a separate client copy, fork or copy this page in GitHub and share that URL with <code>?client=1</code> on the end. The passcode lives in the file, so change it there before you share widely.</div>
     <div class="dactions">
       <button class="mini" id="dashPdf" type="button">Download branded PDF report</button>
       <button class="mini" id="dashAi" type="button">✨ Add AI analysis</button>
@@ -7511,6 +7515,9 @@ function openDash(){
   wrap.querySelector('#dashClose').onclick=close;
   wrap.addEventListener('click',e=>{ if(e.target===wrap) close(); });
   document.addEventListener('keydown',function esc(e){ if(e.key==='Escape'){ close(); document.removeEventListener('keydown',esc); } });
+  $('dashCopyLink').onclick=async()=>{ const i=$('dashClientLink'); i.select();
+    try{ await navigator.clipboard.writeText(i.value); $('dashNote').textContent='Client link copied. Share it with a white-label customer.'; }
+    catch{ $('dashNote').textContent='Select the link and copy it.'; } };
   $('dashPdf').onclick=()=>{ saveBlob(makeLeadPdf(dashData(dashAnalysis),dashState()),'instant-site-report.pdf');
     $('dashNote').textContent='PDF downloaded, in your current theme.'; };
   $('dashPrompt').onclick=async()=>{ const box=$('dashPromptBox'); box.classList.remove('hidden'); box.value=improvementPrompt(); box.select();
@@ -9221,7 +9228,32 @@ renderCxPick(); renderFormCols(); renderFormFields(); renderHfPick();
 $('aiCrawlSwitch').classList.toggle('on',prefs.aiCrawl!==false);
 applyAppearance(); applyBranding();
 
+/* ---- roles ---------------------------------------------------------------
+   Admin (you) builds and downloads free. A client link (?client=1) gives a
+   white-label customer the whole builder EXCEPT the download and the admin
+   tools, so they can design and preview but not walk away with the theme file.
+   Honest limit: the app is a static file, so a determined person can still read
+   its source in the browser. Hiding the download stops the casual case; real
+   code protection needs the backend (Option B). */
+const IS_CLIENT=new URLSearchParams(location.search).has('client');
+function isAdmin(){ try{ return localStorage.getItem('instantsite_admin')==='1'; }catch{ return false; } }
+function setAdmin(){ try{ localStorage.setItem('instantsite_admin','1'); localStorage.setItem('instantsite_dl','1'); }catch{} }
+function clientLink(){ return location.origin+location.pathname+'?client=1'; }
+function applyRole(){
+  if(!IS_CLIENT) return;
+  // Hide the download, the dashboard and the admin-only settings from clients.
+  ['btnDownload','btnDash'].forEach(id=>{ const el=$(id); if(el) el.style.display='none'; });
+  document.querySelectorAll('#secSettings .field, #secSettings .row').forEach(el=>{
+    if(/Sell the theme|Workspace|Back up/.test(el.textContent)) el.style.display='none';
+  });
+  // A light, honestly-cosmetic deterrent against casual copying.
+  document.addEventListener('contextmenu',e=>{ if(!e.target.closest('input,textarea,[contenteditable]')) e.preventDefault(); });
+  document.addEventListener('keydown',e=>{ if((e.ctrlKey||e.metaKey)&&['u','s'].includes((e.key||'').toLowerCase())) e.preventDefault(); });
+  const foot=document.querySelector('.foot span'); if(foot) foot.textContent='White-label build — downloads handled by the site owner.';
+}
+
 function bootDashboard(){
+applyRole();
 $('apiKey').value=getKey();
 $('fontSwitch').classList.toggle('on',prefs.systemFonts);
 $('motionSwitch').classList.toggle('on',prefs.motion);
