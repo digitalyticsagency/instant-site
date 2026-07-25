@@ -3868,19 +3868,23 @@ ${t.callBar?`.callbar{display:none}
   /* Before this, .nl was simply hidden and nothing replaced it, so every
      multi-page site was unnavigable on a phone — the pages existed but no
      visitor could reach them. */
-  /* Two explicit rows. Ordering alone was not enough: the logo and the CTA each
-     take most of the width, so the burger was pushed onto a third line of its
-     own and sat at the far left, nowhere near the menu it opens. Row one is
-     logo + burger, row two is the phone and the call to action. */
+  /* One row for as long as it fits: logo, then phone and CTA, then the burger.
+     Stacking the CTA onto its own row the moment the links were replaced left a
+     tablet-width header half empty with the button stranded under the logo. */
   .nav .w{flex-wrap:wrap;gap:10px 12px}
   /* basis 0, not auto. With flex-wrap the browser decides line breaks from each
      item's base size BEFORE any shrinking, so an auto basis meant a long
      business name claimed its full max-content width and bumped the burger onto
      a line of its own. Basis 0 lets the name take the leftover space and wrap
      its own text instead. */
-  .logo{order:1;flex:1 1 0;min-width:0;white-space:normal;overflow:visible;text-overflow:clip}
-  .burger{display:flex;order:2;margin-left:auto;margin-right:-8px}
-  .navcta{order:3;flex-basis:100%;justify-content:flex-start;gap:14px}
+  /* Wrap, but not without limit. A 50-character trading name ran to four lines
+     and took 279px of a 320px phone before the visitor saw anything at all, so
+     it is capped at two lines and trails off. */
+  .logo{order:1;flex:1 1 0;min-width:0;white-space:normal;text-overflow:clip;
+    display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+  .logo:has(img){display:block;overflow:visible}
+  .navcta{order:2;flex:none;margin-left:auto;gap:14px}
+  .burger{display:flex;order:3;flex:none;margin-right:-8px}
   .nl{display:none;order:4;flex-basis:100%;flex-direction:column;gap:0;
     border-top:1px solid ${t.line};margin-top:4px}
   .navtoggle:checked~.nl{display:flex}
@@ -3897,12 +3901,22 @@ ${t.callBar?`.callbar{display:none}
   .about .fig{order:-1}
   .head{margin-bottom:34px}
 }
+/* Only once a phone genuinely cannot fit logo, phone, CTA and burger on one
+   line does the CTA drop to a second row. The burger stays up beside the logo,
+   where a thumb expects it, rather than travelling with the button. */
+@media(max-width:620px){
+  .navcta{order:3;flex-basis:100%;margin-left:0;justify-content:flex-start}
+  .burger{order:2;margin-left:auto}
+}
 @media(max-width:420px){
   body{font-size:16px}
   .w{padding:0 17px}
   .card{padding:26px 21px}
   .final .inner{padding:42px 20px}
   .b{width:100%;text-align:center}
+  /* The full-width button rule above would otherwise stretch the nav CTA across
+     the header and shove the phone number onto a line of its own. */
+  .navcta .b{width:auto}
 }
 @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
 ${prefs.motion?`
