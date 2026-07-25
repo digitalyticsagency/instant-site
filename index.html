@@ -656,7 +656,11 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
   .col{overflow:visible;min-height:0}
   .panel{border-right:0;border-bottom:1px solid var(--stroke);padding-bottom:14px}
   .work{height:auto}
-  .wbody{height:76vh}
+  /* flex:1 is shorthand for flex-basis:0, and in a column flex container the
+     basis wins over height. With .work switched to height:auto there is no free
+     space to distribute, so the pane collapsed to 0 and the preview vanished.
+     Pinning the basis to auto lets the explicit height apply. */
+  .wbody{flex:0 0 auto;height:76vh}
   .mtabs{display:flex;gap:2px;padding:2px;margin:10px 14px 0;border-radius:9px;background:var(--fill)}
   .mtabs button{flex:1;padding:8px;border-radius:7px;font-size:13px;font-weight:500;color:var(--txt-2)}
   .mtabs button.on{background:var(--surface);color:var(--txt);box-shadow:0 1px 3px rgba(0,0,0,.14)}
@@ -1899,6 +1903,23 @@ const pageRel=(st,from,to)=>{
   return up+pageHref(st,to);
 };
 const pageTitle=(st,i)=>i===0?'Home':(pageOf(st,i).title||'Untitled');
+/* A nav bar is not a heading. A blog title like "7 Warning Signs Your Home
+   Needs Rewiring Now" is exactly right in <h1> and exactly wrong in a nav strip
+   — it wrapped the header to double height and squeezed every other link. So
+   the nav gets its own label: whatever the page sets explicitly, else the title
+   trimmed at a word boundary. The full title still goes in the link's title
+   attribute, so nothing is lost to someone hovering or using a screen reader. */
+const NAV_MAX=22;
+const navLabel=(st,i)=>{
+  if(i===0) return 'Home';
+  const pg=pageOf(st,i), set=(pg.navLabel||'').trim();
+  if(set) return set;
+  const full=pageTitle(st,i);
+  if(full.length<=NAV_MAX) return full;
+  const cut=full.slice(0,NAV_MAX);
+  const sp=cut.lastIndexOf(' ');
+  return (sp>10?cut.slice(0,sp):cut).replace(/[,;:.\-]+$/,'')+'…';
+};
 // Slugs become filenames in the ZIP, so they must be unique.
 function uniqueSlug(st,want,ignoreIdx){
   let base=slugify(want),s=base,n=2;
@@ -3394,8 +3415,18 @@ section:hover>.edsec{opacity:1;pointer-events:auto}
 .nav{position:sticky;top:0;z-index:30;background:${t.bg};border-bottom:1px solid ${t.line}}
 .nav .w{display:flex;align-items:center;justify-content:space-between;gap:18px;padding-top:15px;padding-bottom:15px}
 .logo{font-family:${t.displayFont},sans-serif;font-weight:${t.weight};font-size:20px;color:${t.primary};${t.caps?'text-transform:uppercase;letter-spacing:.04em;':''}}
-.nl{display:flex;gap:26px;font-size:15px;font-weight:500}
-.nl a{color:${t.ink2};text-decoration:none;transition:color .2s}
+.nl{display:flex;gap:26px;font-size:15px;font-weight:500;min-width:0;flex-wrap:nowrap}
+.nl a{color:${t.ink2};text-decoration:none;transition:color .2s;white-space:nowrap}
+.logo{flex:none}
+/* The checkbox is the entire mobile menu mechanism. Exports ship no JavaScript,
+   and a nav that only opens with JS would break that for every visitor with a
+   blocked script. Off-screen rather than display:none so it stays keyboard
+   reachable; the label is the visible control. */
+.navtoggle{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
+.burger{display:none;flex-direction:column;justify-content:center;gap:5px;width:44px;height:44px;
+  padding:10px;cursor:pointer;border-radius:10px;flex:none;-webkit-tap-highlight-color:transparent}
+.burger span{display:block;height:2px;border-radius:2px;background:${t.ink};transition:transform .25s,opacity .2s}
+.navtoggle:focus-visible~.burger{outline:2px solid ${t.primary};outline-offset:2px}
 .nl a:hover{color:${t.primary}}
 .nl a.here{color:${t.primary};font-weight:600}
 .nl a.here::after{content:'';display:block;height:2px;background:${t.primary};margin-top:4px;border-radius:2px}
@@ -3761,7 +3792,22 @@ ${t.callBar?`.callbar{display:none}
   body{padding-bottom:58px}
 }`:''}
 @media(max-width:860px){
-  .nl{display:none}
+  /* Before this, .nl was simply hidden and nothing replaced it, so every
+     multi-page site was unnavigable on a phone — the pages existed but no
+     visitor could reach them. */
+  .nav .w{flex-wrap:wrap;gap:10px}
+  .burger{display:flex;order:3}
+  .navcta{order:2;margin-left:auto}
+  .nl{display:none;order:4;flex-basis:100%;flex-direction:column;gap:0;
+    border-top:1px solid ${t.line};margin-top:4px}
+  .navtoggle:checked~.nl{display:flex}
+  .nl a{padding:13px 2px;border-bottom:1px solid ${t.line};font-size:16px}
+  .nl a:last-child{border-bottom:0}
+  .nl a.here::after{display:none}
+  .navtoggle:checked~.burger span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+  .navtoggle:checked~.burger span:nth-child(2){opacity:0}
+  .navtoggle:checked~.burger span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+  .navtel{font-size:14.5px}
   section{padding:${Math.round(d*.72)}px 0}
   .hero{padding:${Math.round(d*.8)}px 0 ${Math.round(d*.7)}px}
   .hero.split .w,.about .w{grid-template-columns:1fr;gap:34px}
@@ -4519,9 +4565,13 @@ function buildSite(state,mode,pageIdx){
     ? Array.from({length:pageCount(state)},(_,i)=>i)
         .filter(i=>i===0||(pageOf(state,i).inNav!==false&&!pageOf(state,i).legal))
         .slice(0,7)
-        .map(i=>inApp
-          ? `<a href="#" data-page="${i}"${i===pageIdx?' class="here"':''}>${esc(pageTitle(state,i))}</a>`
-          : `<a href="${esc(pageRel(state,pageIdx,i))}"${i===pageIdx?' class="here"':''}>${esc(pageTitle(state,i))}</a>`)
+        .map(i=>{
+          const lbl=esc(navLabel(state,i)), ttl=esc(pageTitle(state,i));
+          const t=lbl===ttl?'':` title="${ttl}"`;
+          return inApp
+            ? `<a href="#" data-page="${i}"${i===pageIdx?' class="here"':''}${t}>${lbl}</a>`
+            : `<a href="${esc(pageRel(state,pageIdx,i))}"${i===pageIdx?' class="here"':''}${t}>${lbl}</a>`;
+        })
         .join('')
     : anchorLinks;
 
@@ -4695,11 +4745,13 @@ ${articleLd?`<script type="application/ld+json">${JSON.stringify(articleLd)}<\/s
   ${logoImg.src
     ? `<div class="logo"${slot('logo','Replace logo')}><img class="logoimg" src="${logoImg.src}" alt="${esc(logoImg.alt||m.businessName)}"></div>`
     : `<div class="logo"${slot('logo','Add a logo')}>${esc(m.businessName)}</div>`}
+  ${navLinks?'<input type="checkbox" id="navtoggle" class="navtoggle">':''}
   <div class="nl">${navLinks}</div>
   <div class="navcta">
     ${c.phone?`<a class="navtel" href="${telHref(c.phone)}">${esc(c.phone)}</a>`:''}
     <a href="${primaryHref}" class="b bs">${esc(s.hero.cta_text)}</a>
   </div>
+  ${navLinks?'<label for="navtoggle" class="burger" aria-label="Open menu"><span></span><span></span><span></span></label>':''}
 </div></nav>
 
 ${sectionsHTML}

@@ -10,4 +10,4 @@ ALLOWED_ORIGINS = "*"
 [[d1_databases]]
 binding = "DB"
 database_name = "instant-site"
-database_id = "REPLACE_AFTER_CREATE"
+database_id = "337d4a9f-9d03-4c60-9caa-28f6dae93e03"
