@@ -53,6 +53,7 @@ a{color:var(--accent)}
     <input id="pin" type="password" placeholder="Enter your passcode" autocomplete="off">
     <div class="row">
       <button id="unlock">Unlock this browser</button>
+      <button class="ghost" id="lock" type="button">Sign out (lock again)</button>
       <a href="./"><button class="ghost" type="button">Open the builder</button></a>
     </div>
     <div class="status" id="unlockOut"></div>
@@ -110,11 +111,22 @@ function refresh(){
     +t('US$'+cost,'Est. spend')
     +t(localStorage.getItem('instantsite_admin')==='1'?'Yes':'No','Admin unlocked');
 }
+/* Must match DL_PIN in index.html. This page previously unlocked on any
+   non-empty string, so typing a single character granted admin — the passcode
+   box looked like a check and was not one. */
+const DL_PIN='122133';
 $('unlock').onclick=()=>{
   const v=$('pin').value.trim();
   if(!v){ $('unlockOut').textContent='Enter the passcode first.'; return; }
+  if(v!==DL_PIN){ $('unlockOut').textContent='That passcode is not right.'; $('pin').value=''; $('pin').focus(); return; }
   localStorage.setItem('instantsite_admin','1'); localStorage.setItem('instantsite_dl','1');
+  $('pin').value='';
   $('unlockOut').textContent='Unlocked. Downloads in this browser will not ask again.';
+  refresh();
+};
+$('lock').onclick=()=>{
+  localStorage.removeItem('instantsite_admin'); localStorage.removeItem('instantsite_dl');
+  $('unlockOut').textContent='Signed out. Downloads in this browser will ask for the passcode again.';
   refresh();
 };
 $('gen').onclick=()=>{

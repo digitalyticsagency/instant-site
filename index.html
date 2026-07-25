@@ -1177,6 +1177,14 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
     <details class="sec" id="secSettings">
       <summary>Settings <span class="tag" id="tagKey">no key</span></summary>
       <div class="body">
+        <div class="field" id="adminField">
+          <label>Admin <span class="tag" id="adminTag">signed out</span></label>
+          <div class="row">
+            <button class="mini" id="btnAdminIn" type="button" title="Enter the licence passcode to unlock downloads and admin tools in this browser.">Sign in as admin</button>
+            <button class="mini" id="btnAdminOut" type="button" title="Lock this browser back down: downloads gated again and admin tools hidden.">Sign out</button>
+          </div>
+          <div class="tiny" id="adminNote"></div>
+        </div>
         <div class="field">
           <label for="apiKey">Anthropic API key</label>
           <div style="display:flex;gap:6px">
@@ -6646,7 +6654,7 @@ function paywall(){
   wrap.addEventListener('click',e=>{ if(e.target===wrap) close(); });
   const inp=wrap.querySelector('#payPin'), err=wrap.querySelector('#payErr');
   const go=()=>{ if(inp.value.trim()===DL_PIN){ setAdmin();   // the passcode owner is the admin
-      close();
+      close(); if(typeof renderAdminRow==='function') renderAdminRow();
       // Defer: this same click bubbles to the document outside-close handler,
       // which would shut the menu the instant it opened.
       setTimeout(openDlMenu,0); }
@@ -9609,6 +9617,24 @@ applyAppearance(); applyBranding();
 const IS_CLIENT=new URLSearchParams(location.search).has('client');
 function isAdmin(){ try{ return localStorage.getItem('instantsite_admin')==='1'; }catch{ return false; } }
 function setAdmin(){ try{ localStorage.setItem('instantsite_admin','1'); localStorage.setItem('instantsite_dl','1'); }catch{} }
+/* Signing out drops both flags, so the paywall returns. It deliberately leaves
+   sites, history and the API key alone — this locks the door, it does not wipe
+   the desk. Needed for the demo case above all: showing a prospect the builder
+   on your own laptop without handing them a free download. */
+function clearAdmin(){ try{ localStorage.removeItem('instantsite_admin'); localStorage.removeItem('instantsite_dl'); }catch{} }
+function renderAdminRow(){
+  const f=$('adminField'); if(!f) return;
+  if(IS_CLIENT){ f.style.display='none'; return; }   // clients never see this
+  const on=isAdmin()||dlUnlocked();
+  const tag=$('adminTag'), note=$('adminNote');
+  tag.textContent=on?'signed in':'signed out';
+  tag.style.color=on?'var(--ok,#16a34a)':'';
+  $('btnAdminIn').style.display=on?'none':'';
+  $('btnAdminOut').style.display=on?'':'none';
+  note.textContent=on
+    ? 'Downloads are unlocked in this browser. Sign out before demoing to a prospect on this machine.'
+    : 'Downloads are gated. Signing in asks for the licence passcode — the same one the Download button asks for.';
+}
 function clientLink(){ return location.origin+location.pathname+'?client=1'; }
 function applyRole(){
   if(!IS_CLIENT) return;
@@ -9625,6 +9651,9 @@ function applyRole(){
 
 function bootDashboard(){
 applyRole();
+renderAdminRow();
+$('btnAdminIn')&&($('btnAdminIn').onclick=()=>paywall());
+$('btnAdminOut')&&($('btnAdminOut').onclick=()=>{ clearAdmin(); renderAdminRow(); refreshStatus(); });
 $('apiKey').value=getKey();
 $('fontSwitch').classList.toggle('on',prefs.systemFonts);
 $('motionSwitch').classList.toggle('on',prefs.motion);
