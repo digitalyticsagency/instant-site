@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Instant Site — Admin</title>
+<style>
+:root{color-scheme:light dark;
+  --bg:#f5f5f7;--surface:#fff;--surface2:#fbfbfd;--txt:#1d1d1f;--txt2:#424245;--txt3:#6e6e73;
+  --stroke:#e3e3e6;--accent:#0066d6;--accent-fill:#0066d6;--on-accent:#fff;--good:#1a7f3e;--warn:#8a5a00;--bad:#c9302c;
+  --sans:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',system-ui,sans-serif;
+  --shadow:0 10px 34px rgba(0,0,0,.10);--r:14px}
+@media(prefers-color-scheme:dark){:root{--bg:#000;--surface:#1c1c1e;--surface2:#2c2c2e;--txt:#f5f5f7;--txt2:#aeaeb2;--txt3:#9a9aa0;
+  --stroke:#2f2f33;--accent:#3d9bff;--accent-fill:#0f6fd0;--good:#30d158;--warn:#ff9f0a;--bad:#ff6961;--shadow:0 10px 34px rgba(0,0,0,.5)}}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--txt);font-family:var(--sans);line-height:1.55;padding:32px 20px 60px}
+.wrap{max-width:840px;margin:0 auto}
+header{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.mark{width:38px;height:38px;border-radius:11px;background:var(--accent-fill);color:var(--on-accent);display:grid;place-items:center;font-size:20px}
+h1{font-size:24px;letter-spacing:-.02em}
+.sub{color:var(--txt3);font-size:14px;margin-bottom:26px}
+.card{background:var(--surface);border:1px solid var(--stroke);border-radius:var(--r);padding:22px;margin-bottom:16px;box-shadow:var(--shadow)}
+.card h2{font-size:16px;margin-bottom:4px}
+.card p.note{font-size:13.5px;color:var(--txt3);margin-bottom:14px;line-height:1.6}
+label{display:block;font-size:13px;font-weight:600;margin:12px 0 6px}
+input,select{width:100%;padding:11px 13px;border-radius:10px;border:1px solid var(--stroke);background:var(--surface2);color:var(--txt);font:inherit;font-size:15px}
+input:focus,select:focus{outline:2px solid var(--accent);border-color:var(--accent)}
+button{padding:11px 16px;border:0;border-radius:10px;background:var(--accent-fill);color:var(--on-accent);font:inherit;font-weight:600;font-size:14px;cursor:pointer}
+button.ghost{background:transparent;border:1px solid var(--stroke);color:var(--txt)}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.out{margin-top:14px;padding:12px 14px;border-radius:10px;background:var(--surface2);border:1px solid var(--stroke);
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;word-break:break-all}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:6px}
+.tile{padding:14px;border-radius:12px;background:var(--surface2);border:1px solid var(--stroke);text-align:center}
+.tile b{display:block;font-size:22px}
+.tile span{font-size:11.5px;color:var(--txt3)}
+.warn{margin-top:12px;padding:10px 12px;border-radius:9px;background:color-mix(in srgb,var(--warn) 14%,transparent);color:var(--warn);font-size:12.5px;line-height:1.6}
+ul{margin:8px 0 0 18px}li{font-size:13.5px;color:var(--txt2);margin-bottom:6px}
+a{color:var(--accent)}
+.status{margin-top:10px;font-size:13px;color:var(--good);min-height:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><div class="mark">⚡</div><h1>Instant Site — Admin</h1></header>
+  <div class="sub">Your control page. Not linked from the app and marked noindex, but it is a public file on a public site, so treat the passcode as a deterrent rather than a secret.</div>
+
+  <div class="card">
+    <h2>Your access</h2>
+    <p class="note">Unlock this browser so your own downloads never ask for the passcode.</p>
+    <label for="pin">Admin passcode</label>
+    <input id="pin" type="password" placeholder="Enter your passcode" autocomplete="off">
+    <div class="row">
+      <button id="unlock">Unlock this browser</button>
+      <a href="./"><button class="ghost" type="button">Open the builder</button></a>
+    </div>
+    <div class="status" id="unlockOut"></div>
+  </div>
+
+  <div class="card">
+    <h2>Client links</h2>
+    <p class="note">A client link opens the full builder so a white-label developer can design and preview, but hides the download, the dashboard and the admin settings. Add a label so you can tell links apart in your own records.</p>
+    <label for="cname">Client label (optional)</label>
+    <input id="cname" placeholder="e.g. Auckland reseller" maxlength="40">
+    <div class="row"><button id="gen">Generate client link</button><button class="ghost" id="copy">Copy</button></div>
+    <div class="out" id="link">—</div>
+    <div class="status" id="linkOut"></div>
+    <div class="warn">This hides the download; it does not encrypt the app. A determined person can still read the page source, because the browser has to download the code to run it. Real protection needs a small hosted backend.</div>
+  </div>
+
+  <div class="card">
+    <h2>Selling the theme</h2>
+    <p class="note">Buyers pay through your own Stripe or PayPal link, then you give them the passcode. Set these once here and the builder uses them.</p>
+    <label for="buy">Payment link</label>
+    <input id="buy" type="url" placeholder="https://buy.stripe.com/… or https://paypal.me/…">
+    <label for="price">Price label</label>
+    <input id="price" placeholder="$25" maxlength="12">
+    <div class="row"><button id="saveSell">Save</button></div>
+    <div class="status" id="sellOut"></div>
+  </div>
+
+  <div class="card">
+    <h2>This browser's usage</h2>
+    <p class="note">Counters are stored locally by the builder, so this shows what has been done in this browser only.</p>
+    <div class="grid" id="stats"></div>
+    <div class="row"><button class="ghost" id="refresh">Refresh</button></div>
+    <div class="warn">Tracking other people's accounts and usage needs a hosted backend. Nothing here can see what a client does in their own browser.</div>
+  </div>
+
+  <div class="card">
+    <h2>Hosting a separate client copy</h2>
+    <ul>
+      <li>Copy <code>index.html</code> into a new GitHub repo, or a folder such as <code>/client-a/</code> in this one.</li>
+      <li>Turn on GitHub Pages for it, then share that URL with <code>?client=1</code> on the end.</li>
+      <li>Change <code>DL_PIN</code> in that copy before sharing widely, so one leaked passcode does not unlock every copy.</li>
+    </ul>
+  </div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const base=location.href.replace(/admin\.html.*$/,'');
+function refresh(){
+  let u={};
+  try{ u=JSON.parse(localStorage.getItem('instantsite_usage')||'{}'); }catch(e){}
+  const cost=((u.inTok||0)/1e6*3+(u.outTok||0)/1e6*15).toFixed(2);
+  const t=(v,l)=>`<div class="tile"><b>${v}</b><span>${l}</span></div>`;
+  $('stats').innerHTML=t(u.sites||0,'Sites generated')+t(u.calls||0,'API calls')
+    +t(((u.inTok||0)/1000).toFixed(1)+'k','Tokens in')+t(((u.outTok||0)/1000).toFixed(1)+'k','Tokens out')
+    +t('US$'+cost,'Est. spend')
+    +t(localStorage.getItem('instantsite_admin')==='1'?'Yes':'No','Admin unlocked');
+}
+$('unlock').onclick=()=>{
+  const v=$('pin').value.trim();
+  if(!v){ $('unlockOut').textContent='Enter the passcode first.'; return; }
+  localStorage.setItem('instantsite_admin','1'); localStorage.setItem('instantsite_dl','1');
+  $('unlockOut').textContent='Unlocked. Downloads in this browser will not ask again.';
+  refresh();
+};
+$('gen').onclick=()=>{
+  const label=$('cname').value.trim();
+  const url=base+'?client=1'+(label?'&ref='+encodeURIComponent(label):'');
+  $('link').textContent=url;
+  $('linkOut').textContent='Link ready. Share it with your client.';
+};
+$('copy').onclick=async()=>{
+  const v=$('link').textContent; if(!v||v==='—') return;
+  try{ await navigator.clipboard.writeText(v); $('linkOut').textContent='Copied.'; }
+  catch(e){ $('linkOut').textContent='Select the link above and copy it.'; }
+};
+(()=>{ let c={}; try{ c=JSON.parse(localStorage.getItem('instantsite_sell')||'{}'); }catch(e){}
+  $('buy').value=c.buy||''; $('price').value=c.price||''; })();
+$('saveSell').onclick=()=>{
+  localStorage.setItem('instantsite_sell',JSON.stringify({buy:$('buy').value.trim(),price:$('price').value.trim()}));
+  $('sellOut').textContent='Saved. The builder will show this price and link on the paywall.';
+};
+$('refresh').onclick=refresh;
+refresh();
+</script>
+</body>
+</html>
