@@ -577,7 +577,7 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
 
 .foot{padding:10px 14px;border-top:1px solid var(--stroke);font-size:11.5px;color:var(--txt-3);flex:none;display:flex;gap:10px;flex-wrap:wrap;align-items:center;background:var(--surface-2)}
 /* dashboard */
-#dashModal{position:fixed;inset:0;z-index:9998;display:grid;place-items:center;padding:20px;
+#dashModal,#embedModal{position:fixed;inset:0;z-index:9998;display:grid;place-items:center;padding:20px;
   background:rgba(8,8,10,.5);backdrop-filter:blur(3px);overflow:auto}
 .dashcard{width:min(620px,100%);max-height:90vh;overflow:auto;padding:28px 26px;border-radius:20px;position:relative;
   background:var(--surface);border:1px solid var(--stroke);box-shadow:var(--shadow-lg)}
@@ -677,6 +677,10 @@ if(location.hash.startsWith(REVIEW_PREFIX)){
       <button type="button" data-dl="wp">
         <b>WordPress theme</b>
         <span>Installable .zip — PHP templates, editable in Appearance → Customize.</span>
+      </button>
+      <button type="button" data-dl="embed">
+        <b>Wix / Squarespace embed</b>
+        <span>A snippet to paste into a Wix HTML element or a Squarespace Code Block.</span>
       </button>
     </div>
   </div>
@@ -1064,6 +1068,10 @@ if(location.hash.startsWith(REVIEW_PREFIX)){
             <button class="mini" id="btnSocialKit" title="Generate an Instagram post and a LinkedIn banner in this site's theme, as PNGs. No design work needed." type="button">Social image kit</button>
             <button class="mini" id="btnBioLink" title="Add a mobile-first link-in-bio page listing your site, socials, phone, email and booking link, styled to match." type="button">Add bio-link page</button>
             <button class="mini" id="btnLeadMagnet" title="Generate a branded PDF lead magnet — a checklist or short guide from your brief — to give away in exchange for an email." type="button">Lead magnet PDF</button>
+            <button class="mini" id="btnBlog" title="Write a full blog post (comparison, case study or how-to) built to convert readers into leads. Editable, then export as HTML for your CMS or as a PDF." type="button">Blog post</button>
+          </div>
+          <div class="tabs" id="blogFmt" style="margin-top:6px;display:none">
+            <button data-bf="auto" class="on">Auto</button><button data-bf="how-to">How-to</button><button data-bf="comparison">Comparison</button><button data-bf="case-study">Case study</button>
           </div>
           <div id="growthStatus" class="tiny" style="margin-top:8px"></div>
         </div>
@@ -6381,8 +6389,65 @@ dlMenu.querySelectorAll('[data-dl]').forEach(b=>b.onclick=()=>{
   closeDl();
   if(b.dataset.dl==='wp') downloadWordPress();
   else if(b.dataset.dl==='review') makeReviewLink(true);
+  else if(b.dataset.dl==='embed') showEmbed();
   else download();
 });
+
+/* ---- Wix / Squarespace embed -------------------------------------------
+   Neither platform imports a theme the way WordPress does, so the honest
+   deliverable is an embed snippet. It renders the exported page inside an
+   iframe via srcdoc, which fully isolates it from the host page's CSS, and
+   auto-sizes its height by posting scrollHeight back to a tiny listener. The
+   user pastes it into a Wix "Embed a Widget > HTML" element or a Squarespace
+   "Code Block". One page per embed. */
+function embedSnippet(){
+  const id='is'+Math.random().toString(36).slice(2,8);
+  // append a height reporter to the page that goes inside srcdoc
+  const inner=buildSite(siteState,false,currentPage)
+    +`<script>(function(){function h(){parent.postMessage({i:'${id}',h:document.documentElement.scrollHeight},'*')}addEventListener('load',h);addEventListener('resize',h);setInterval(h,900)})()<\/script>`;
+  // Escape every "</" as "<\/" so no closing tag inside the srcdoc (LD+JSON,
+  // the height reporter) terminates the outer <script> when this is pasted
+  // into a page. The replacement must emit a real backslash, hence '<\\/'.
+  const srcdoc=JSON.stringify(inner).replace(/<\//g,'<\\/');
+  return `<div id="${id}"></div>
+<script>
+(function(){
+  var f=document.createElement('iframe');
+  f.title=${JSON.stringify(siteState.meta.businessName||'Website')};
+  f.style.cssText='width:100%;border:0;display:block;min-height:600px';
+  f.setAttribute('loading','lazy');
+  document.getElementById('${id}').appendChild(f);
+  f.srcdoc=${srcdoc};
+  window.addEventListener('message',function(e){ if(e.data&&e.data.i==='${id}'&&e.data.h) f.style.height=e.data.h+'px'; });
+})();
+<\/script>`;
+}
+function showEmbed(){
+  if(!siteState) return;
+  const snip=embedSnippet();
+  const wrap=document.createElement('div'); wrap.id='embedModal';
+  wrap.innerHTML=`<div class="dashcard" style="max-width:640px">
+    <button class="dashx" id="embX" aria-label="Close">&times;</button>
+    <h2>Wix / Squarespace embed</h2>
+    <div class="tiny" style="margin-bottom:10px">This renders your page inside an isolated frame, so the host site's styling cannot touch it, and it resizes to fit. One page per embed (currently: ${esc(pageTitle(siteState,currentPage))}).</div>
+    <div class="tiny" style="margin-bottom:10px"><b>Wix:</b> Add › Embed Code › Embed HTML, paste, click Update. &nbsp; <b>Squarespace:</b> add a Code Block, paste, save. (Code Blocks need a paid Squarespace plan.)</div>
+    <textarea id="embBox" readonly rows="8" style="width:100%;font-size:11.5px" spellcheck="false"></textarea>
+    <div style="display:flex;gap:6px;margin-top:10px">
+      <button class="mini" id="embCopy" type="button">Copy snippet</button>
+      <button class="mini" id="embDl" type="button">Download as .txt</button>
+    </div>
+    <div id="embNote" class="tiny" style="margin-top:8px"></div>
+  </div>`;
+  document.body.appendChild(wrap);
+  const box=wrap.querySelector('#embBox'); box.value=snip;
+  const close=()=>wrap.remove();
+  wrap.querySelector('#embX').onclick=close;
+  wrap.addEventListener('click',e=>{ if(e.target===wrap) close(); });
+  wrap.querySelector('#embCopy').onclick=async()=>{ box.select();
+    try{ await navigator.clipboard.writeText(box.value); wrap.querySelector('#embNote').textContent='Copied. Paste it into your Wix or Squarespace code element.'; }
+    catch{ wrap.querySelector('#embNote').textContent='Select the text and copy it manually.'; } };
+  wrap.querySelector('#embDl').onclick=()=>{ saveBlob(new Blob([snip],{type:'text/plain'}),`${slugify(siteState.meta.businessName,'embed')}-embed.txt`); };
+}
 
 let lastReviewURL='';
 async function makeReviewLink(alsoOpenPanel){
@@ -7471,6 +7536,164 @@ Return ONLY raw JSON: {"summary":string,"sections":[{"heading":string,"body":str
   };
 }
 $('btnDash').onclick=openDash;
+
+/* ---- blog-post generator ------------------------------------------------
+   A full, conversion-shaped article from the business brief. Editable in a
+   draft box, then exported as clean article HTML for any CMS or as a PDF. The
+   exported HTML is self-contained and theme-styled, carries a content-upgrade
+   CTA and FAQ schema, and a CSS-only stats bar when the model returns figures,
+   so it needs no JavaScript. */
+let blogFormat='auto', blogData=null;
+document.querySelectorAll('#blogFmt [data-bf]').forEach(b=>b.onclick=()=>{
+  blogFormat=b.dataset.bf;
+  document.querySelectorAll('#blogFmt [data-bf]').forEach(x=>x.classList.toggle('on',x===b));
+});
+$('btnBlog').onclick=async()=>{
+  if(!siteState){ $('growthStatus').textContent='Generate a site first.'; return; }
+  if(!getKey()){ $('growthStatus').textContent='Add an API key under Settings first.'; return; }
+  $('blogFmt').style.display='flex';
+  const btn=$('btnBlog'), was=btn.textContent; btn.disabled=true; btn.textContent='Writing…';
+  $('growthStatus').textContent='Writing the blog post…';
+  const b=briefFromMeta();
+  const fmtLine=blogFormat==='auto'
+    ? 'Choose whichever of these three formats will convert best for this business: a how-to guide, a comparison, or a case study.'
+    : `Write it as a ${blogFormat.replace('-',' ')}.`;
+  const sys=`You are an SEO content writer for a small local business. Write ONE blog post that is genuinely useful and built to convert a reader into a lead, using real specifics rather than generic claims.
+
+${fmtLine}
+
+Return ONLY raw JSON:
+{"title":string,"slug":string,"metaDescription":string,"intro":string,
+ "sections":[{"heading":string,"body":string}],
+ "stats":[{"label":string,"value":number,"suffix":string}],
+ "upgrade":{"title":string,"blurb":string,"cta":string},
+ "faqs":[{"q":string,"a":string}],"keyword":string}
+
+- "title" under 65 characters, benefit-led, with the search phrase near the front.
+- "intro" is 2 to 3 sentences that promise the payoff and name who it is for.
+- "sections": 4 to 6, each "body" 2 to 4 short paragraphs (use double newlines between paragraphs). Concrete, specific to this trade and area. No filler.
+- "stats": 0 to 4 simple figures a reader would find useful, ONLY if you can derive them honestly from the brief; otherwise return []. "value" is a plain number, "suffix" like "%", "days", "" .
+- "upgrade" is a content upgrade to capture the email: a checklist or template named in "title", "blurb" one sentence, "cta" the button text.
+- "faqs": 3 to 4 real questions with 1 to 2 sentence answers.
+- Never invent prices, certifications or figures not supported by the brief.
+- NEVER use an em dash.`;
+  try{
+    const raw=await callClaude(sys,`${userPrompt(b,null,null)}\n\nReturn the JSON now.`);
+    blogData=cleanCopy(JSON.parse(stripFences(raw)));
+    renderBlog();
+    $('growthStatus').textContent='Blog post ready. Edit the draft if you like, then export.';
+  }catch(e){ $('growthStatus').textContent=e.message||'Could not write the post.'; }
+  finally{ btn.disabled=false; btn.textContent=was; }
+};
+function blogToMarkdown(d){
+  let out=`# ${d.title}\n\n${d.intro||''}\n\n`;
+  (d.sections||[]).forEach(s=>{ out+=`## ${s.heading}\n\n${s.body}\n\n`; });
+  if(d.upgrade) out+=`> ${d.upgrade.title}\n> ${d.upgrade.blurb} [${d.upgrade.cta}]\n\n`;
+  (d.faqs||[]).forEach(f=>{ out+=`### ${f.q}\n\n${f.a}\n\n`; });
+  return out.trim();
+}
+function markdownToBlog(md){
+  // Parse the editable draft back into the data model so edits survive export.
+  const d={title:'',intro:'',sections:[],upgrade:blogData&&blogData.upgrade,faqs:[],
+    stats:blogData?blogData.stats:[],slug:blogData?blogData.slug:'',metaDescription:blogData?blogData.metaDescription:'',keyword:blogData?blogData.keyword:''};
+  const lines=md.split(/\n/); let cur=null, intro=[];
+  lines.forEach(l=>{
+    let m;
+    if((m=l.match(/^#\s+(.*)/))){ d.title=m[1].trim(); cur='intro'; }
+    else if((m=l.match(/^##\s+(.*)/))){ cur={heading:m[1].trim(),body:''}; d.sections.push(cur); }
+    else if((m=l.match(/^###\s+(.*)/))){ cur={q:m[1].trim(),a:''}; d.faqs.push(cur); }
+    else if(l.startsWith('>')){ /* keep existing upgrade */ }
+    else { if(cur==='intro') intro.push(l);
+      else if(cur&&'body' in cur) cur.body+=(cur.body?'\n':'')+l;
+      else if(cur&&'a' in cur) cur.a+=(cur.a?'\n':'')+l; }
+  });
+  d.intro=intro.join('\n').trim();
+  d.sections.forEach(s=>s.body=s.body.trim());
+  d.faqs.forEach(f=>f.a=f.a.trim());
+  return d;
+}
+function renderBlog(){
+  const d=blogData; if(!d) return;
+  const esc2=x=>esc(String(x==null?'':x));
+  const box=(h,inner)=>`<div class="gout"><h5>${h}</h5>${inner}</div>`;
+  let html=box('Draft (editable)',`<textarea id="blogDraft" rows="14" style="width:100%;font-size:12.5px;line-height:1.5" spellcheck="false"></textarea>
+    <div class="tiny" style="margin-top:6px">Markdown-style. Edits here flow into both exports.</div>`);
+  html+=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+    <button class="mini" id="blogHtml" type="button">Download as HTML</button>
+    <button class="mini" id="blogPdf" type="button">Download as PDF</button>
+    <button class="mini" id="blogRewrite" type="button">✨ Rewrite</button></div>`;
+  $('growthOut').innerHTML=html;
+  $('blogDraft').value=blogToMarkdown(d);
+  const sync=()=>{ blogData=markdownToBlog($('blogDraft').value); };
+  $('blogDraft').addEventListener('input',sync);
+  $('blogHtml').onclick=()=>{ sync(); const slug=slugify(blogData.slug||blogData.title,'post');
+    saveBlob(new Blob([blogHTML(blogData,siteState)],{type:'text/html'}),`${slug}.html`); };
+  $('blogPdf').onclick=()=>{ sync(); const slug=slugify(blogData.slug||blogData.title,'post');
+    saveBlob(makeLeadPdf(blogToPdfData(blogData),dashState()),`${slug}.pdf`); };
+  $('blogRewrite').onclick=()=>$('btnBlog').click();
+}
+function blogToPdfData(d){
+  return {title:d.title,subtitle:'',intro:d.intro,
+    sections:(d.sections||[]).map(s=>({heading:s.heading,type:'prose',body:s.body}))
+      .concat((d.faqs||[]).length?[{heading:'FAQ',type:'prose',body:(d.faqs||[]).map(f=>f.q+'\n'+f.a).join('\n\n')}]:[]),
+    cta:d.upgrade?d.upgrade.title+' — '+d.upgrade.cta:'',filename:slugify(d.slug||d.title,'post')};
+}
+function blogHTML(d,state){
+  const m=state.meta, t=resolveTheme(m.theme), c=m.contact||{};
+  const useSys=prefs.systemFonts;
+  const disp=useSys?t.sysDisplay:`'${(t.display||'').replace(/'/g,'')}',${t.sysDisplay}`;
+  const body=useSys?t.sysBody:`'${(t.body||'').replace(/'/g,'')}',${t.sysBody}`;
+  const fontLink=(!useSys&&t.google)?`<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=${t.google}&display=swap">`:'';
+  const para=x=>String(x||'').split(/\n{2,}/).map(pp=>`<p>${esc(pp.trim())}</p>`).join('');
+  const maxV=Math.max(1,...(d.stats||[]).map(s=>+s.value||0));
+  const statsHTML=(d.stats&&d.stats.length)?`<div class="bstats">${d.stats.map(s=>`
+    <div class="bstat"><div class="bnum">${esc(s.value)}${esc(s.suffix||'')}</div>
+      <div class="bbar"><i style="width:${Math.round((+s.value||0)/maxV*100)}%"></i></div>
+      <div class="blab">${esc(s.label)}</div></div>`).join('')}</div>`:'';
+  const faqLd=(d.faqs&&d.faqs.length)?`<script type="application/ld+json">${JSON.stringify({'@context':'https://schema.org','@type':'FAQPage',mainEntity:d.faqs.map(f=>({'@type':'Question',name:f.q,acceptedAnswer:{'@type':'Answer',text:f.a}}))})}<\/script>`:'';
+  const artLd=`<script type="application/ld+json">${JSON.stringify({'@context':'https://schema.org','@type':'Article',headline:d.title,description:d.metaDescription||'',author:{'@type':'Organization',name:m.businessName},publisher:{'@type':'Organization',name:m.businessName},datePublished:new Date().toISOString().slice(0,10)})}<\/script>`;
+  const cta=c.book?esc(c.book):c.phone?telHref(c.phone):c.email?'mailto:'+esc(c.email):'#';
+  return `<!DOCTYPE html>
+<html lang="${(LOCALES[m.locale]&&LOCALES[m.locale].tag)||'en'}">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(d.title)}</title>
+<meta name="description" content="${esc(d.metaDescription||'')}">
+${fontLink}
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:${t.bg};color:${t.ink};font-family:${body};line-height:1.7;font-size:18px}
+.wrap{max-width:720px;margin:0 auto;padding:56px 22px}
+h1{font-family:${disp};font-weight:${t.weight};font-size:clamp(28px,5vw,40px);line-height:1.15;margin-bottom:18px;${t.caps?'text-transform:uppercase;':''}}
+h2{font-family:${disp};font-weight:${t.weight};font-size:clamp(22px,3vw,27px);margin:38px 0 12px}
+h3{font-size:20px;margin:26px 0 8px}
+p{margin-bottom:16px;color:${t.ink2}}
+.lead{font-size:20px;color:${t.ink};margin-bottom:28px}
+.bstats{display:grid;gap:16px;margin:30px 0;padding:24px;border-radius:14px;background:${t.panel};border:1px solid ${t.line}}
+.bnum{font-family:${disp};font-weight:${t.weight};font-size:28px;color:${t.primary}}
+.bbar{height:8px;border-radius:99px;background:${rgba(t.ink,.08)};margin:6px 0 4px;overflow:hidden}
+.bbar i{display:block;height:100%;border-radius:99px;background:${t.primary}}
+.blab{font-size:14px;color:${t.ink2}}
+.upgrade{margin:36px 0;padding:28px;border-radius:16px;background:linear-gradient(135deg,${t.primary},${t.accent});color:${bestOn(t.primary)}}
+.upgrade h3{color:inherit;margin-top:0;font-size:22px}
+.upgrade p{color:inherit;opacity:.92}
+.upgrade a{display:inline-block;margin-top:10px;background:${t.bg};color:${t.ink};padding:12px 22px;border-radius:99px;text-decoration:none;font-weight:600}
+.faq{margin-top:40px;border-top:1px solid ${t.line};padding-top:20px}
+.byline{font-size:14px;color:${t.ink2};margin-bottom:30px}
+</style>${artLd}${faqLd}
+</head>
+<body><article class="wrap">
+  <h1>${esc(d.title)}</h1>
+  <div class="byline">${esc(m.businessName)}${m.location?' · '+esc(m.location):''}</div>
+  ${d.intro?`<p class="lead">${esc(d.intro)}</p>`:''}
+  ${statsHTML}
+  ${(d.sections||[]).map(sec=>`<h2>${esc(sec.heading)}</h2>${para(sec.body)}`).join('')}
+  ${d.upgrade?`<div class="upgrade"><h3>${esc(d.upgrade.title)}</h3><p>${esc(d.upgrade.blurb)}</p><a href="${cta}">${esc(d.upgrade.cta)}</a></div>`:''}
+  ${(d.faqs&&d.faqs.length)?`<div class="faq"><h2>Questions</h2>${d.faqs.map(f=>`<h3>${esc(f.q)}</h3><p>${esc(f.a)}</p>`).join('')}</div>`:''}
+</article></body>
+</html>`;
+}
+
 
 $('btnOgImage').onclick=()=>{
   if(!siteState){ $('seoScore').innerHTML='<div class="tiny">Generate a site first.</div>'; return; }
