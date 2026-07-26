@@ -39,12 +39,15 @@ Measured, not estimated:
 
 | | Google Fonts (default) | System fonts mode |
 |---|---|---|
-| File size | ~18–20 KB | ~18–20 KB |
+| File size (on disk) | ~45 KB | ~45 KB |
+| File size (gzipped, as served) | ~10 KB | ~10 KB |
 | External requests | 3 (preconnected, `display=swap`) | **0** |
 | Executable scripts | **0** | **0** |
 | DOMContentLoaded | ~8 ms | ~8 ms |
 
-All CSS is inlined, icons are inline SVG, and below-fold sections use `content-visibility`. At ~20 KB the page is a single round trip — real-world load time is dominated by your host's TTFB, not the page itself.
+Measured on a Trades Bold export with every section populated; hiding the optional sections saves ~2 KB, because the weight is the stylesheet rather than the content. The inlined CSS is ~32 KB of the 45 KB and compresses hard, which is why the served size is ~10 KB.
+
+All CSS is inlined, icons are inline SVG, and below-fold sections use `content-visibility`. At ~10 KB over the wire the page is a single round trip — real-world load time is dominated by your host's TTFB, not the page itself.
 
 ## Interface
 

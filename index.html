@@ -40,7 +40,9 @@
           both CTA gradient stops — is verified against WCAG AA at boot by
           verifyThemes(). App chrome tokens are checked by verifyAppTokens().
 
-  PERFORMANCE: exports are ~20 KB, zero JavaScript, all CSS inlined, icons as
+  PERFORMANCE: exports are ~45 KB on disk and ~10 KB gzipped over the wire
+          (the inlined stylesheet is ~32 KB of that, and compresses hard).
+          Zero JavaScript, all CSS inlined, icons as
           inline SVG. The only
           optional external request is Google Fonts for the generated site
           (preconnected, display=swap); "System fonts only" drops it to zero.
@@ -141,6 +143,11 @@
   --ease:cubic-bezier(.32,.72,0,1); --hdr:54px;
   --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Helvetica Neue",Helvetica,Arial,sans-serif;
 }
+/* --txt-1 was referenced in six places but never defined, so every one of them
+   silently fell back to the inherited colour instead of the intended primary
+   text tone. Aliasing it is safer than rewriting the call sites, two of which
+   live inside JS template strings. */
+:root{--txt-1:var(--txt)}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;overflow:hidden}
 /* NOTE: do NOT put a `transition` on these. They are driven by custom
@@ -226,7 +233,11 @@ header .spacer{flex:1}
    matching ones and opens them, which beats scrolling for the panel you want. */
 .secfind{position:sticky;top:0;z-index:5;margin:-12px -12px 8px;padding:10px 12px;background:var(--bg);
   border-bottom:1px solid var(--stroke)}
-.secfind input{width:100%;padding:8px 11px 8px 30px;font-size:13px;border-radius:var(--r-pill);
+/* The generic input rule below sets `padding:8px 11px` at equal specificity and
+   later in the sheet, so it won the cascade and the magnifier painted directly
+   on top of the placeholder's first letter. Scoping the selector to the type
+   puts this back in front. */
+.secfind input[type=search],.secfind input{width:100%;padding:8px 11px 8px 32px;font-size:13px;border-radius:var(--r-pill);
   background:var(--fill);border:1px solid transparent}
 .secfind input:focus{background:var(--surface);border-color:var(--accent)}
 .secfind .mag{position:absolute;left:22px;top:50%;transform:translateY(-50%);width:14px;height:14px;
@@ -285,6 +296,10 @@ select{appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%
 .combo input{width:100%;padding-right:34px}
 .combo-x{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:24px;height:24px;
   border-radius:50%;font-size:16px;line-height:1;color:var(--txt-3);display:none}
+/* The visible dot stays 24px so it reads as a subtle affordance inside the
+   field, but a bare 24px target is well under the 44px touch minimum. The
+   pseudo-element extends the hit area without changing anything you can see. */
+.combo-x::after{content:'';position:absolute;left:50%;top:50%;width:44px;height:44px;transform:translate(-50%,-50%)}
 .combo-x:hover{background:var(--fill);color:var(--txt-1)}
 .combo.filled .combo-x{display:block}
 .combo-list{position:absolute;left:0;right:0;top:calc(100% + 6px);max-height:230px;overflow-y:auto;
@@ -298,12 +313,21 @@ select{appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%
 .combo-group{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--txt-3);padding:8px 10px 4px}
 .combo-empty{padding:10px;font-size:12px;color:var(--txt-3)}
 .suggs{display:block;font-size:10.5px;color:var(--txt-3);margin-top:5px;letter-spacing:.02em}
-.serp{padding:12px;border:1px solid var(--stroke);border-radius:10px;background:var(--surface);margin-bottom:8px}
-.serp .u{font-size:11.5px;color:var(--txt-3)}
-.serp .t{font-size:15px;color:#1a0dab;line-height:1.3;margin:2px 0}
-.serp .d{font-size:12px;color:var(--txt-2);line-height:1.5}
-.serp.social{background:var(--surface-2)}
-.serp.social .t{color:var(--txt-1);font-weight:600}
+/* This is a mock of a Google result, so it is pinned to Google's own light card
+   in both appearances rather than following the app surface. In dark mode the
+   #1a0dab link on --surface measured 1.37:1 — the headline was invisible, which
+   is the one thing this preview exists to show. Fixed local tokens keep every
+   pair above AA and make the mock read as a screenshot of the SERP, not as a
+   panel of the app. */
+.serp{padding:12px;border:1px solid var(--stroke);border-radius:10px;margin-bottom:8px;
+  background:#fff;--serp-u:#5f6368;--serp-t:#1a0dab;--serp-d:#3c4043}
+:root[data-theme="dark"] .serp{background:#f8f9fa;border-color:#c8c9cc}
+.serp .u{font-size:11.5px;color:var(--serp-u)}
+.serp .t{font-size:15px;color:var(--serp-t);line-height:1.3;margin:2px 0}
+.serp .d{font-size:12px;color:var(--serp-d);line-height:1.5}
+.serp.social{background:#f1f3f4;--serp-t:#202124}
+:root[data-theme="dark"] .serp.social{background:#eceff1}
+.serp.social .t{font-weight:600}
 .scorebar{height:8px;border-radius:99px;background:var(--fill-2);overflow:hidden;margin:6px 0 10px}
 .scorebar i{display:block;height:100%;border-radius:99px;transition:width .5s var(--ease)}
 .scorerow{display:flex;gap:8px;align-items:flex-start;padding:6px 0;font-size:12px;border-bottom:1px solid var(--stroke)}
@@ -447,7 +471,12 @@ select{appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%
 .empty p{color:var(--txt-3);font-size:13.5px;line-height:1.6}
 .steps{margin-top:22px;text-align:left;display:grid;gap:10px}
 .step{display:flex;gap:11px;align-items:flex-start;font-size:13px;color:var(--txt-2)}
-.step b{width:21px;height:21px;border-radius:50%;background:var(--fill);display:grid;place-items:center;font-size:11px;font-weight:600;flex:none;color:var(--txt-3)}
+/* Must stay a child selector. As `.step b` it also matched the inline <b> inside
+   a step's text, so "Settings" in step 1 was rendered as a 21px grey circle and
+   broke to its own line with the full stop orphaned under it — on the empty
+   state, which is the first thing every new user sees. */
+.step>b{width:21px;height:21px;border-radius:50%;background:var(--fill);display:grid;place-items:center;font-size:11px;font-weight:600;flex:none;color:var(--txt-3)}
+.step div b{font-weight:600;color:var(--txt)}
 
 .loading{height:100%;display:grid;place-items:center;text-align:center;padding:32px}
 .spinner{width:34px;height:34px;margin:0 auto 20px;border-radius:50%;border:2.5px solid var(--fill-2);border-top-color:var(--accent);animation:spin .8s linear infinite}
@@ -682,10 +711,19 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
   .mtabs button.on{background:var(--surface);color:var(--txt);box-shadow:0 1px 3px rgba(0,0,0,.14)}
   .app.mob-preview .panel{display:none}
   .app.mob-brief .work{display:none}
+  /* Below this width the labels are dropped, which leaves icon-only pills at
+     38x30 — under the 44px touch minimum, in the header, where a mis-tap on
+     Download is the most annoying one to make. The buttons keep their visual
+     weight and gain a compliant target. */
   .hbtn span{display:none}
-  .hbtn{padding:7px 11px}
+  .hbtn{padding:7px 11px;min-width:44px;min-height:44px;justify-content:center}
+  .icon-btn{width:44px;height:44px}
 }
 @media(max-width:520px){ .two,.themes{grid-template-columns:1fr} header{padding:0 10px;gap:6px} }
+/* Once the header controls are at their 44px touch size there is no longer room
+   for the wordmark, and it was ellipsising to "Insta…" — which reads as a
+   layout bug rather than a brand. The mark alone carries it at this width. */
+@media(max-width:430px){ .brand-name{display:none} }
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation-duration:.01ms!important}}
 /* Applied for two frames while the appearance swaps. Without it, any element
    carrying `transition:all` on a var-driven background/colour keeps painting
@@ -1324,7 +1362,7 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
             <div class="step"><b>1</b><div>Paste an Anthropic API key under <b>Settings</b>.</div></div>
             <div class="step"><b>2</b><div>Describe the business and add contact details.</div></div>
             <div class="step"><b>3</b><div>Pick a theme, generate, then click any text in the preview to edit it.</div></div>
-            <div class="step"><b>4</b><div>Download the HTML — ~20 KB, zero JavaScript, ready to host.</div></div>
+            <div class="step"><b>4</b><div>Download the HTML — ~10 KB over the wire, zero JavaScript, ready to host.</div></div>
           </div>
         </div></div>
       </div>
@@ -3408,6 +3446,17 @@ body{background:${t.bg};color:${t.ink};font-family:${t.bodyFont},sans-serif;font
 h1,h2,h3{font-family:${t.displayFont},sans-serif;font-weight:${t.weight};line-height:1.12;letter-spacing:${t.caps?'.01em':'-.02em'}}
 img{max-width:100%;height:auto;display:block}
 a{color:inherit}
+/* Form fields and the burger already had a themed focus ring; links and buttons
+   fell through to the browser default, so keyboard tabbing through a finished
+   site changed appearance halfway down the page. Themed here in the site's own
+   primary so the whole page is consistent.
+   .b is the one case where the element's own background IS the primary, which
+   would swallow a primary outline — it gets the label colour instead, drawn
+   inside the button where it is guaranteed to contrast (onPrimary is picked
+   against t.primary by bestOn). Costs ~180 bytes in the export. */
+a:focus-visible,button:focus-visible,summary:focus-visible,[tabindex]:focus-visible{
+  outline:3px solid ${t.primary};outline-offset:2px;border-radius:3px}
+.b:focus-visible{outline-color:${onPrimary};outline-offset:-7px}
 .w{max-width:${t.story?'980px':'1120px'};margin:0 auto;padding:0 24px}
 /* Anchor targets must clear the sticky nav, or clicking a nav link parks the
    heading underneath it. */
@@ -3555,7 +3604,9 @@ header.fx-condensed .nav-inner{transform:scale(.94);transform-origin:left center
 .trust span{display:inline-flex;align-items:center;gap:8px}
 .trust svg{width:17px;height:17px;color:${t.accent};flex:none}
 .hcard{padding:32px;border-radius:${t.radius};background:${t.panel};border:1px solid ${t.line}}
-.hcard h3{font-size:19px;margin-bottom:14px}
+/* h2, not h3: this card sits in the hero beside the h1, so an h3 here jumped
+   the outline straight from h1 to h3 before any section heading. */
+.hcard h2{font-size:19px;margin-bottom:14px}
 .hcard dl{display:grid;gap:11px;font-size:15.5px}
 .hcard dt{font-weight:600;color:${t.ink}}
 .hcard dd{color:${t.ink2}}
@@ -3608,7 +3659,7 @@ section{padding:${d}px 0}
 .hero.banner .b2,.hero.photo .b2{background:transparent;color:#fff;border-color:rgba(255,255,255,.6)}
 .hero.photo .trust svg{color:#fff}
 .hero.photo .hcard{background:rgba(255,255,255,.96);color:${t.ink}}
-.hero.photo .hcard dt{color:${t.ink}}.hero.photo .hcard dd{color:${t.ink2}}.hero.photo .hcard h3{color:${t.ink}}
+.hero.photo .hcard dt{color:${t.ink}}.hero.photo .hcard dd{color:${t.ink2}}.hero.photo .hcard h2{color:${t.ink}}
 .q{padding:30px 28px;border-radius:${t.radius};background:${t.bg};border:1px solid ${t.line};display:flex;flex-direction:column;gap:16px}
 .stars{display:flex;gap:3px;color:${t.accent}}
 .stars svg{width:18px;height:18px;fill:currentColor}
@@ -3666,9 +3717,19 @@ section{padding:${d}px 0}
   color:${t.ink};letter-spacing:${t.caps?'.04em':'-.01em'};${t.caps?'text-transform:uppercase;':''}}
 .footlogo{max-height:44px;width:auto}
 .footline{margin-top:10px;max-width:34ch;line-height:1.6;font-size:15px}
-.foot h4{font-family:${t.displayFont},sans-serif;font-size:13px;letter-spacing:.08em;text-transform:uppercase;
-  color:${t.ink};margin-bottom:14px;font-weight:${t.weight};opacity:.75}
+/* h3, not h4: the page's sections are all h2, so an h4 here skipped a level and
+   broke the outline for anyone navigating by heading. line-height is pinned
+   because h3 (unlike h4) also picks up the global h1,h2,h3 rule above. */
+.foot h3{font-family:${t.displayFont},sans-serif;font-size:13px;letter-spacing:.08em;text-transform:uppercase;
+  color:${t.ink};margin-bottom:14px;font-weight:${t.weight};opacity:.75;line-height:1.5}
 .footcol div{margin-bottom:8px;line-height:1.5}
+/* Footer link rows measured 19px tall with a 13px gap — a 32px pitch, which
+   fails WCAG 2.2 Target Size (24x24 minimum) and is well under the 44px touch
+   guidance. Padding the anchor instead of the wrapper makes the whole row
+   tappable while keeping the same 32px rhythm on a mouse, so the footer looks
+   unchanged on desktop and stops being a mis-tap trap on a phone. */
+.footcol div a{display:inline-flex;align-items:center;min-height:24px}
+@media(pointer:coarse){.footcol div{margin-bottom:0}.footcol div a{min-height:44px}}
 .footmeta{opacity:.8;font-size:14.5px}
 .foot a{color:${t.ink2};text-decoration:none;transition:color .18s}
 .foot a:hover{color:${t.primary}}
@@ -4642,7 +4703,7 @@ function buildSite(state,mode,pageIdx){
     <div class="trust">${trust}</div>`;
 
   const heroCard=(c.phone||c.email||c.hours||c.area)?`
-    <aside class="hcard"><h3>Get in touch</h3><dl>
+    <aside class="hcard"><h2>Get in touch</h2><dl>
       ${c.phone?`<dt>Phone</dt><dd><a href="${telHref(c.phone)}">${esc(c.phone)}</a></dd>`:''}
       ${c.email?`<dt>Email</dt><dd><a href="mailto:${esc(c.email)}">${esc(c.email)}</a></dd>`:''}
       ${c.hours?`<dt>Hours</dt><dd>${esc(c.hours)}</dd>`:''}
@@ -4659,7 +4720,7 @@ function buildSite(state,mode,pageIdx){
   const hFields=(m.heroFormFields&&m.heroFormFields.length>=2)?m.heroFormFields:F;
   const hForm=(fields,title,sub,btn,cls)=>!canForm?'':`
     <aside class="hcard hform ${cls||''}">
-      ${title?`<h3>${esc(title)}</h3>`:''}
+      ${title?`<h2>${esc(title)}</h2>`:''}
       ${sub?`<p class="hfsub">${esc(sub)}</p>`:''}
       ${formBody(fields,btn||s.hero.cta_text)}
       ${c.phone?`<p class="hfor">or call <a href="${telHref(c.phone)}">${esc(c.phone)}</a></p>`:''}
@@ -4677,7 +4738,7 @@ function buildSite(state,mode,pageIdx){
     detailed:  ()=>hForm(hFields,'Tell us about the job','The more you tell us, the sharper the quote.','Send the details','hf-quote'),
     withcard:  ()=>!canForm?heroCard:`
       <aside class="hcard hform hf-both">
-        <h3>Get in touch</h3>
+        <h2>Get in touch</h2>
         ${formBody(hFields.slice(0,3),s.hero.cta_text)}
         <dl class="hfmini">
           ${c.phone?`<dt>Phone</dt><dd><a href="${telHref(c.phone)}">${esc(c.phone)}</a></dd>`:''}
@@ -4843,8 +4904,8 @@ n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0
     ? `<a href="#" data-page="${i}">${esc(pageTitle(state,i))}</a>`
     : `<a href="${esc(pageRel(state,pageIdx,i))}">${esc(pageTitle(state,i))}</a>`;
   const footNav=footPages.length>1
-    ? `<div class="footcol"><h4>Pages</h4>${footPages.map(i=>`<div>${pageLink(i)}</div>`).join('')}</div>`
-    : (anchorLinksRaw.length?`<div class="footcol"><h4>On this page</h4>${anchorLinksRaw.map(k=>
+    ? `<div class="footcol"><h3>Pages</h3>${footPages.map(i=>`<div>${pageLink(i)}</div>`).join('')}</div>`
+    : (anchorLinksRaw.length?`<div class="footcol"><h3>On this page</h3>${anchorLinksRaw.map(k=>
         `<div><a href="#${k}">${NAV_LABELS[k]}</a></div>`).join('')}</div>`:'');
   const legalLinks=legalPages.length
     ? `<span class="legallinks">${legalPages.map(i=>pageLink(i)).join('')}</span>`:'';
@@ -4945,7 +5006,7 @@ ${sectionsHTML}
       ${c.phone||c.email?`<a class="footcta" href="${primaryHref}">${esc(heroCta)}</a>`:''}
     </div>
     ${footNav}
-    ${(c.phone||c.email||c.hours||c.area)?`<div class="footcol"><h4>Get in touch</h4>
+    ${(c.phone||c.email||c.hours||c.area)?`<div class="footcol"><h3>Get in touch</h3>
       ${c.phone?`<div><a href="${telHref(c.phone)}">${esc(c.phone)}</a></div>`:''}
       ${c.email?`<div><a href="mailto:${esc(c.email)}">${esc(c.email)}</a></div>`:''}
       ${c.hours?`<div class="footmeta">${esc(c.hours)}</div>`:''}
@@ -6161,7 +6222,7 @@ $socials = array_filter( array_map( 'trim', explode( "\\n", ${slug.replace(/-/g,
 
     <?php if ( has_nav_menu( 'footer' ) || has_nav_menu( 'primary' ) ) : ?>
     <div class="footcol">
-      <h4><?php esc_html_e( 'Pages', '${slug}' ); ?></h4>
+      <h3><?php esc_html_e( 'Pages', '${slug}' ); ?></h3>
       <?php wp_nav_menu( array(
         'theme_location' => has_nav_menu( 'footer' ) ? 'footer' : 'primary',
         'container'      => false,
@@ -6175,7 +6236,7 @@ $socials = array_filter( array_map( 'trim', explode( "\\n", ${slug.replace(/-/g,
 
     <?php if ( $phone || $email || $hours || $area ) : ?>
     <div class="footcol">
-      <h4><?php esc_html_e( 'Get in touch', '${slug}' ); ?></h4>
+      <h3><?php esc_html_e( 'Get in touch', '${slug}' ); ?></h3>
       <?php if ( $phone ) : ?><div><a href="<?php echo esc_url( ${slug.replace(/-/g,'_')}_tel( $phone ) ); ?>"><?php echo esc_html( $phone ); ?></a></div><?php endif; ?>
       <?php if ( $email ) : ?><div><a href="mailto:<?php echo esc_attr( $email ); ?>"><?php echo esc_html( $email ); ?></a></div><?php endif; ?>
       <?php if ( $hours ) : ?><div class="footmeta"><?php echo esc_html( $hours ); ?></div><?php endif; ?>
@@ -6976,19 +7037,30 @@ function paywall(){
   const cfg=(()=>{ try{ return JSON.parse(localStorage.getItem('instantsite_sell')||'{}'); }catch{ return {}; } })();
   const price=cfg.price||'$49', buy=(cfg.buy||'').trim();
   const wrap=document.createElement('div'); wrap.id='payModal';
-  wrap.innerHTML=`<div class="paycard">
+  wrap.innerHTML=`<div class="paycard" role="dialog" aria-modal="true" aria-labelledby="payTitle">
     <button class="dashx" id="payX" aria-label="Close">&times;</button>
-    <h2>Unlock the theme download</h2>
+    <h2 id="payTitle">Unlock the theme download</h2>
     <p class="tiny">Building and previewing is free. The exportable theme file is the paid product. Enter your licence passcode, or buy it once for ${esc(price)}.</p>
     <input id="payPin" type="text" autocomplete="off" spellcheck="false" placeholder="${LICENCE_API?'Licence key or passcode':'Licence passcode'}">
     <button id="payGo" type="button" class="paybtn">Unlock downloads</button>
     ${buy?`<div class="payor">or</div><a id="payBuy" href="${esc(buy)}" target="_blank" rel="noopener" class="paybtn paybuy">Buy the theme — ${esc(price)}</a>
       <div class="tiny" style="margin-top:8px">After paying you will be given the passcode. Paste it above.</div>`
         :`<div class="tiny" style="margin-top:10px">No buy link is set. The admin can add a Stripe or PayPal payment link under Settings › Sell the theme.</div>`}
-    <div id="payErr"></div>
+    <div id="payErr" role="alert" aria-live="assertive"></div>
   </div>`;
   document.body.appendChild(wrap);
-  const close=()=>wrap.remove();
+  /* Every other dismissible surface in the app closes on Escape — the combobox,
+     the download menu, the dashboard, the version menu. This one did not, which
+     made the paywall the single hardest thing to back out of. Focus goes back to
+     the button that opened it rather than to the top of the document. */
+  const opener=document.activeElement;
+  const close=()=>{
+    wrap.remove();
+    document.removeEventListener('keydown',onKey);
+    if(opener&&opener.isConnected) opener.focus();
+  };
+  function onKey(e){ if(e.key==='Escape'){ e.stopPropagation(); close(); } }
+  document.addEventListener('keydown',onKey);
   wrap.querySelector('#payX').onclick=close;
   wrap.addEventListener('click',e=>{ if(e.target===wrap) close(); });
   const inp=wrap.querySelector('#payPin'), err=wrap.querySelector('#payErr');
