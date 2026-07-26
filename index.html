@@ -7415,23 +7415,36 @@ function openDlMenu(){
     $('dlHtmlNote').textContent=n>1?`${n} linked pages as a .zip.`:'One self-contained file. Host it anywhere.'; }
 }
 /* ---- theme paywall ------------------------------------------------------
-   The app is free to use; the downloadable theme is the paid product. There is
-   no server, so this is an honest soft gate, NOT DRM: the licence is a passcode
-   the admin owns. The admin enters it to export free; a white-label buyer pays
-   through the admin's own Stripe or PayPal link and is given the same passcode.
-   Anyone who reads the source can find the passcode, so this deters, it does
-   not enforce. Real enforcement would need a backend, which this app does not
-   have. Once unlocked it stays unlocked in this browser. */
-/* Your Cloudflare Worker, if you have deployed one. Set this and the Download
-   button will also accept per-customer licence keys, which you can revoke one
-   at a time from admin.html. Leave it empty and the app falls back to the
-   shared passcode above, which works offline but cannot be revoked for one
-   customer without changing it for everyone. */
+   The app is free to use; the downloadable theme is the paid product.
+
+   How it works: every buyer, including the owner, gets their own licence key
+   issued from admin.html. The key is checked against the Worker, and revoking
+   it there stops that key working everywhere on its next check. There is no
+   shared secret and no owner bypass — the passcode that used to serve both
+   roles was published in this file, could not be revoked, and made the rest of
+   the gate meaningless.
+
+   What this does NOT do, stated plainly because it decides how you price:
+   the export is assembled in the visitor's browser out of their own content,
+   so the Worker never touches the file and cannot withhold it. Anyone willing
+   to edit this JavaScript can still export. The gate is a lock on the front
+   door of a building with no walls — it stops casual non-payment and gives you
+   revocation, which is what an honest customer relationship needs. It is not
+   DRM and cannot be. Real file-level enforcement means building the export
+   server-side, which would cost the offline, no-backend property this whole
+   product is built on. That is a trade worth making deliberately or not at
+   all. */
+/* Your Cloudflare Worker. This is now the ONLY way downloads unlock — there is
+   no offline fallback, because the thing it used to fall back to was the shared
+   passcode. If you fork this and leave it empty, the Download button has no way
+   to verify anyone and stays locked. Deploy worker/ and put its URL here. */
 const LICENCE_API='https://instant-site-licence.digitalyticsagency.workers.dev';
 const LS_LIC='instantsite_licence';
 function savedLicence(){ try{ return localStorage.getItem(LS_LIC)||''; }catch{ return ''; } }
-/* Verified server-side, so a revoked key stops working on the next check even
-   though the passcode path stays offline-capable. */
+/* Verified server-side, so a revoked key stops working on its next check.
+   "Next check" is at most a day for an active user — see LIC_TTL — and the
+   grace window in dlUnlocked() means an outage never locks out someone who has
+   already paid. */
 async function verifyLicence(key){
   if(!LICENCE_API) return {ok:false,error:'No licence server is configured.'};
   const r=await fetch(LICENCE_API.replace(/\/+$/,'')+'/verify',{method:'POST',

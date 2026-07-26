@@ -43,9 +43,12 @@ Measured, not estimated:
 | File size (gzipped, as served) | ~10 KB | ~10 KB |
 | External requests | 3 (preconnected, `display=swap`) | **0** |
 | Executable scripts | **0** | **0** |
+| *(with JS libraries opted in)* | *up to +736 KB* | *up to +736 KB* |
 | DOMContentLoaded | ~8 ms | ~8 ms |
 
 Measured on a Trades Bold export with every section populated; hiding the optional sections saves ~2 KB, because the weight is the stylesheet rather than the content. The inlined CSS is ~32 KB of the 45 KB and compresses hard, which is why the served size is ~10 KB.
+
+**These figures are for the default settings**, where the JavaScript level is `Off`. That is the only configuration that is genuinely script-free. Opting into the JS libraries under Settings changes the picture a long way — Smooth scroll adds ~13 KB, GSAP effects ~128 KB and the WebGL hero ~736 KB, all fetched from jsDelivr on every visit — and the pre-flight check reports the real total whenever they are on. The client report generated from a site measures the actual export rather than repeating this table, so it stays honest either way.
 
 All CSS is inlined, icons are inline SVG, and below-fold sections use `content-visibility`. At ~10 KB over the wire the page is a single round trip — real-world load time is dominated by your host's TTFB, not the page itself.
 
@@ -113,11 +116,27 @@ index.html
 
 To sell metered generations instead of asking every customer for their own key, put a Cloudflare Worker in front: it holds one shared key as a secret, validates a customer token, decrements a quota, and forwards to the Messages API. Only `callClaude()` changes — everything downstream (validation, theming, rendering, export) is untouched. See the TODO block at the top of `index.html`.
 
+## Selling the theme, and what the gate actually does
+
+Building and previewing are free. The exportable theme file is the paid product, gated behind a licence key.
+
+Every buyer — including you — gets their own key, issued from `admin.html` and stored in a Cloudflare D1 table by the Worker in `worker/`. The Download button checks the key against the Worker, re-checks about daily, and a key you revoke stops working everywhere on its next check. There is no shared passcode and no owner bypass.
+
+**What the gate does not do.** The export is assembled in the visitor's browser out of their own content, so the Worker never touches the file and cannot withhold it. Anyone willing to edit the app's JavaScript can still export. This is not DRM and cannot be, because the architecture that makes the tool work offline with no backend is the same architecture that puts the export beyond the server's reach.
+
+What you get is worth having anyway: casual non-payment is blocked, every buyer is identifiable, and a leaked key can be revoked in seconds. What you don't get is enforcement against someone technical who has decided not to pay. Price accordingly, and don't sell it as protected.
+
+Two consequences worth knowing:
+
+- **Without a deployed Worker the Download button stays locked.** There is no offline fallback — the thing it used to fall back to was a hardcoded passcode published in the page source, which is now removed.
+- **`?client=1` is a courtesy, not a boundary.** It hides your pricing and white-label controls from a client you have shared the builder with, but the client controls their own address bar and can remove it. Anything you would not want a client to see should not be in a copy of the app you have given them.
+
 ## Known limitations
 
 - **No image generation.** Themes use gradients and typography; the about section has a placeholder block. Add real photography and write `alt` text — the one manual step the export can't do for you.
 - **No hosting or deploy integration.** Export is a downloadable `.html` file; publishing it is up to you.
 - **No forms backend.** Contact CTAs are `tel:`, `mailto:` and booking links, which need no server.
+- **The theme gate is not DRM.** See above — it deters and it revokes; it does not enforce.
 
 ---
 
