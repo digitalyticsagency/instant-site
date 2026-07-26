@@ -7447,7 +7447,54 @@ function logUsage(kind,meta){
     headers:{'content-type':'application/json'},
     body:JSON.stringify({key:savedLicence()||undefined,client:ref||undefined,kind,meta})}).catch(()=>{}); }catch{}
 }
-function dlUnlocked(){ try{ return localStorage.getItem('instantsite_dl')==='1'; }catch{ return false; } }
+/* ---------- the download gate ----------
+   This used to be `localStorage.instantsite_dl === '1'`, which meant one line
+   in a console unlocked it and no server was ever consulted. The gate now
+   depends on holding a licence the Worker has confirmed, so a leaked key can
+   actually be revoked from the admin page and stop working everywhere.
+
+   Read the Worker's own header comment before expecting more than that: the
+   export is built in the visitor's browser from their own data, so the server
+   never touches the file and cannot withhold it. Someone willing to edit the
+   app's JavaScript can still export. This raises the bar from "read the
+   passcode out of the page source" to "patch the app", which is the most an
+   offline, no-backend product can honestly claim.
+
+   Failure handling is deliberately asymmetric. An explicit "revoked" or
+   "not recognised" from the Worker locks immediately. A network failure does
+   NOT: a paying customer must not lose their download because the Worker had
+   an outage or they are on a plane, so a previously-confirmed licence keeps
+   working through a grace window and re-checks when it can. */
+const LS_LIC_AT='instantsite_licence_at';   // when the Worker last said yes
+const LIC_TTL  = 24*3600e3;                 // re-check about daily
+const LIC_GRACE= 7*864e5;                   // tolerate an outage this long
+function licAt(){ try{ return +(localStorage.getItem(LS_LIC_AT)||0)||0; }catch{ return 0; } }
+function setLicOk(){ try{ localStorage.setItem(LS_LIC_AT,String(Date.now())); }catch{} }
+function clearLicence(){
+  try{ localStorage.removeItem(LS_LIC); localStorage.removeItem(LS_LIC_AT); localStorage.removeItem('instantsite_dl'); }catch{}
+}
+function dlUnlocked(){
+  const key=savedLicence(); if(!key) return false;
+  return Date.now()-licAt() < LIC_GRACE;
+}
+/* Re-ask the Worker when the local confirmation is stale. Silent on success and
+   on network trouble; only an explicit refusal changes anything the user sees. */
+let _licChecking=false;
+async function revalidateLicence(force){
+  const key=savedLicence();
+  if(!key||!LICENCE_API||_licChecking) return;
+  if(!force && Date.now()-licAt() < LIC_TTL) return;
+  _licChecking=true;
+  try{
+    const r=await verifyLicence(key);
+    if(r&&r.ok){ setLicOk(); }
+    else{
+      // The server answered and said no. That is the one case worth acting on.
+      clearLicence(); renderAdminRow&&renderAdminRow(); refreshStatus&&refreshStatus();
+    }
+  }catch{ /* offline or Worker down — keep the grace window, try again later */ }
+  finally{ _licChecking=false; }
+}
 function paywall(){
   const cfg=(()=>{ try{ return JSON.parse(localStorage.getItem('instantsite_sell')||'{}'); }catch{ return {}; } })();
   const price=cfg.price||'$49', buy=(cfg.buy||'').trim();
@@ -7497,7 +7544,9 @@ function paywall(){
     try{
       const r=await verifyLicence(v);
       if(!r.ok){ err.textContent=r.error||'That licence key is not recognised.'; inp.select(); return; }
-      try{ localStorage.setItem(LS_LIC,v.toUpperCase()); localStorage.setItem('instantsite_dl','1'); }catch{}
+      // The timestamp is what the gate reads now; the key alone is not enough.
+      try{ localStorage.setItem(LS_LIC,v.toUpperCase()); }catch{}
+      setLicOk();
       logUsage('unlock',r.label||'');
       unlock();
     }catch(e){
@@ -7509,11 +7558,23 @@ function paywall(){
   inp.addEventListener('keydown',e=>{ if(e.key==='Enter') go(); });
   setTimeout(()=>inp.focus(),50);
 }
-$('btnDownload').onclick=e=>{
+$('btnDownload').onclick=async e=>{
   if($('btnDownload').disabled) return;
   e.stopPropagation();
   if(dlMenu.classList.contains('open')){ closeDl(); return; }
-  if(isAdmin()||dlUnlocked()){ openDlMenu(); return; }   // admin never pays
+  if(isAdmin()){ openDlMenu(); return; }   // admin never pays
+  if(dlUnlocked()){
+    /* Fresh confirmation: open straight away and refresh in the background, so
+       the common case stays instant. Stale confirmation: wait for the answer
+       before opening, which is what makes a revoked key stop working rather
+       than lingering until the grace window runs out. */
+    if(Date.now()-licAt() < LIC_TTL){ openDlMenu(); revalidateLicence(); return; }
+    const btn=$('btnDownload'), was=btn.textContent;
+    btn.disabled=true; btn.textContent='Checking licence…';
+    await revalidateLicence(true);
+    btn.disabled=false; btn.textContent=was;
+    if(dlUnlocked()){ openDlMenu(); return; }
+  }
   paywall();
 };
 document.addEventListener('click',e=>{ if(!e.target.closest('.dlwrap')) closeDl(); });
@@ -10544,6 +10605,9 @@ function applyRole(){
 function bootDashboard(){
 applyRole();
 renderAdminRow();
+/* Ask the Worker on the way in, so a revoked key is dead by the next visit
+   rather than only when someone happens to click Download. */
+revalidateLicence();
 renderVersions();
 $('btnUndo')&&($('btnUndo').onclick=()=>undoVersion());
 $('btnVersions')&&($('btnVersions').onclick=e=>{
