@@ -3650,9 +3650,18 @@ section:hover>.edsec{opacity:1;pointer-events:auto}
 .edsec button:hover:not([disabled]){background:${t.primary}}
 .edsec button[disabled]{opacity:.35;cursor:default}`:''}
 .nav{position:sticky;top:0;z-index:30;background:${t.bg};border-bottom:1px solid ${t.line}}
-.nav .w{display:flex;align-items:center;justify-content:space-between;gap:18px;padding-top:15px;padding-bottom:15px}
+.nav .w{display:flex;align-items:center;justify-content:space-between;gap:12px 18px;padding-top:15px;padding-bottom:15px;flex-wrap:wrap}
 .logo{font-family:${t.displayFont},sans-serif;font-weight:${t.weight};font-size:20px;color:${t.primary};${t.caps?'text-transform:uppercase;letter-spacing:.04em;':''}}
-.nl{display:flex;gap:26px;font-size:15px;font-weight:500;min-width:0;flex-wrap:nowrap;flex:0 1 auto;overflow:hidden}
+/* Links wrap to their own row rather than being cut off.
+   This was flex-wrap:nowrap with overflow:hidden, which meant that once a site
+   had more than about five pages the extra links were silently CLIPPED — the
+   last one rendered as a half-word against the edge and the rest simply were
+   not there. Clipping navigation is the worst available failure: the pages
+   exist, nothing looks broken, and no visitor can reach them.
+   The 320px flex-basis is the whole mechanism. While the row has 320px spare
+   the links sit inline as before; when it does not, they take a line of their
+   own instead of being trimmed. Pure CSS, so the export stays script-free. */
+.nl{display:flex;gap:10px 26px;font-size:15px;font-weight:500;min-width:0;flex-wrap:wrap;flex:1 1 320px;overflow:visible}
 .nl a{color:${t.ink2};text-decoration:none;transition:color .2s;white-space:nowrap}
 /* Shrink order matters in the band just above the mobile breakpoint, where the
    nav links are still shown but space is tight. Nothing could shrink, so a long
