@@ -1273,10 +1273,10 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
 
         <div class="field" id="sellField">
           <label>Sell the theme <span class="opt">white-label</span>
-            <span class="help" data-tip="The app is free to use; the theme download is gated behind a licence passcode. Add your own Stripe or PayPal payment link here so buyers can pay, then you give them the passcode. This is a soft gate, not DRM: anyone who opens the file can read the passcode.">?</span></label>
+            <span class="help" data-tip="The app is free to use; the theme download is gated behind a licence key checked by your Worker. Add your own Stripe or PayPal payment link here so buyers can pay, then issue them a key from the admin page. Not DRM — the export is built in the visitor's browser, so a determined developer can still patch the app — but each key is per-buyer and revocable.">?</span></label>
           <input type="url" id="sellBuy" placeholder="Your Stripe or PayPal payment link">
           <input type="text" id="sellPrice" placeholder="Price label, e.g. $49" style="margin-top:6px" maxlength="12">
-          <div class="tiny">Buyers pay through your link and you share the licence passcode with them. The passcode is set in the code (currently the one you chose).</div>
+          <div class="tiny">Buyers pay through your link, then you issue them a licence key on the admin page and send it over. Keys are per-buyer and can be revoked, so one leak does not unlock every copy.</div>
         </div>
       </div>
     </details>
@@ -1287,7 +1287,7 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
         <div class="field" id="adminField">
           <label>Admin <span class="tag" id="adminTag">signed out</span></label>
           <div class="row">
-            <button class="mini" id="btnAdminIn" type="button" title="Enter the licence passcode to unlock downloads and admin tools in this browser.">Sign in as admin</button>
+            <button class="mini" id="btnAdminIn" type="button" title="Enter your licence key to unlock downloads in this browser. Checked against your Worker.">Enter licence key</button>
             <button class="mini" id="btnAdminOut" type="button" title="Lock this browser back down: downloads gated again and admin tools hidden.">Sign out</button>
           </div>
           <div class="tiny" id="adminNote"></div>
@@ -7422,7 +7422,6 @@ function openDlMenu(){
    Anyone who reads the source can find the passcode, so this deters, it does
    not enforce. Real enforcement would need a backend, which this app does not
    have. Once unlocked it stays unlocked in this browser. */
-const DL_PIN='122133';                       // your own owner passcode
 /* Your Cloudflare Worker, if you have deployed one. Set this and the Download
    button will also accept per-customer licence keys, which you can revoke one
    at a time from admin.html. Leave it empty and the app falls back to the
@@ -7502,11 +7501,11 @@ function paywall(){
   wrap.innerHTML=`<div class="paycard" role="dialog" aria-modal="true" aria-labelledby="payTitle">
     <button class="dashx" id="payX" aria-label="Close">&times;</button>
     <h2 id="payTitle">Unlock the theme download</h2>
-    <p class="tiny">Building and previewing is free. The exportable theme file is the paid product. Enter your licence passcode, or buy it once for ${esc(price)}.</p>
-    <input id="payPin" type="text" autocomplete="off" spellcheck="false" placeholder="${LICENCE_API?'Licence key or passcode':'Licence passcode'}">
+    <p class="tiny">Building and previewing is free. The exportable theme file is the paid product. Enter your licence key, or buy it once for ${esc(price)}.</p>
+    <input id="payPin" type="text" autocomplete="off" spellcheck="false" placeholder="Licence key, e.g. IS-XXXX-XXXX-XXXX-XXXX">
     <button id="payGo" type="button" class="paybtn">Unlock downloads</button>
     ${buy?`<div class="payor">or</div><a id="payBuy" href="${esc(buy)}" target="_blank" rel="noopener" class="paybtn paybuy">Buy the theme — ${esc(price)}</a>
-      <div class="tiny" style="margin-top:8px">After paying you will be given the passcode. Paste it above.</div>`
+      <div class="tiny" style="margin-top:8px">After paying you will be sent a licence key. Paste it above.</div>`
         :`<div class="tiny" style="margin-top:10px">No buy link is set. The admin can add a Stripe or PayPal payment link under Settings › Sell the theme.</div>`}
     <div id="payErr" role="alert" aria-live="assertive"></div>
   </div>`;
@@ -7535,9 +7534,8 @@ function paywall(){
   };
   const go=async()=>{
     const v=inp.value.trim();
-    if(!v){ err.textContent='Enter your licence key or passcode.'; inp.focus(); return; }
-    if(v===DL_PIN){ setAdmin(); unlock(); return; }   // the passcode owner is the admin
-    if(!LICENCE_API){ err.textContent='That passcode is not right.'; inp.value=''; inp.focus(); return; }
+    if(!v){ err.textContent='Enter your licence key.'; inp.focus(); return; }
+    if(!LICENCE_API){ err.textContent='No licence server is configured, so keys cannot be checked.'; inp.value=''; inp.focus(); return; }
     /* A customer key unlocks downloads but does NOT make them an admin: they
        get the export, not the reseller's pricing and white-label controls. */
     err.textContent=''; btn.disabled=true; const was=btn.textContent; btn.textContent='Checking…';
@@ -8786,12 +8784,12 @@ function openDash(){
     <h3 class="dh">What the tool can do</h3>
     <div class="dfeat">${Object.entries(inv).map(([k,v])=>`<span><b>${v}</b> ${esc(k)}</span>`).join('')}</div>
     <h3 class="dh">Share with clients</h3>
-    <div class="tiny" style="margin-bottom:8px">This link gives a client the whole builder to design and preview with, but hides the download and the admin tools, so they cannot take the theme file. ${isAdmin()?'You are signed in as the admin, so your own downloads are free.':'Enter the passcode once on Download to unlock your own free downloads.'}</div>
+    <div class="tiny" style="margin-bottom:8px">This link gives a client the whole builder to design and preview with, but hides the download and the admin tools, so they cannot take the theme file. Unlock your own downloads once with your licence key and this browser will not ask again.</div>
     <div style="display:flex;gap:6px">
       <input id="dashClientLink" readonly value="${esc(clientLink())}" style="flex:1;padding:9px 12px;border-radius:10px;border:1px solid var(--stroke);background:var(--fill);color:var(--txt-1);font-size:12.5px">
       <button class="mini" id="dashCopyLink" type="button">Copy</button>
     </div>
-    <div class="tiny" style="margin-top:6px">To host a separate client copy, fork or copy this page in GitHub and share that URL with <code>?client=1</code> on the end. The passcode lives in the file, so change it there before you share widely.</div>
+    <div class="tiny" style="margin-top:6px">To host a separate client copy, fork or copy this page in GitHub and share that URL with <code>?client=1</code> on the end. Nothing secret lives in the file — downloads are gated by a licence key your Worker checks.</div>
     <div class="dactions">
       <button class="mini" id="dashPdf" type="button">Download branded PDF report</button>
       <button class="mini" id="dashAi" type="button">✨ Add AI analysis</button>
@@ -10559,8 +10557,13 @@ applyAppearance(); applyBranding();
    its source in the browser. Hiding the download stops the casual case; real
    code protection needs the backend (Option B). */
 const IS_CLIENT=new URLSearchParams(location.search).has('client');
-function isAdmin(){ try{ return localStorage.getItem('instantsite_admin')==='1'; }catch{ return false; } }
-function setAdmin(){ try{ localStorage.setItem('instantsite_admin','1'); localStorage.setItem('instantsite_dl','1'); }catch{} }
+/* There is no longer an admin bypass. The owner unlocks downloads with their
+   own licence key, exactly like a customer, and that key is checked by the
+   Worker and can be revoked. A hardcoded passcode could not be revoked and was
+   readable by anyone who opened the page source, which made every other part of
+   the gate pointless. Kept as a function returning false so the call sites read
+   honestly rather than being deleted and silently changing meaning. */
+function isAdmin(){ return false; }
 /* Signing out drops both flags, so the paywall returns. It deliberately leaves
    sites, history and the API key alone — this locks the door, it does not wipe
    the desk. Needed for the demo case above all: showing a prospect the builder

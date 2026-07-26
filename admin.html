@@ -44,19 +44,18 @@ a{color:var(--accent)}
 <body>
 <div class="wrap">
   <header><div class="mark">⚡</div><h1>Instant Site — Admin</h1></header>
-  <div class="sub">Your control page. Not linked from the app and marked noindex, but it is a public file on a public site, so treat the passcode as a deterrent rather than a secret.</div>
+  <div class="sub">Your control page. Not linked from the app and marked noindex, but it is a public file on a
+    public site — so nothing secret is stored in it. The admin token you enter below is kept in this browser and
+    sent only to your own Worker.</div>
 
   <div class="card">
     <h2>Your access</h2>
-    <p class="note">Unlock this browser so your own downloads never ask for the passcode.</p>
-    <label for="pin">Admin passcode</label>
-    <input id="pin" type="password" placeholder="Enter your passcode" autocomplete="off">
+    <p class="note">There is no passcode any more. Issue yourself a licence below, labelled so you can tell it
+      apart, then enter it once on the builder's Download button. It is checked by the Worker and you can revoke
+      it from this page if it ever leaks — none of which was true of the passcode this replaced.</p>
     <div class="row">
-      <button id="unlock">Unlock this browser</button>
-      <button class="ghost" id="lock" type="button">Sign out (lock again)</button>
       <a href="./"><button class="ghost" type="button">Open the builder</button></a>
     </div>
-    <div class="status" id="unlockOut"></div>
   </div>
 
   <div class="card">
@@ -97,7 +96,8 @@ a{color:var(--accent)}
 
   <div class="card">
     <h2>Selling the theme</h2>
-    <p class="note">Buyers pay through your own Stripe or PayPal link, then you give them the passcode. Set these once here and the builder uses them.</p>
+    <p class="note">Buyers pay through your own Stripe or PayPal link, then you issue them a licence key above and
+      send it over. Each buyer gets their own key, so a leaked one can be revoked without affecting anyone else.</p>
     <label for="buy">Payment link</label>
     <input id="buy" type="url" placeholder="https://buy.stripe.com/… or https://paypal.me/…">
     <label for="price">Price label</label>
@@ -119,7 +119,6 @@ a{color:var(--accent)}
     <ul>
       <li>Copy <code>index.html</code> into a new GitHub repo, or a folder such as <code>/client-a/</code> in this one.</li>
       <li>Turn on GitHub Pages for it, then share that URL with <code>?client=1</code> on the end.</li>
-      <li>Change <code>DL_PIN</code> in that copy before sharing widely, so one leaked passcode does not unlock every copy.</li>
     </ul>
   </div>
 </div>
@@ -134,26 +133,10 @@ function refresh(){
   $('stats').innerHTML=t(u.sites||0,'Sites generated')+t(u.calls||0,'API calls')
     +t(((u.inTok||0)/1000).toFixed(1)+'k','Tokens in')+t(((u.outTok||0)/1000).toFixed(1)+'k','Tokens out')
     +t('US$'+cost,'Est. spend')
-    +t(localStorage.getItem('instantsite_admin')==='1'?'Yes':'No','Admin unlocked');
+    +t(localStorage.getItem('instantsite_licence')?'Yes':'No','Licence held');
 }
-/* Must match DL_PIN in index.html. This page previously unlocked on any
-   non-empty string, so typing a single character granted admin — the passcode
-   box looked like a check and was not one. */
-const DL_PIN='122133';
-$('unlock').onclick=()=>{
-  const v=$('pin').value.trim();
-  if(!v){ $('unlockOut').textContent='Enter the passcode first.'; return; }
-  if(v!==DL_PIN){ $('unlockOut').textContent='That passcode is not right.'; $('pin').value=''; $('pin').focus(); return; }
-  localStorage.setItem('instantsite_admin','1'); localStorage.setItem('instantsite_dl','1');
-  $('pin').value='';
-  $('unlockOut').textContent='Unlocked. Downloads in this browser will not ask again.';
-  refresh();
-};
-$('lock').onclick=()=>{
-  localStorage.removeItem('instantsite_admin'); localStorage.removeItem('instantsite_dl');
-  $('unlockOut').textContent='Signed out. Downloads in this browser will ask for the passcode again.';
-  refresh();
-};
+
+
 /* ---- licence keys, via the Cloudflare Worker ----------------------------
    The admin token lives in this browser's localStorage and is sent only to
    your own Worker. It is not in the page source, so a copy of admin.html on
