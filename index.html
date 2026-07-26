@@ -8797,12 +8797,15 @@ function openDash(){
     <h3 class="dh">What the tool can do</h3>
     <div class="dfeat">${Object.entries(inv).map(([k,v])=>`<span><b>${v}</b> ${esc(k)}</span>`).join('')}</div>
     <h3 class="dh">Share with clients</h3>
-    <div class="tiny" style="margin-bottom:8px">This link gives a client the whole builder to design and preview with, but hides the download and the admin tools, so they cannot take the theme file. Unlock your own downloads once with your licence key and this browser will not ask again.</div>
+    <div class="tiny" style="margin-bottom:8px">A quick link for design and preview. Downloads still require a licence key, so a client cannot take the theme file — but this hides your pricing and branding at runtime only, and the client controls their own address bar. Fine for someone you trust; use the client copy below for anyone you do not.</div>
     <div style="display:flex;gap:6px">
       <input id="dashClientLink" readonly value="${esc(clientLink())}" style="flex:1;padding:9px 12px;border-radius:10px;border:1px solid var(--stroke);background:var(--fill);color:var(--txt-1);font-size:12.5px">
       <button class="mini" id="dashCopyLink" type="button">Copy</button>
     </div>
-    <div class="tiny" style="margin-top:6px">To host a separate client copy, fork or copy this page in GitHub and share that URL with <code>?client=1</code> on the end. Nothing secret lives in the file — downloads are gated by a licence key your Worker checks.</div>
+    <div class="tiny" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--stroke)"><b>Build a client copy.</b> Downloads a <code>client.html</code> with your pricing, payment link, white-label settings and backup tools <b>deleted from the file</b>, pinned into client mode so the URL cannot switch it back. Host it wherever you like and send that address. This is the version to give a stranger: removing the query parameter does nothing, because there is nothing left to reveal.</div>
+    <div class="dactions" style="margin-top:8px">
+      <button class="mini" id="btnClientBuild" type="button">Build a client copy</button>
+    </div>
     <div class="dactions">
       <button class="mini" id="dashPdf" type="button">Download branded PDF report</button>
       <button class="mini" id="dashAi" type="button">✨ Add AI analysis</button>
@@ -8855,6 +8858,7 @@ function openDash(){
   $('dashCopyLink').onclick=async()=>{ const i=$('dashClientLink'); i.select();
     try{ await navigator.clipboard.writeText(i.value); $('dashNote').textContent='Client link copied. Share it with a white-label customer.'; }
     catch{ $('dashNote').textContent='Select the link and copy it.'; } };
+  $('btnClientBuild')&&($('btnClientBuild').onclick=buildClientCopy);
   $('dashPdf').onclick=()=>{ saveBlob(makeLeadPdf(dashData(dashAnalysis),dashState()),'instant-site-report.pdf');
     $('dashNote').textContent='PDF downloaded, in your current theme.'; };
   $('dashPrompt').onclick=async()=>{ const box=$('dashPromptBox'); box.classList.remove('hidden'); box.value=improvementPrompt(); box.select();
@@ -10569,7 +10573,11 @@ applyAppearance(); applyBranding();
    Honest limit: the app is a static file, so a determined person can still read
    its source in the browser. Hiding the download stops the casual case; real
    code protection needs the backend (Option B). */
-const IS_CLIENT=new URLSearchParams(location.search).has('client');
+/* Two ways in. The query parameter is convenient for a quick share; the meta
+   marker is what a built client copy carries, so that copy stays in client mode
+   no matter what the visitor does to the URL. */
+const IS_CLIENT=new URLSearchParams(location.search).has('client')
+  || document.querySelector('meta[name="instant-site-role"][content="client"]')!==null;
 /* There is no longer an admin bypass. The owner unlocks downloads with their
    own licence key, exactly like a customer, and that key is checked by the
    Worker and can be revoked. A hardcoded passcode could not be revoked and was
@@ -10596,6 +10604,44 @@ function renderAdminRow(){
     : 'Downloads are gated. Signing in asks for the licence passcode — the same one the Download button asks for.';
 }
 function clientLink(){ return location.origin+location.pathname+'?client=1'; }
+/* The single source of truth for "a client must never see this". Used both to
+   strip the live DOM and to build the client copy, so the two can never drift. */
+const OWNER_ONLY=['sellField','wlRow','wlFields','workspaceField','adminField'];
+
+/* ---- client copy --------------------------------------------------------
+   ?client=1 is a courtesy, not a boundary: the client owns their address bar,
+   and this is a static file, so display:none and even removing the nodes still
+   lose to View Source. The only honest fix is a separate file that does not
+   contain the owner's blocks at all.
+
+   This fetches the app's own source, deletes those blocks outright, pins the
+   copy into client mode so the query parameter is not load-bearing any more,
+   and hands back a file to host. What is not in the file cannot be un-hidden. */
+async function buildClientCopy(){
+  const btn=$('btnClientBuild'); if(!btn) return;
+  const was=btn.textContent; btn.disabled=true; btn.textContent='Building…';
+  const fail=m=>{ btn.textContent=m; setTimeout(()=>{btn.textContent=was;btn.disabled=false;},4000); };
+  try{
+    if(location.protocol==='file:') return fail('Open the hosted copy first');
+    const res=await fetch(location.href,{cache:'no-store'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    let src=await res.text();
+    const doc=new DOMParser().parseFromString(src,'text/html');
+    let removed=0;
+    OWNER_ONLY.forEach(id=>{ const el=doc.getElementById(id); if(el){ el.remove(); removed++; } });
+    if(!removed) throw new Error('found none of the owner-only blocks');
+    /* Pin client mode so stripping the query parameter changes nothing. The
+       marker is read at the top of the file, before IS_CLIENT is computed. */
+    const marker=doc.createElement('meta');
+    marker.setAttribute('name','instant-site-role'); marker.setAttribute('content','client');
+    doc.head.appendChild(marker);
+    const out='<!doctype html>\n'+doc.documentElement.outerHTML;
+    saveBlob(new Blob([out],{type:'text/html'}),'client.html');
+    btn.textContent=`Built — ${removed} blocks removed`;
+    setTimeout(()=>{btn.textContent=was;btn.disabled=false;},4000);
+  }catch(e){ fail('Could not build it'); }
+}
+
 function applyRole(){
   if(!IS_CLIENT) return;
   /* The download stays VISIBLE for clients and is gated by the paywall instead
@@ -10609,9 +10655,11 @@ function applyRole(){
      the Growth kit and the white-label switch never matched the pattern, so a
      client could read the reseller's own pricing and branding controls. IDs do
      not silently stop matching when copy is reworded. */
-  ['sellField','wlRow','wlFields','workspaceField','adminField'].forEach(id=>{
-    const el=$(id); if(el) el.style.display='none';
-  });
+  /* remove(), not display:none — hiding left the reseller's pricing and
+     branding sitting in the DOM one inspector click away. This is still only a
+     runtime measure: the markup is in the static file either way, which is why
+     the real answer is the client copy built by buildClientCopy(). */
+  OWNER_ONLY.forEach(id=>{ const el=$(id); if(el) el.remove(); });
   // A light, honestly-cosmetic deterrent against casual copying.
   document.addEventListener('contextmenu',e=>{ if(!e.target.closest('input,textarea,[contenteditable]')) e.preventDefault(); });
   document.addEventListener('keydown',e=>{ if((e.ctrlKey||e.metaKey)&&['u','s'].includes((e.key||'').toLowerCase())) e.preventDefault(); });
