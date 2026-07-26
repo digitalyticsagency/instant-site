@@ -543,6 +543,50 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
 .doneline b{color:var(--good)}
 /* Sits under the pre-flight list: the same numbers, packaged for the client. */
 .proofrow{margin-top:14px;padding-top:14px;border-top:1px solid var(--stroke);display:flex;flex-direction:column;gap:7px;align-items:flex-start}
+
+/* ---------- client book ---------- */
+#rosterModal{position:fixed;inset:0;z-index:9998;display:grid;place-items:center;padding:20px;
+  background:rgba(8,8,10,.5);backdrop-filter:blur(3px);overflow:auto}
+/* Must out-specify .dashcard, which is defined later in this sheet and would
+   otherwise win at equal specificity and pin this to 620px — clipping every
+   column past the price. */
+.dashcard.rostercard{width:min(1040px,100%)}
+.backupnote{margin:10px 0 4px;font-size:12px;color:var(--txt-3);padding:8px 11px;border-radius:9px;background:var(--fill)}
+.backupnote.stale{color:var(--warn);background:var(--warn-bg)}
+.rostertools{display:flex;gap:8px;margin:12px 0 10px;flex-wrap:wrap}
+.rostertools input[type=search]{flex:1 1 220px;min-width:0}
+.rostertools select{flex:0 0 auto;width:auto;min-width:150px}
+/* Six columns of facts, then the note on its own full-width row. Cramming the
+   note into the same row left every field too narrow to read, and the note is
+   the one field that actually wants the space. */
+.rrow{display:grid;gap:8px 10px;padding:12px;border:1px solid var(--stroke);border-radius:13px;
+  background:var(--surface-2);margin-bottom:8px;
+  grid-template-columns:minmax(140px,1.3fr) 128px minmax(150px,1fr) 88px 138px auto}
+.rf-w{grid-column:1 / -1}
+.rmain{min-width:0}
+.rname{font-weight:600;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rmeta{font-size:11px;color:var(--txt-3);margin-top:2px}
+.rgone{font-size:10px;font-weight:500;color:var(--txt-3);background:var(--fill-2);padding:1px 6px;border-radius:99px;white-space:nowrap}
+.rf{display:flex;flex-direction:column;gap:3px;min-width:0;font-size:11px;color:var(--txt-3)}
+.rf input,.rf select{font-size:12.5px;padding:6px 8px}
+.rdue{color:var(--bad)}
+.ract{display:flex;gap:5px;align-items:flex-end;flex-wrap:wrap}
+.ract .mini{padding:6px 10px;font-size:12px;text-decoration:none;display:inline-flex;align-items:center}
+/* Status colour is carried on the select itself so the book is scannable
+   without reading a word of it. */
+.rstatus.s-draft{border-color:var(--stroke)}
+.rstatus.s-sent{border-color:color-mix(in srgb,var(--warn) 55%,transparent);color:var(--warn)}
+.rstatus.s-live{border-color:color-mix(in srgb,var(--good) 55%,transparent);color:var(--good)}
+.rstatus.s-archived{color:var(--txt-3);opacity:.75}
+.hist-st{margin-left:auto;font-size:10px;padding:1px 7px;border-radius:99px;background:var(--fill-2);color:var(--txt-3)}
+.hist-st.s-live{color:var(--good);background:var(--good-bg)}
+.hist-st.s-sent{color:var(--warn);background:var(--warn-bg)}
+@media(max-width:900px){
+  /* Seven columns is a desktop luxury. On a phone each client becomes a card,
+     which is also how you actually read this on site. */
+  .rrow{grid-template-columns:1fr 1fr}
+  .rmain,.rf-w,.ract{grid-column:1 / -1}
+}
 .pri{font-size:10.5px;font-weight:600;padding:3px 8px;border-radius:99px;flex:none;margin-top:2px;white-space:nowrap}
 .pri.p1{background:var(--warn-bg);color:var(--warn)}
 .pri.p2{background:var(--sel);color:var(--accent)}
@@ -663,7 +707,13 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
   background:rgba(8,8,10,.5);backdrop-filter:blur(3px);overflow:auto}
 .dashcard{width:min(620px,100%);max-height:90vh;overflow:auto;padding:28px 26px;border-radius:20px;position:relative;
   background:var(--surface);border:1px solid var(--stroke);box-shadow:var(--shadow-lg)}
-.dashx{position:absolute;top:14px;right:16px;border:0;background:transparent;font-size:26px;line-height:1;color:var(--txt-3);cursor:pointer}
+/* Shared by the dashboard, the paywall and the client book. The glyph alone
+   measured 26px tall — under the touch minimum, on the one control whose whole
+   job is getting you out of a full-screen modal on a phone. */
+.dashx{position:absolute;top:14px;right:16px;border:0;background:transparent;font-size:26px;line-height:1;color:var(--txt-3);cursor:pointer;
+  display:grid;place-items:center;width:34px;height:34px;border-radius:9px}
+.dashx:hover{background:var(--fill)}
+@media(pointer:coarse){.dashx{width:44px;height:44px;top:9px;right:9px}}
 .dashcard h2{font-size:22px;margin-bottom:4px}
 .dgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:8px}
 .dtile{padding:14px;border-radius:14px;background:var(--fill);border:1px solid var(--stroke);text-align:center}
@@ -789,7 +839,8 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
   <aside class="col rail" id="rail">
     <div class="rail-head"><span>History</span><span id="histCount">0 / 20</span></div>
     <div id="histList"></div>
-    <button class="mini" id="btnClearHist" title="Delete every saved generation from this browser. Cannot be undone." style="width:100%;margin-top:8px">Clear history</button>
+    <button class="mini" id="btnRoster" title="Every site you have built, with its status, price and what is due next." style="width:100%;margin-top:8px">Client book</button>
+    <button class="mini" id="btnClearHist" title="Delete every saved generation from this browser. Cannot be undone." style="width:100%;margin-top:6px">Clear history</button>
 
     <button class="go" id="btnGen" title="Send the brief to Claude and build the site. Uses one API call.">
       <span class="go-scan"></span>
@@ -1455,6 +1506,24 @@ const MAX_TOKENS=4000;
 const LS_KEY='instantsite_api_key', LS_HIST='instantsite_history',
       LS_WL='instantsite_whitelabel', LS_PREF='instantsite_prefs', LS_BRIEF='instantsite_brief';
 const HIST_CAP=20;
+/* The roster is deliberately a SEPARATE key from the history.
+   A history entry carries the whole siteState — base64 photography included —
+   so it runs to hundreds of KB, which is why HIST_CAP exists and why
+   saveHistory() sheds the oldest entries when localStorage fills. A client
+   record is a few hundred bytes. Keeping them together would mean losing the
+   business record the moment storage got tight, which is precisely when you
+   have the most clients. Split, the book outlives the files: a site whose
+   payload has been evicted still shows in the roster with everything you need
+   to invoice and follow up, just no longer openable in the editor. */
+const LS_ROSTER='instantsite_roster';
+const ROSTER_CAP=500;
+const STATUSES=[
+  {k:'draft',   label:'Draft',    hint:'Being built. Not shown to the client yet.'},
+  {k:'sent',    label:'Sent',     hint:'With the client, waiting on their word.'},
+  {k:'live',    label:'Live',     hint:'Published and working.'},
+  {k:'archived',label:'Archived', hint:'Finished or lapsed. Kept for the record.'}
+];
+const STATUS_OF=k=>STATUSES.find(s=>s.k===k)||STATUSES[0];
 
 const PACKS={
   tradie:{label:'Tradie / Home Services',theme:'trades',promptHint:'Emphasize trust, urgency, reliability, local licensing/certification language, and clear call-to-action for quotes.'},
@@ -2597,6 +2666,67 @@ function saveHistory(l){
   }
   return false;
 }
+/* ---------- client roster ----------
+   One record per site you have ever built, keyed by the same id as the history
+   entry so the two join cheaply. Small enough that the cap is about sanity
+   rather than storage. */
+function loadRoster(){ try{ const o=JSON.parse(localStorage.getItem(LS_ROSTER)||'{}'); return (o&&typeof o==='object'&&!Array.isArray(o))?o:{}; }catch{ return {}; } }
+function saveRoster(r){
+  try{
+    const keys=Object.keys(r);
+    if(keys.length>ROSTER_CAP){
+      // Shed the least recently touched, never the ones still in the editor.
+      keys.sort((a,b)=>(r[b].updated||0)-(r[a].updated||0)).slice(ROSTER_CAP).forEach(k=>{ delete r[k]; });
+    }
+    localStorage.setItem(LS_ROSTER,JSON.stringify(r)); return true;
+  }catch(e){ console.warn('Roster save failed',e); return false; }
+}
+/* Upsert. `patch` is whatever changed; everything else is preserved, which is
+   what stops a regeneration from wiping the price and status you typed in. */
+function rosterTouch(id,patch){
+  if(!id) return null;
+  const r=loadRoster();
+  const now=Date.now();
+  const cur=r[id]||{status:'draft',url:'',price:'',due:'',note:'',created:now};
+  r[id]=Object.assign(cur,patch||{},{updated:now});
+  saveRoster(r);
+  return r[id];
+}
+function rosterOf(id){ return loadRoster()[id]||null; }
+
+/* ---------- backup pressure ----------
+   I wanted this to write the backup file itself on every change. It cannot,
+   honestly: silently writing a file needs the File System Access API, which is
+   Chrome and Edge only and cannot persist its file handle without dragging in
+   IndexedDB — so on Firefox and Safari it would quietly do nothing while
+   claiming to be automatic, which is worse than not having it. Anything else
+   either doubles storage or spams the Downloads folder.
+   So this counts unsaved changes and says so where it matters. The backup is
+   still one click, but you are told when you owe one instead of remembering. */
+const LS_BACKUP='instantsite_backup_meta';
+let _abT=null;
+function backupMeta(){ try{ const o=JSON.parse(localStorage.getItem(LS_BACKUP)||'{}'); return o&&typeof o==='object'?o:{}; }catch{ return {}; } }
+function setBackupMeta(m){ try{ localStorage.setItem(LS_BACKUP,JSON.stringify(m)); }catch{} }
+function autoBackup(){
+  // Debounced: a burst of edits is one unit of drift, not thirty.
+  clearTimeout(_abT);
+  _abT=setTimeout(()=>{ const m=backupMeta(); m.dirty=(m.dirty||0)+1; setBackupMeta(m); renderBackupNote(); },600);
+}
+function markBackedUp(){ setBackupMeta({at:Date.now(),dirty:0}); renderBackupNote(); }
+function backupStatus(){
+  const m=backupMeta(), dirty=m.dirty||0;
+  if(!m.at) return {stale:dirty>0, text:dirty?`You have never backed up. ${dirty} change${dirty===1?'':'s'} so far live only in this browser.`:'No backup taken yet.'};
+  const days=Math.floor((Date.now()-m.at)/86400000);
+  if(!dirty) return {stale:false, text:`Backed up ${days===0?'today':days===1?'yesterday':days+' days ago'}. Nothing has changed since.`};
+  return {stale:days>=7||dirty>=10,
+    text:`${dirty} change${dirty===1?'':'s'} since your last backup ${days===0?'today':days===1?'yesterday':days+' days ago'}.`};
+}
+function renderBackupNote(){
+  const el=$('backupNote'); if(!el) return;
+  const s=backupStatus();
+  el.textContent=s.text; el.className='backupnote'+(s.stale?' stale':'');
+}
+
 function pushHistory(state){
   const list=loadHistory();
   const e={id:currentId,businessName:state.meta.businessName||'Untitled site',timestamp:Date.now(),theme:state.meta.theme,siteState:state};
@@ -2604,7 +2734,11 @@ function pushHistory(state){
   if(i>=0) list[i]=e; else list.unshift(e);
   list.sort((a,b)=>b.timestamp-a.timestamp);
   const ok=saveHistory(list);
-  renderHistory(); markSaved(ok);
+  /* Name and theme are mirrored onto the roster record so it stays readable
+     after the heavy history entry is gone. Status, price, due date and note are
+     the owner's and are never touched here. */
+  rosterTouch(currentId,{name:e.businessName,theme:e.theme,built:e.timestamp});
+  renderHistory(); markSaved(ok); autoBackup();
   return ok;
 }
 // Visible autosave state — "did my edit stick?" should never be a guess.
@@ -6781,15 +6915,140 @@ async function copyHTML(){
 /* ==========================================================================
    15. HISTORY
    ========================================================================== */
+/* ==========================================================================
+   CLIENT BOOK
+   The history rail answers "what did I build recently". This answers "who are
+   my clients, which of these is live, and what do I need to chase" — the
+   question that actually caps how many sites one person can run. Records
+   outlive their site payloads on purpose (see LS_ROSTER).
+   ========================================================================== */
+let rosterFilter={q:'',status:'',sort:'recent'};
+function rosterRows(){
+  const r=loadRoster(), hist=new Set(loadHistory().map(h=>h.id));
+  let rows=Object.entries(r).map(([id,v])=>Object.assign({id,openable:hist.has(id)},v));
+  const q=rosterFilter.q.trim().toLowerCase();
+  if(q) rows=rows.filter(x=>((x.name||'')+' '+(x.note||'')+' '+(x.url||'')).toLowerCase().includes(q));
+  if(rosterFilter.status) rows=rows.filter(x=>(x.status||'draft')===rosterFilter.status);
+  const due=x=>x.due?Date.parse(x.due)||Infinity:Infinity;
+  if(rosterFilter.sort==='name') rows.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  else if(rosterFilter.sort==='due') rows.sort((a,b)=>due(a)-due(b));
+  else rows.sort((a,b)=>(b.updated||0)-(a.updated||0));
+  return rows;
+}
+function rosterSummary(){
+  const all=Object.values(loadRoster());
+  const live=all.filter(x=>x.status==='live').length;
+  /* Counted separately: something a fortnight out is a plan, something already
+     past is a problem, and rolling them into one number hides the problem. */
+  const now=Date.now(), day=86400000;
+  const dated=all.filter(x=>x.due&&x.status!=='archived').map(x=>Date.parse(x.due)).filter(d=>!isNaN(d));
+  const over=dated.filter(d=>d<now).length;
+  const soon=dated.filter(d=>d>=now&&d-now<=14*day).length;
+  return {total:all.length,live,soon,over};
+}
+function openRoster(){
+  const wrap=document.createElement('div'); wrap.id='rosterModal';
+  wrap.innerHTML=`<div class="dashcard rostercard" role="dialog" aria-modal="true" aria-labelledby="rosterTitle">
+    <button class="dashx" id="rosterX" aria-label="Close">&times;</button>
+    <h2 id="rosterTitle">Client book</h2>
+    <div class="tiny" id="rosterSum"></div>
+    <div class="backupnote" id="backupNote"></div>
+    <div class="rostertools">
+      <input type="search" id="rosterQ" placeholder="Search name, note or address" aria-label="Search the client book">
+      <select id="rosterStatus" aria-label="Filter by status"><option value="">All statuses</option>${
+        STATUSES.map(s=>`<option value="${s.k}">${s.label}</option>`).join('')}</select>
+      <select id="rosterSort" aria-label="Sort"><option value="recent">Recently touched</option><option value="name">Name</option><option value="due">Next due</option></select>
+    </div>
+    <div id="rosterList"></div>
+    <div class="dactions">
+      <button class="mini" id="rosterBackup">Back up everything</button>
+      <span class="tiny">Writes one .json holding every site, this book and your settings. No API keys are in it.</span>
+    </div>
+  </div>`;
+  document.body.appendChild(wrap);
+  const opener=document.activeElement;
+  const close=()=>{ wrap.remove(); document.removeEventListener('keydown',onKey); if(opener&&opener.isConnected) opener.focus(); };
+  function onKey(e){ if(e.key==='Escape'){ e.stopPropagation(); close(); } }
+  document.addEventListener('keydown',onKey);
+  wrap.querySelector('#rosterX').onclick=close;
+  wrap.addEventListener('click',e=>{ if(e.target===wrap) close(); });
+  $('rosterQ').value=rosterFilter.q; $('rosterStatus').value=rosterFilter.status; $('rosterSort').value=rosterFilter.sort;
+  $('rosterQ').oninput=e=>{ rosterFilter.q=e.target.value; renderRoster(); };
+  $('rosterStatus').onchange=e=>{ rosterFilter.status=e.target.value; renderRoster(); };
+  $('rosterSort').onchange=e=>{ rosterFilter.sort=e.target.value; renderRoster(); };
+  $('rosterBackup').onclick=()=>{ $('btnExportAll').click(); };
+  renderRoster(); renderBackupNote();
+  setTimeout(()=>$('rosterQ').focus(),50);
+}
+function renderRoster(){
+  const list=$('rosterList'); if(!list) return;
+  const rows=rosterRows(), s=rosterSummary();
+  $('rosterSum').textContent=s.total
+    ? `${s.total} site${s.total===1?'':'s'} · ${s.live} live`
+      +(s.over?` · ${s.over} overdue`:'')
+      +(s.soon?` · ${s.soon} due within a fortnight`:'')
+    : 'Nothing here yet. Every site you generate is added automatically.';
+  if(!rows.length){
+    list.innerHTML=`<div class="hist-empty">${s.total?'No sites match that filter.':'Generate a site and it appears here.'}</div>`;
+    return;
+  }
+  const today=new Date().toISOString().slice(0,10);
+  list.innerHTML=rows.map(x=>{
+    const st=STATUS_OF(x.status||'draft');
+    const overdue=x.due&&x.due<today&&x.status!=='archived';
+    return `<div class="rrow" data-id="${esc(x.id)}">
+      <div class="rmain">
+        <div class="rname">${esc(x.name||'Untitled site')}${x.openable?'':' <span class="rgone" title="The site data was shed to free storage. The record is kept.">record only</span>'}</div>
+        <div class="rmeta">${x.built?new Date(x.built).toLocaleDateString():''}${x.theme&&THEMES[x.theme]?' · '+esc(THEMES[x.theme].label):''}</div>
+      </div>
+      <label class="rf"><span>Status</span>
+        <select data-f="status" class="rstatus s-${st.k}" title="${esc(st.hint)}">${
+          STATUSES.map(o=>`<option value="${o.k}"${o.k===st.k?' selected':''}>${o.label}</option>`).join('')}</select></label>
+      <label class="rf"><span>Live address</span><input data-f="url" type="url" placeholder="https://" value="${esc(x.url||'')}"></label>
+      <label class="rf rf-s"><span>Price</span><input data-f="price" type="text" placeholder="$0" value="${esc(x.price||'')}"></label>
+      <label class="rf rf-s"><span>Next due${overdue?' <b class="rdue">overdue</b>':''}</span><input data-f="due" type="date" value="${esc(x.due||'')}"></label>
+      <label class="rf rf-w"><span>Note</span><input data-f="note" type="text" placeholder="What is outstanding?" value="${esc(x.note||'')}"></label>
+      <div class="ract">
+        ${x.openable?`<button class="mini" data-a="open">Open</button>`:''}
+        ${x.url?`<a class="mini" href="${esc(x.url)}" target="_blank" rel="noopener">Visit</a>`:''}
+        <button class="mini" data-a="del" title="Remove this record. The saved site itself is not deleted.">Remove</button>
+      </div>
+    </div>`;
+  }).join('');
+  list.querySelectorAll('.rrow').forEach(row=>{
+    const id=row.dataset.id;
+    row.querySelectorAll('[data-f]').forEach(inp=>{
+      const commit=()=>{ rosterTouch(id,{[inp.dataset.f]:inp.value}); autoBackup();
+        if(inp.dataset.f==='status'){ inp.className='rstatus s-'+inp.value; renderRoster(); } };
+      inp.onchange=commit;
+      if(inp.tagName==='INPUT') inp.onblur=commit;
+    });
+    const open=row.querySelector('[data-a="open"]');
+    if(open) open.onclick=()=>{
+      const btn=$('histList').querySelector(`.hist-item[data-id="${id}"]`);
+      document.getElementById('rosterModal')?.remove();
+      if(btn) btn.click();
+    };
+    row.querySelector('[data-a="del"]').onclick=()=>{
+      const r=loadRoster(); delete r[id]; saveRoster(r); renderRoster(); renderHistory();
+    };
+  });
+}
+
 function renderHistory(){
   const list=loadHistory();
   $('histCount').textContent=`${list.length} / ${HIST_CAP}`;
   if(!list.length){ $('histList').innerHTML=`<div class="hist-empty">No saved sites yet.<br>Your last ${HIST_CAP} generations appear here.</div>`; return; }
+  const roster=loadRoster();
   $('histList').innerHTML=list.map(h=>{
     const th=THEMES[h.theme]||THEMES[DEFAULT_THEME];
+    /* The status is the one thing worth carrying into the rail: which of these
+       is actually live is the question you ask a dozen times a day. */
+    const rec=roster[h.id], st=rec?STATUS_OF(rec.status):null;
     return `<button class="hist-item ${h.id===currentId?'active':''}" data-id="${h.id}">
       <div class="hist-name">${esc(h.businessName)}</div>
-      <div class="hist-meta"><span class="hist-dot" style="background:${th.primary}"></span>${new Date(h.timestamp).toLocaleDateString()} ${new Date(h.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>
+      <div class="hist-meta"><span class="hist-dot" style="background:${th.primary}"></span>${new Date(h.timestamp).toLocaleDateString()} ${new Date(h.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}${
+        st?`<span class="hist-st s-${st.k}">${st.label}</span>`:''}</div>
     </button>`;
   }).join('');
   $('histList').querySelectorAll('.hist-item').forEach(b=>b.onclick=()=>{
@@ -7541,8 +7800,13 @@ $('btnRail').onclick=()=>{
   if(window.innerWidth<=1240){ app.classList.toggle('showrail'); $('btnRail').classList.toggle('on',app.classList.contains('showrail')); }
   else { app.classList.toggle('norail'); $('btnRail').classList.toggle('on',!app.classList.contains('norail')); }
 };
+$('btnRoster').onclick=openRoster;
 $('btnClearHist').onclick=()=>{
-  if(!confirm('Delete all saved sites from this browser? This cannot be undone.')) return;
+  /* Clearing the saved sites deliberately leaves the client book alone. The
+     two are different things: one is disk, the other is who you work for.
+     Emptying the rail to reclaim storage should not wipe the record of a job
+     you still have to invoice for. */
+  if(!confirm('Delete all saved sites from this browser? This cannot be undone.\n\nYour client book is kept — remove entries there individually if you want them gone.')) return;
   localStorage.removeItem(LS_HIST); renderHistory();
 };
 
@@ -9344,12 +9608,13 @@ Object.keys(TRACK_IDS).forEach(id=>{
    a live API key is a file someone will email to a colleague. */
 $('btnExportAll').onclick=()=>{
   const dump={v:1,at:new Date().toISOString(),
-    history:loadHistory(), prefs, whitelabel:wl, brief:(()=>{try{return JSON.parse(localStorage.getItem(LS_BRIEF)||'{}')}catch{return{}}})(),
+    history:loadHistory(), roster:loadRoster(), prefs, whitelabel:wl, brief:(()=>{try{return JSON.parse(localStorage.getItem(LS_BRIEF)||'{}')}catch{return{}}})(),
     tones:customTones()};
   const n=dump.history.length;
   saveBlob(new Blob([JSON.stringify(dump,null,2)],{type:'application/json'}),
     `instant-site-backup-${new Date().toISOString().slice(0,10)}.json`);
-  $('workspaceNote').textContent=`Backed up ${n} site${n===1?'':'s'}, your preferences and white-label settings. No API keys are in the file.`;
+  markBackedUp();
+  $('workspaceNote').textContent=`Backed up ${n} site${n===1?'':'s'}, your client book, preferences and white-label settings. No API keys are in the file.`;
 };
 $('btnImportAll').onclick=()=>$('importFile').click();
 $('importFile').onchange=e=>{
@@ -9365,6 +9630,14 @@ $('importFile').onchange=e=>{
         const merged=loadHistory().concat(d.history.filter(h=>h&&h.id&&!have.has(h.id)));
         added=merged.length-loadHistory().length;
         saveHistory(merged); renderHistory();
+      }
+      /* Merge, never replace: restoring a backup onto a browser that has
+         since done more work must not throw that work away. Existing records
+         win, because they are the more recent truth. */
+      if(d.roster&&typeof d.roster==='object'&&!Array.isArray(d.roster)){
+        const cur=loadRoster();
+        Object.entries(d.roster).forEach(([k,v])=>{ if(!cur[k]) cur[k]=v; });
+        saveRoster(cur);
       }
       if(d.prefs&&typeof d.prefs==='object'){
         Object.assign(prefs,d.prefs); savePrefs(); loadPrefs();
