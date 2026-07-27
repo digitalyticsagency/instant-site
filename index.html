@@ -363,6 +363,15 @@ select{appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%
 /* No inner scrollbox. A capped, scrolling grid swallowed the wheel whenever the
    cursor was over it, which made the whole middle column feel stuck. A
    show-more reveal keeps the section short by default and never traps scroll. */
+/* Filter chips above the theme grid. Compact enough to sit inside the panel
+   without pushing the swatches below the fold, which would trade one
+   discoverability problem for another. */
+.themefilter{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:7px}
+.themefilter .chip{padding:4px 9px;font-size:11.5px;border-radius:var(--r-pill);
+  border:1px solid var(--stroke);background:var(--surface);color:var(--txt-2);cursor:pointer}
+.themefilter .chip:hover{background:var(--fill)}
+.themefilter .chip.on{background:var(--accent-fill);border-color:var(--accent-fill);color:var(--on-accent)}
+.themefilter .tfn{opacity:.65;font-size:10.5px;margin-left:1px}
 .themes{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .themes.short>.theme:nth-child(n+10){display:none}
 .cxgridpick.short>.cxbtn:nth-child(n+7){display:none}
@@ -1248,6 +1257,7 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
       <summary>Theme <span class="tag" id="tagTheme">36</span></summary>
       <div class="body">
         <div class="tiny">Switching theme after generating is instant and costs no API call.</div>
+        <div class="themefilter" id="themeFilter"></div>
         <div class="themes" id="themeGrid"></div>
       </div>
     </details>
@@ -6114,8 +6124,27 @@ function renderThemeStrip(){
   $('themeStrip').innerHTML=THEME_IDS.map(id=>`<button class="tpill ${id===cur?'on':''}" data-t="${id}"><i style="background:${THEMES[id].primary}"></i>${THEMES[id].label}</button>`).join('');
   $('themeStrip').querySelectorAll('.tpill').forEach(b=>b.onclick=()=>setTheme(b.dataset.t));
 }
+/* With 46 themes a new one appended to the end is invisible: the grid collapses
+   to its first nine, so anything added later sits four rows below a "Show all"
+   button. A filter is the difference between a library and a pile. */
+let themeFilter='all';
+const THEME_FILTERS=[
+  {k:'all',   label:'All',         match:()=>true},
+  {k:'depth', label:'Dimensional', match:t=>!!t.depth},
+  {k:'flat',  label:'Flat',        match:t=>!t.depth},
+  {k:'light', label:'Light',       match:t=>!t.dark},
+  {k:'dark',  label:'Dark',        match:t=>!!t.dark}
+];
 function renderThemeGrid(){
-  $('themeGrid').innerHTML=THEME_IDS.map(id=>{
+  const f=(THEME_FILTERS.find(x=>x.k===themeFilter)||THEME_FILTERS[0]);
+  const ids=THEME_IDS.filter(id=>f.match(THEMES[id]));
+  const bar=$('themeFilter');
+  if(bar) bar.innerHTML=THEME_FILTERS.map(x=>{
+    const n=THEME_IDS.filter(id=>x.match(THEMES[id])).length;
+    return `<button type="button" class="chip ${x.k===themeFilter?'on':''}" data-tf="${x.k}">${x.label} <span class="tfn">${n}</span></button>`;
+  }).join('');
+  if(bar) bar.querySelectorAll('[data-tf]').forEach(b=>b.onclick=()=>{ themeFilter=b.dataset.tf; renderThemeGrid(); });
+  $('themeGrid').innerHTML=ids.map(id=>{
     const t=THEMES[id];
     return `<button type="button" class="theme ${id===prefs.theme?'on':''}" data-t="${id}">
       <div class="swatch" style="background:${t.bg}">
@@ -6126,8 +6155,9 @@ function renderThemeGrid(){
   }).join('');
   $('themeGrid').querySelectorAll('.theme').forEach(b=>b.onclick=()=>setTheme(b.dataset.t));
   // Derived, never hardcoded: the count drifted to 14 while the library grew to 36.
-  const tt=$('tagTheme'); if(tt) tt.textContent=`${THEME_IDS.length} themes`;
-  mountMore($('themeGrid'),9,'theme',n=>`Show all ${n} themes`);
+  const tt=$('tagTheme'); if(tt) tt.textContent=themeFilter==='all'
+    ? `${THEME_IDS.length} themes` : `${ids.length} of ${THEME_IDS.length}`;
+  mountMore($('themeGrid'),9,'theme',n=>`Show all ${n}${themeFilter==='all'?' themes':' '+f.label.toLowerCase()}`);
   if(typeof renderHfPick==='function') renderHfPick();
 }
 
