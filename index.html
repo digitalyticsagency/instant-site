@@ -357,7 +357,7 @@ select{appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%
   color:var(--warn);line-height:1.55}
 
 /* theme cards */
-/* 36 themes at two columns ran to ~4000px, a third of the whole panel. Three
+/* The theme library at two columns ran to ~4000px, a third of the whole panel. Three
    tighter columns in a capped, internally scrolling box keeps every theme
    reachable while the section itself stays a sensible height. */
 /* No inner scrollbox. A capped, scrolling grid swallowed the wheel whenever the
@@ -1258,7 +1258,10 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
     </details>
 
     <details class="sec" open>
-      <summary>Theme <span class="tag" id="tagTheme">36</span></summary>
+      <!-- Empty on purpose: renderThemes() fills this from THEME_IDS.length. A
+           number typed here is a number that goes stale — it already read 14,
+           then 36, while the library grew past both. -->
+      <summary>Theme <span class="tag" id="tagTheme"></span></summary>
       <div class="body">
         <div class="tiny">Switching theme after generating is instant and costs no API call.</div>
         <div class="themefilter" id="themeFilter"></div>
@@ -5178,8 +5181,14 @@ function buildSite(state,mode,pageIdx){
      how every publication on the web does it. */
   const navLinks=multi
     ? Array.from({length:pageCount(state)},(_,i)=>i)
+        /* No count cap here any more. There used to be a .slice(0,7), from when
+           the nav was a single non-wrapping row and an eighth page pushed the
+           phone number off the bar. The bar wraps now, so the cap only did harm:
+           the owner turns "menu" on for a page, gets no warning, and the page
+           simply never appears. Which pages appear is the owner's call, made
+           with the per-page menu toggle; the pre-flight warns when the list gets
+           long enough to wrap to a third line. */
         .filter(i=>i===0||(pageOf(state,i).inNav!==false&&!pageOf(state,i).legal&&!isBlogPost(pageOf(state,i))))
-        .slice(0,7)
         .map(i=>{
           const lbl=esc(navLabel(state,i)), ttl=esc(pageTitle(state,i));
           const t=lbl===ttl?'':` title="${ttl}"`;
@@ -5948,6 +5957,16 @@ function renderTips(){
   if(!md.logo.src) add(2,'Add your logo',
     'Replaces the text wordmark in the nav. Even a simple one lifts perceived legitimacy.');
 
+  /* The nav used to silently drop everything past the seventh page, so a long
+     menu looked fine and quietly lost pages. It now shows every page you have
+     switched on, which means a long list wraps instead of disappearing — worth
+     saying out loud, because wrapping to three rows pushes the hero down the
+     screen on a laptop. */
+  const navCount=Array.from({length:pageCount(siteState)},(_,i)=>i)
+    .filter(i=>i===0||(pageOf(siteState,i).inNav!==false&&!pageOf(siteState,i).legal&&!isBlogPost(pageOf(siteState,i)))).length;
+  if(navCount>8) add(2,`${navCount} items in the top menu`,
+    `Every page you have switched on now appears, so the bar wraps onto extra rows instead of hiding pages. Above about eight it starts pushing the hero down the screen. Turn "menu" off for the less important pages in the Pages panel — they stay in the footer, stay linked and stay indexed.`);
+
   /* A configured form with nowhere to appear is the most expensive silent
      failure here: the owner pastes in a Web3Forms key, believes leads are
      being captured, and the page renders call buttons instead. Ten of the
@@ -6179,7 +6198,7 @@ function renderThemeGrid(){
       <div class="theme-meta"><div class="theme-name">${t.label}</div><div class="theme-for">${t.for}</div></div></button>`;
   }).join('');
   $('themeGrid').querySelectorAll('.theme').forEach(b=>b.onclick=()=>setTheme(b.dataset.t));
-  // Derived, never hardcoded: the count drifted to 14 while the library grew to 36.
+  // Derived, never hardcoded: the count drifted to 14, then 36, while the library kept growing.
   const tt=$('tagTheme'); if(tt) tt.textContent=themeFilter==='all'
     ? `${THEME_IDS.length} themes` : `${ids.length} of ${THEME_IDS.length}`;
   mountMore($('themeGrid'),9,'theme',n=>`Show all ${n}${themeFilter==='all'?' themes':' '+f.label.toLowerCase()}`);
@@ -6302,7 +6321,7 @@ async function renderProspectView(raw,review){
             'font:500 12.5px/1.5 var(--sans);box-shadow:0 8px 26px rgba(0,0,0,.34)';
   const PILL='color:#fff;background:rgba(255,255,255,.18);padding:7px 13px;border-radius:999px;text-decoration:none;border:0;cursor:pointer;font:inherit';
   /* A theme picker for the client. Content is theme-independent, so switching
-     is instant and free — the client can try all 36 looks and their pick rides
+     is instant and free — the client can try every look and their pick rides
      back with an approval. The strip lives at the top so it never fights the
      review bar at the bottom. */
   const themeBar=`
