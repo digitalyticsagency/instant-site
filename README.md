@@ -10,17 +10,18 @@ Describe a business, pick a theme, and get a complete one-page website: hero, se
 
 ## What it does
 
-- **46 themes**, each tuned to a buyer segment (see below), filterable by family. Switching theme after generating is instant and costs **no API call** — the content is theme-independent.
+- **47 themes**, each tuned to a buyer segment (see below), filterable by family. Switching theme after generating is instant and costs **no API call** — the content is theme-independent.
 - **Inline editing.** Click any text in the preview and type. Edits write straight into the single source of truth, so the export always matches what you see.
 - **Per-section regeneration.** Redo just the hero, services, about, reviews or FAQ without touching the rest of the page.
 - **Contact details wired end-to-end.** Phone, email, hours, service area and a booking link flow into the nav, hero card, contact section, footer and LocalBusiness JSON-LD automatically — no placeholder `hello@example.com` to hunt down.
 - **Pre-flight checks** for colour contrast, heading hierarchy, meta length, missing contact fields, page weight and structured data. Advisory only; export is never blocked.
+- **Stock photo and video search** built in. Photos from Openverse, Wikimedia, Pexels or Unsplash; video from Dailymotion or Pexels. Dailymotion and Openverse need no API key, so search works the moment you open the app. Found video becomes a link, never an upload, so the export stays small.
 - **History** of your last 20 generations, stored locally.
 - **White-label mode** for agencies. Exports never carry Instant Site branding either way.
 
 ## Themes
 
-46 themes, browsable by family from the filter above the grid. The original eight cover the core buyer segments:
+47 themes, browsable by family from the filter above the grid. The original eight cover the core buyer segments:
 
 | Theme | Built for |
 |---|---|
@@ -33,7 +34,7 @@ Describe a business, pick a theme, and get a complete one-page website: hero, se
 | Minimal Mono | Designers, architects, premium one-person studios |
 | Conversion Punch | Anyone running ads — offer-led landing page |
 
-Ten of the 46 are **dimensional** — they add a CSS depth system on top of the shared skeleton, in five families of two: soft (neumorphic), glass, clay, layered and tactile. The other 36 are flat.
+Eleven of the 47 are **dimensional** — they add a CSS depth system on top of the shared skeleton, in five families of two: soft (neumorphic), glass, clay, layered and tactile — plus Studio Kinetic, a true-black creative-studio look with monospace micro-labels and pill buttons. The other 36 are flat.
 
 Every theme shares one semantic HTML skeleton and differs by design tokens plus three structural variants — hero (`split` / `center` / `banner`), services (`cards` / `numbered` / `list`) and testimonials (`cards` / `featured`). That keeps the codebase small and fast while the output looks genuinely different.
 
@@ -62,7 +63,7 @@ Apple design language, light and dark. Typography is the real SF Pro stack via `
 
 Appearance follows your OS by default and can be pinned Light or Dark from the header toggle or the segmented control under Settings.
 
-The 46 website themes are a **separate** palette system — a buyer's plumbing site shouldn't look like macOS — so switching app appearance never changes the site you're generating.
+The 47 website themes are a **separate** palette system — a buyer's plumbing site shouldn't look like macOS — so switching app appearance never changes the site you're generating.
 
 ## Accessibility
 
@@ -70,11 +71,11 @@ Exported pages carry a `<main>` landmark and a keyboard skip link (WCAG 2.4.1), 
 
 Three independent guards run at boot and log loudly to the console on regression:
 
-- **`verifyThemes()`** — all 46 output themes, against WCAG AA 4.5:1. Not just palette-vs-background but **button labels against their own fills** and **CTA text over both gradient stops**. These pair checks caught two real failures during development (white text on a light amber accent at 1.86:1, and a CTA gradient end at 3.95:1).
+- **`verifyThemes()`** — all 47 output themes, against WCAG AA 4.5:1. Not just palette-vs-background but **button labels against their own fills** and **CTA text over both gradient stops**. These pair checks caught two real failures during development (white text on a light amber accent at 1.86:1, and a CTA gradient end at 3.95:1).
 - **`verifyAppTokens()`** — the app's own chrome, in both appearances, against every ground it paints on (`bg`, `surface`, `surface-2`). This caught four failures in the first Apple palette, including the fact that Apple's `#0A84FF` reads beautifully as text on black (5.76:1) but carries a white button label at only 3.65:1 — which is why `--accent` (text) and `--accent-fill` (button background) are **separate tokens** in dark mode.
 - **`verifyButtons()`** — the output's *interactive* states, measured on a real render rather than on the palette. It builds every theme in an iframe and asks the browser what it actually painted, resolving transparent backgrounds and gradients against the ground behind them. This is the one that catches what the other two cannot: it found a depth-family rule painting a secondary button's label onto its own fill at 1.00:1, invisible, which no palette check would ever see.
 
-Verified by measuring computed styles on 21 rendered element pairs per appearance: all ≥ 4.5:1. Across the output themes that is 46 × 10 colour pairs, plus every button in every theme rendered and measured — currently all passing.
+Verified by measuring computed styles on 21 rendered element pairs per appearance: all ≥ 4.5:1. Across the output themes that is 47 × 10 colour pairs, plus every button in every theme rendered and measured — currently all passing.
 
 ---
 
@@ -111,7 +112,7 @@ index.html
     ├── prompts     system + user prompt construction, incl. partial regeneration
     ├── callClaude  the ONLY network seam — swap this for a proxy in v3
     ├── validation  strict schema check; renders nothing on a miss
-    ├── buildSite   one skeleton × 46 themes → preview (editable) and export (clean)
+    ├── buildSite   one skeleton × 47 themes → preview (editable) and export (clean)
     └── checks      pre-flight panel, verifyThemes() contrast guard
 ```
 
