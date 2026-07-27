@@ -11326,10 +11326,17 @@ $('vidGo').onclick=runVideoSearch;
 $('vidQ').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); runVideoSearch(); } });
 
 /* ---- version and update detection --------------------------------------
-   version.json is fetched with cache:'no-store' AND a cache-busting query.
-   Belt and braces on purpose: no-store is what should be enough, but some
-   proxies and older Safari ignore it on a same-origin GET, and the query is
-   the part nothing can cache around.
+   version.json is fetched with cache:'no-store' and a cache-busting query.
+   Between them those defeat the BROWSER cache, which is the one that matters
+   here: a tab left open for days is the case this exists for.
+
+   They do not defeat GitHub's CDN. Measured, not assumed — Fastly serves this
+   path with max-age=600 and ignores the query string entirely, so two requests
+   with different ?t= values come back as the same cached object with an `age`
+   header ticking up. The practical guarantee is therefore "a new release is
+   noticed within about ten minutes", not "instantly". That is still the
+   difference between ten minutes and never, which is what an already-open tab
+   would otherwise get.
 
    Checked on load, when the tab is brought back to the front, and hourly for a
    tab left open all day. Deliberately not polled aggressively — a stale build

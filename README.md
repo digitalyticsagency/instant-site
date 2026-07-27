@@ -12,7 +12,11 @@ Describe a business, pick a theme, and get a complete one-page website: hero, se
 
 Bump `APP_VERSION` in `index.html` and `version` in `version.json` **together**, then push. Both are checked against each other by the pre-flight, and a mismatch means every visitor is told there is an update that does not exist.
 
-GitHub Pages serves the app with a fixed `cache-control: max-age=600` and gives you no way to change response headers, so for ten minutes after a push some browsers keep serving the old build — and a tab that was already open never re-checks at all. The app therefore polls `version.json` (a few dozen bytes, fetched with `cache: 'no-store'` and a cache-busting query) on load, whenever the tab is brought back to the front, and hourly. If the live version differs it offers a reload, which navigates to a changed URL rather than calling `location.reload()` — a plain reload can be served straight back out of the same cache.
+GitHub Pages serves the app with a fixed `cache-control: max-age=600` and gives you no way to change response headers, so for ten minutes after a push some browsers keep serving the old build — and a tab that was already open never re-checks at all.
+
+The app therefore polls `version.json` (a few dozen bytes, fetched with `cache: 'no-store'` and a cache-busting query) on load, whenever the tab is brought back to the front, and hourly. If the live version differs it offers a reload, which navigates to a changed URL rather than calling `location.reload()` — a plain reload can be served straight back out of the same cache.
+
+**What this actually guarantees.** The `no-store` and the query defeat the *browser* cache, which is the one that matters for a long-open tab. They do **not** defeat GitHub's CDN: measured on the live site, Fastly serves this path with `max-age=600` and ignores the query string entirely — two requests with different `?t=` values return the same cached object with an `age` header ticking up. So the honest promise is *a release is noticed within about ten minutes*, not instantly. That is still the difference between ten minutes and never.
 
 ---
 
