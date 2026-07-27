@@ -640,6 +640,22 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
 .pgbtns button{padding:3px 7px;border-radius:6px;border:1px solid var(--stroke);background:var(--surface);font-size:10px;color:var(--txt-3)}
 .pgbtns button:hover{background:var(--fill);color:var(--txt)}
 .pgbtns button.on{border-color:var(--accent);color:var(--accent);background:var(--sel)}
+/* ---- page reordering ----
+   The row wraps so the menu-label field takes its own line rather than crushing
+   the page name, which is the field people actually scan by. */
+.pgrow{flex-wrap:wrap}
+.pgdrag{flex:none;cursor:grab;color:var(--txt-3);font-size:13px;line-height:1;padding:2px 1px;user-select:none}
+.pgdrag:active{cursor:grabbing}
+.pgdrag.ghost{opacity:.45;cursor:default}
+.pgrow.dragging{opacity:.45}
+/* Drawn on the row being dropped onto, not as a gap between rows: this list is
+   a swap-to-position, so highlighting the destination row is what actually
+   happens. */
+.pgrow.dropinto{border-color:var(--accent);box-shadow:0 0 0 3px var(--ring)}
+.pgrow.pinned{background:var(--fill)}
+.pgnav{flex:1 1 100%;display:flex;align-items:center;gap:7px;margin:2px 0 1px;font-size:10.5px;color:var(--txt-3)}
+.pgnav span{flex:none}
+.pgnav input{padding:4px 8px;font-size:12px;border-radius:7px}
 
 /* section manager */
 .secrow{display:flex;align-items:center;gap:9px;padding:8px 10px;border:1px solid var(--stroke);border-radius:11px;margin-bottom:6px;background:var(--bg)}
@@ -8083,11 +8099,23 @@ function renderPages(){
   const n=pageCount(siteState);
   $('tagPages').textContent=String(n);
   $('tagPages').className='tag'+(n>1?' ok':'');
+  /* Menu order is page order, so this list IS the header. Home is pinned: it is
+     the index file, and a site whose first page is not the home page is broken
+     rather than reordered. Dragging is the fast path; the arrows are the same
+     operation for anyone using a keyboard, which dragging alone locks out. */
   host.innerHTML=Array.from({length:n},(_,i)=>{
     const home=i===0, p=pageOf(siteState,i);
-    return `<div class="pgrow${i===currentPage?' cur':''}">
+    const inNav=!home&&p.inNav!==false&&!p.legal&&!isBlogPost(p);
+    const lbl=navLabel(siteState,i), title=pageTitle(siteState,i);
+    return `<div class="pgrow${i===currentPage?' cur':''}${home?' pinned':''}" data-idx="${i}"${home?'':' draggable="true"'}>
+      ${home?'<span class="pgdrag ghost" aria-hidden="true">⌂</span>'
+            :`<span class="pgdrag" title="Drag to reorder">⠿</span>`}
+      <div class="secmove">
+        <button type="button" data-mvup="${i}" ${i<=1?'disabled':''} title="Move up" aria-label="Move ${esc(title)} up">↑</button>
+        <button type="button" data-mvdn="${i}" ${(home||i===n-1)?'disabled':''} title="Move down" aria-label="Move ${esc(title)} down">↓</button>
+      </div>
       <button type="button" class="pgopen" data-go="${i}">
-        <span class="pgname">${esc(pageTitle(siteState,i))}${home?' <em>· home</em>':''}</span>
+        <span class="pgname">${esc(title)}${home?' <em>· home</em>':''}</span>
         <span class="pgslug">/${home?'':esc(p.slug||'')}${home?'':'.html'}</span>
       </button>
       <div class="pgbtns">
@@ -8095,8 +8123,83 @@ function renderPages(){
         ${home?'':`<button type="button" data-ren="${i}" title="Rename">✎</button>`}
         ${home?'':`<button type="button" data-del="${i}" title="Delete page">×</button>`}
       </div>
+      ${inNav?`<label class="pgnav"><span>Menu label</span>
+        <input type="text" data-navlbl="${i}" maxlength="24" placeholder="${esc(lbl)}"
+               value="${esc((p.navLabel||'').trim())}"
+               title="What this page is called in the header. Leave blank to use the page name, shortened if it is long."></label>`:''}
     </div>`;
   }).join('');
+  /* pages[] holds 1..n; home is the state root and has no slot in it, so every
+     page index maps to pages[i-1]. Moving to position 0 is refused rather than
+     silently clamped — that would look like the drag worked and quietly do
+     nothing, which is worse than not moving. */
+  function movePage(from,to){
+    const total=pageCount(siteState);
+    if(from<1||to<1||from>=total||to>=total||from===to) return false;
+    const arr=siteState.pages||[];
+    const [pg]=arr.splice(from-1,1);
+    arr.splice(to-1,0,pg);
+    // Keep the editor pointed at the same page the user was looking at.
+    if(currentPage===from) currentPage=to;
+    else if(currentPage>from&&currentPage<=to) currentPage--;
+    else if(currentPage<from&&currentPage>=to) currentPage++;
+    renderPreview(); renderPages(); pushHistory(siteState); lastShareURL='';
+    return true;
+  }
+  host.querySelectorAll('[data-mvup]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.mvup; movePage(i,i-1);
+    setTimeout(()=>{const el=host.querySelector(`[data-mvup="${i-1}"]`); el&&el.focus();},0); });
+  host.querySelectorAll('[data-mvdn]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.mvdn; movePage(i,i+1);
+    setTimeout(()=>{const el=host.querySelector(`[data-mvdn="${i+1}"]`); el&&el.focus();},0); });
+
+  /* Drag and drop. dragover must preventDefault or the drop never fires — the
+     single most common reason a hand-rolled DnD list looks dead. */
+  let dragFrom=null;
+  /* One cleanup path, called from everywhere a drag can end. A refused drop
+     does not re-render, so without this the source row keeps its faded
+     "dragging" look with no way back — a dead state that reads as a bug. */
+  const endDrag=()=>{ dragFrom=null;
+    host.querySelectorAll('.pgrow').forEach(r=>r.classList.remove('dragging','dropinto')); };
+  host.querySelectorAll('.pgrow[draggable="true"]').forEach(row=>{
+    row.addEventListener('dragstart',e=>{
+      dragFrom=+row.dataset.idx; row.classList.add('dragging');
+      e.dataTransfer.effectAllowed='move';
+      try{ e.dataTransfer.setData('text/plain',String(dragFrom)); }catch{}
+    });
+    row.addEventListener('dragend',endDrag);
+  });
+  // Belt and braces: a drop anywhere, including outside the list, ends the drag.
+  host.addEventListener('drop',endDrag);
+  document.addEventListener('dragend',endDrag,{once:true});
+  host.querySelectorAll('.pgrow').forEach(row=>{
+    row.addEventListener('dragover',e=>{
+      if(dragFrom==null) return;
+      const target=+row.dataset.idx;
+      if(target===0) return;            // home is pinned; do not offer it as a target
+      e.preventDefault(); e.dataTransfer.dropEffect='move';
+      row.classList.add('dropinto');
+    });
+    row.addEventListener('dragleave',()=>row.classList.remove('dropinto'));
+    row.addEventListener('drop',e=>{
+      e.preventDefault();
+      const to=+row.dataset.idx, from=dragFrom;
+      endDrag();                       // clear first: a refused move must not leave a ghost row
+      if(from!=null) movePage(from,to);
+    });
+  });
+
+  /* Menu label. Blank means "use the page name", so an empty box is a real
+     value here rather than an unset one — hence removing the key instead of
+     storing ''. */
+  host.querySelectorAll('[data-navlbl]').forEach(inp=>{
+    const commit=()=>{
+      const p=pageOf(siteState,+inp.dataset.navlbl), v=inp.value.trim();
+      if(v) p.navLabel=v; else delete p.navLabel;
+      renderPreview(); pushHistory(siteState); lastShareURL='';
+    };
+    inp.onchange=commit;
+    inp.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); inp.blur(); } };
+  });
+
   host.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>gotoPage(+b.dataset.go));
   host.querySelectorAll('[data-nav]').forEach(b=>b.onclick=()=>{
     const p=pageOf(siteState,+b.dataset.nav); p.inNav=p.inNav===false;
