@@ -3559,6 +3559,11 @@ function processImage(file,slot){
   });
 }
 const mediaOf=(s,slot)=>((s&&s.media&&s.media[slot])||{src:'',alt:'',credit:null});
+/* Intrinsic dimensions, and only when they are known. Sites saved before the
+   compressor started keeping w/h have none, and inventing a ratio for them
+   would shift the layout in a different direction rather than stop it — so
+   they simply behave as they always did. */
+const dim=o=>(o&&o.w&&o.h)?` width="${o.w}" height="${o.h}"`:'';
 
 /* Same downscale path as an upload, but sourced from a URL. Uses fetch→blob
    rather than <img crossorigin> so a CORS failure surfaces as a real message
@@ -4478,7 +4483,7 @@ function buildSite(state,mode,pageIdx){
   const galleryHTML=gallery.length?`
 <section id="gallery"><div class="w">
   ${head('gallery','Recent work',`A few jobs from around ${m.location||'the area'}.`)}
-  <div class="gal">${gallery.map((g,i)=>`<figure class="${editable?'edi':''}">${editable?`<span class="edx" contenteditable="false"><button type="button" data-delg="${i}" title="Remove photo">✕</button></span>`:''}<img src="${g.src}" alt="${esc(g.alt||'Recent work by '+m.businessName)}" loading="lazy" decoding="async"></figure>`).join('')}</div>
+  <div class="gal">${gallery.map((g,i)=>`<figure class="${editable?'edi':''}">${editable?`<span class="edx" contenteditable="false"><button type="button" data-delg="${i}" title="Remove photo">✕</button></span>`:''}<img src="${g.src}"${dim(g)} alt="${esc(g.alt||'Recent work by '+m.businessName)}" loading="lazy" decoding="async"></figure>`).join('')}</div>
 </div></section>`:'';
 
   /* Policy pages are ordinary pages carrying one long-form section, so they
@@ -4514,7 +4519,7 @@ function buildSite(state,mode,pageIdx){
     ${c.hours?`<p style="margin-top:18px"><strong>Hours:</strong> ${esc(c.hours)}</p>`:''}
   </div>
   ${aboutImg.src
-    ? `<div class="fig"${slot('about','Replace photo')}><img src="${aboutImg.src}" alt="${esc(aboutImg.alt||m.businessName+' team at work')}" loading="lazy" decoding="async"></div>`
+    ? `<div class="fig"${slot('about','Replace photo')}><img src="${aboutImg.src}"${dim(aboutImg)} alt="${esc(aboutImg.alt||m.businessName+' team at work')}" loading="lazy" decoding="async"></div>`
     : `<!-- REMINDER: swap this placeholder for a real photo and write descriptive alt text. -->
   <div class="fig" role="img" aria-label="Placeholder, replace with a photo of the team or recent work"${slot('about','Add a photo')}>${iconSVG('camera')}</div>`}
 </div></section>`;
@@ -4662,7 +4667,11 @@ function buildSite(state,mode,pageIdx){
       return `${head}<div class="atwrap"><table class="atable"><thead><tr>${cols.map((c,ci)=>ed(`${P}.columns.${ci}`,'th','',c)).join('')}</tr></thead><tbody>${rows.map((r,ri)=>`<tr>${(r||[]).map((cell,ci)=>ed(`${P}.rows.${ri}.${ci}`,'td','',cell)).join('')}</tr>`).join('')}</tbody></table></div>`; }
     if(T==='image'){ const im=mediaOf(s,'article');
       const cap=blk.caption?ed(`${P}.caption`,'figcaption','',blk.caption):'';
-      return im.src?`<figure class="aimg"><img src="${im.src}" alt="${esc(blk.caption||bd.title||'')}" loading="lazy">${cap}</figure>`
+      /* The one image on the page with no reserved space: .aimg img is
+         width:100% with auto height and its container has no aspect-ratio, so
+         without intrinsic dimensions the article reflows as the photo decodes
+         and the reader loses their place mid-sentence. */
+      return im.src?`<figure class="aimg"><img src="${im.src}"${dim(im)} alt="${esc(blk.caption||bd.title||'')}" loading="lazy" decoding="async">${cap}</figure>`
         :`<figure class="aimg ph"${slot('article','Add an image')}>${iconSVG('camera')}${cap}</figure>`; }
     return '';
   };
@@ -5153,7 +5162,7 @@ ${articleLd?`<script type="application/ld+json">${JSON.stringify(articleLd)}<\/s
 <body>
 <nav class="nav" id="top"><div class="w">
   ${logoImg.src
-    ? `<div class="logo"${slot('logo','Replace logo')}><img class="logoimg" src="${logoImg.src}" alt="${esc(logoImg.alt||m.businessName)}"></div>`
+    ? `<div class="logo"${slot('logo','Replace logo')}><img class="logoimg" src="${logoImg.src}"${dim(logoImg)} alt="${esc(logoImg.alt||m.businessName)}"></div>`
     : `<div class="logo"${slot('logo','Add a logo')}>${esc(m.businessName)}</div>`}
   ${navLinks?'<input type="checkbox" id="navtoggle" class="navtoggle">':''}
   <div class="nl">${navLinks}</div>
@@ -5169,7 +5178,7 @@ ${sectionsHTML}
 <footer class="foot" id="site-footer">
   <div class="w footgrid">
     <div class="footbrand">
-      ${logoImg.src?`<img class="footlogo" src="${logoImg.src}" alt="${esc(m.businessName)}" loading="lazy" decoding="async">`
+      ${logoImg.src?`<img class="footlogo" src="${logoImg.src}"${dim(logoImg)} alt="${esc(m.businessName)}" loading="lazy" decoding="async">`
                    :`<div class="footmark">${esc(m.businessName)}</div>`}
       ${m.standout?`<p class="footline">${esc(m.standout)}</p>`:m.location?`<p class="footline">Serving ${esc(m.location)}</p>`:''}
       ${socialLinks}
@@ -5325,7 +5334,10 @@ async function applyImage(file){
   try{
     const {src,w,h}=await processImage(file,slot);
     const M=curPage(); M.media=M.media||blankMedia();
-    M.media[slot]={src,alt:M.media[slot]&&M.media[slot].alt||''};
+    /* w/h were computed by the compressor, shown in the status line, then
+       dropped. Keeping them lets every <img> carry intrinsic dimensions, which
+       is what stops the page reflowing as photos decode. */
+    M.media[slot]={src,alt:M.media[slot]&&M.media[slot].alt||'',w,h};
     renderPreview(); renderMediaPanel(); renderChecks(); renderTips();
     if(!pushHistory(siteState)){
       setMediaStatus(`Image added (${Math.round(src.length/1024)} KB) — but this site is now too large to save in history.`,true);
@@ -5343,7 +5355,7 @@ async function applyGalleryImage(file,credit){
   setMediaStatus('Processing photo…');
   try{
     const {src,w,h}=await processImage(file,'gallery');
-    M.media.gallery.push({src,alt:'',credit:credit||null});
+    M.media.gallery.push({src,alt:'',credit:credit||null,w,h});
     renderPreview(); renderMediaPanel(); renderSections(); renderChecks(); renderTips();
     const ok=pushHistory(siteState);
     setMediaStatus(ok?`Added to Recent work — ${w}×${h}, ${Math.round(src.length/1024)} KB (${M.media.gallery.length}/${GALLERY_MAX}).`
