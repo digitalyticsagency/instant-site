@@ -854,6 +854,10 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
         <b>Wix / Squarespace embed</b>
         <span>A snippet to paste into a Wix HTML element or a Squarespace Code Block.</span>
       </button>
+      <button type="button" data-dl="copy">
+        <b>Copy HTML</b>
+        <span id="copyLabel">The whole page on your clipboard — paste it into a host's file editor.</span>
+      </button>
     </div>
   </div>
 </header>
@@ -2804,7 +2808,6 @@ function rosterTouch(id,patch){
   saveRoster(r);
   return r[id];
 }
-function rosterOf(id){ return loadRoster()[id]||null; }
 
 /* ---------- backup pressure ----------
    I wanted this to write the backup file itself on every change. It cannot,
@@ -4363,7 +4366,17 @@ ${prefs.motion?`
       .card:hover,.rows .row:hover,.num .item:hover{transform:translateY(-2px);box-shadow:0 1px 0 ${rgba('#ffffff',t.dark?.12:.9)} inset, 0 16px 32px ${rgba(t.ink,.16)}}
       .ico{background:linear-gradient(180deg,${rgba(t.primary,.22)},${rgba(t.primary,.10)});
         box-shadow:0 1px 0 ${rgba('#ffffff',t.dark?.10:.7)} inset}
+      /* Both rules stay at one class on purpose. The secondary button is
+         class="b b2" and paints its label in t.primary, so .b alone put primary
+         text on a primary fill — an invisible label at 1.00:1. The obvious fix,
+         .b:not(.b2), is wrong: :not() counts its argument, so it climbs to two
+         classes and starts beating .final .b and .hero.banner .b, repainting
+         those buttons' backgrounds while their own colour stays put. Ordering
+         .b2 after .b does the same job at equal weight and leaves every
+         two-class override above it still winning. */
       .b{background:linear-gradient(180deg,${rgba('#ffffff',.18)},transparent 60%),${t.primary}}
+      .b2{background:linear-gradient(180deg,${rgba('#ffffff',t.dark?.06:.7)},transparent 62%),${t.panel};
+        box-shadow:0 1px 0 ${rgba('#ffffff',t.dark?.10:.8)} inset, 0 4px 10px ${rgba(t.ink,.10)}}
       .b:active{transform:translateY(2px);box-shadow:0 2px 6px ${rgba(t.ink,.3)} inset}`
   }[t.depth]||'')}
 
@@ -7200,17 +7213,25 @@ async function download(){
     btn.disabled=false; setTimeout(()=>{label.textContent=was;},1800);
   }
 }
+/* Reachable from the Download menu, so it sits behind the same licence gate as
+   every other export route — the menu is what the gate opens. The label is the
+   menu item's own description line; it is restored rather than hardcoded so the
+   wording only ever lives in the markup. */
 async function copyHTML(){
   if(!siteState) return;
   const html=exportHTML(),label=$('copyLabel');
-  try{ await navigator.clipboard.writeText(html); label.textContent='Copied'; }
+  const was=label?label.textContent:'';
+  const kb=Math.round(new Blob([html]).size/1024);
+  const say=t=>{ if(label) label.textContent=t; };
+  try{ await navigator.clipboard.writeText(html); say(`Copied — ${kb} KB on your clipboard`); }
   catch{
     const ta=document.createElement('textarea'); ta.value=html; ta.style.cssText='position:fixed;opacity:0';
     document.body.appendChild(ta); ta.select();
-    try{ document.execCommand('copy'); label.textContent='Copied'; }catch{ label.textContent='Copy failed'; }
+    try{ document.execCommand('copy'); say('Copied'); }catch{ say('Copy failed — use Static HTML instead'); }
     ta.remove();
   }
-  setTimeout(()=>{label.textContent='Copy HTML';},1800);
+  logUsage('copy-html',kb+' KB');
+  setTimeout(()=>say(was),2600);
 }
 
 /* ==========================================================================
@@ -7887,6 +7908,7 @@ dlMenu.querySelectorAll('[data-dl]').forEach(b=>b.onclick=()=>{
   if(b.dataset.dl==='wp') downloadWordPress();
   else if(b.dataset.dl==='review') makeReviewLink(true);
   else if(b.dataset.dl==='embed') showEmbed();
+  else if(b.dataset.dl==='copy') copyHTML();
   else download();
 });
 
@@ -11033,7 +11055,7 @@ function renderAdminRow(){
   $('btnAdminOut').style.display=on?'':'none';
   note.textContent=on
     ? 'Downloads are unlocked in this browser. Sign out before demoing to a prospect on this machine.'
-    : 'Downloads are gated. Signing in asks for the licence passcode — the same one the Download button asks for.';
+    : 'Downloads are gated. Signing in asks for your licence key — the same one the Download button asks for.';
 }
 function clientLink(){ return location.origin+location.pathname+'?client=1'; }
 /* The single source of truth for "a client must never see this". Used both to
