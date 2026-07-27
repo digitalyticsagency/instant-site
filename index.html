@@ -2148,7 +2148,16 @@ const pageTitle=(st,i)=>i===0?'Home':(pageOf(st,i).title||'Untitled');
    the nav gets its own label: whatever the page sets explicitly, else the title
    trimmed at a word boundary. The full title still goes in the link's title
    attribute, so nothing is lost to someone hovering or using a screen reader. */
-const NAV_MAX=22;
+/* The nav used to be flex-wrap:nowrap with overflow:hidden, so a long label
+   was cut off mid-word against the edge of the header — this cap existed to
+   truncate it deliberately and at least end on a word with an ellipsis. The
+   header now wraps to a second row instead of clipping, so the cap is no
+   longer protecting anything and was itself the thing shortening names: six
+   words is about 34 characters and everything past 22 became "Emergency
+   Callout…". Raised to leave the wrap to do its job, and kept only as a
+   last-resort guard against a title long enough to take a whole row alone.
+   A Menu label set on the page always wins over this. */
+const NAV_MAX=38;
 /* Post dates are stored ISO so they sort and validate; readers want them
    written out. Locale-aware because the app already distinguishes NZ/AU from
    US, and 3/4/2026 means two different days in those two places. Falls back to
@@ -6166,15 +6175,38 @@ async function unpackShare(s){
   }else if(flag!=='r') throw new Error('Unrecognised link format.');
   return new TextDecoder().decode(bytes);
 }
+/* A logo small enough to ride along free. Photos are the reason share links
+   get too long — a hero is 170 KB of budget and a full gallery 510 KB — but a
+   logo is 45 KB at most and usually a few KB, and it is the one image whose
+   absence makes a client preview look broken rather than merely plain. So it
+   travels even when photos do not, up to this ceiling.
+   The ceiling exists because the budget is best-effort, not a guarantee: the
+   compressor steps quality down to 0.42 and stops whether or not it hit the
+   target, and a PNG logo skips the loop entirely. A pathological logo can
+   therefore arrive at 100 KB, which would push an otherwise pasteable link
+   past the length most chat apps will carry. */
+const SHARE_LOGO_MAX=40*1024;
 function shareState(withImages){
   const clone=JSON.parse(JSON.stringify(siteState));
   // Strip images from EVERY page, not just home — otherwise a text-only link
   // still drags every sub-page photo along with it.
   if(!withImages){
-    clone.media=blankMedia();
-    (clone.pages||[]).forEach(pg=>{ pg.media=blankMedia(); });
+    const keepLogo=g=>{
+      const l=(g&&g.logo)||null;
+      return (l&&l.src&&l.src.length<=SHARE_LOGO_MAX)?JSON.parse(JSON.stringify(l)):null;
+    };
+    const homeLogo=keepLogo(clone.media);
+    clone.media=blankMedia(); if(homeLogo) clone.media.logo=homeLogo;
+    (clone.pages||[]).forEach(pg=>{ const l=keepLogo(pg.media); pg.media=blankMedia(); if(l) pg.media.logo=l; });
   }
   return {v:4,s:clone,wl:wl.on?{on:true,name:wl.name}:null};
+}
+/* What the current site would actually send, so the Share panel can say so
+   before the link is built rather than after it is already copied. */
+function shareLogoState(){
+  const l=(curPage().media||{}).logo;
+  if(!l||!l.src) return 'none';
+  return l.src.length<=SHARE_LOGO_MAX?'included':'too-big';
 }
 /* A review link is the same payload as a share link, plus who the decision
    should go back to. It opens the site in a sign-off view instead of a plain
@@ -10759,7 +10791,18 @@ async function makeShareLink(){
     if(url.length<8000) msg+='Safe to paste into any email, text or chat app.';
     else if(url.length<120000){ cls='tiny shareWarn'; msg+='Works in browsers, but some chat apps truncate links this long — send it by email, or turn photos off.'; }
     else { cls='tiny shareBad'; msg+='Very long. Expect this to break in most messaging apps — turn photos off for sharing, and use Download for the full-quality site.'; }
-    if(!shareIncludesImages&&hasImgs) msg+=' Photos are excluded from this link; the downloaded HTML still has them.';
+    /* Be specific about what travelled. "Photos are excluded" was technically
+       true and practically misleading: it also dropped the logo, so a client
+       opened a preview with no branding and no explanation. */
+    if(!shareIncludesImages){
+      const lg=shareLogoState();
+      if(hasImgs) msg+=lg==='included'
+        ? ' Your logo is included; the other photos are not — the downloaded HTML still has them.'
+        : lg==='too-big'
+          ? ' Photos are excluded, and your logo is too large to travel in a link — re-add it as a smaller file, or turn photos on.'
+          : ' Photos are excluded from this link; the downloaded HTML still has them.';
+      else if(lg==='included') msg+=' Your logo is included.';
+    }
     if(!canCompress()) msg+=' (This browser lacks compression, so the link is larger than usual.)';
     $('shareMeta').textContent=msg; $('shareMeta').className=cls;
   }catch(e){ $('shareMeta').textContent='Could not build the link: '+e.message; $('shareMeta').className='tiny shareBad'; }
