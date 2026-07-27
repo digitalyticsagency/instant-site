@@ -700,6 +700,26 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
 .stockitem img{width:100%;height:100%;object-fit:cover;display:block}
 .stockitem .lic{position:absolute;left:3px;bottom:3px;background:rgba(0,0,0,.72);color:#fff;font-size:8.5px;font-weight:600;padding:2px 5px;border-radius:4px;letter-spacing:.02em}
 .stockitem .dim{position:absolute;right:3px;top:3px;background:rgba(0,0,0,.62);color:#fff;font-size:8px;font-weight:600;padding:2px 4px;border-radius:4px}
+/* Video results reuse .stockitem wholesale and add the two things a video
+   thumbnail needs that a photo does not: a duration and a play affordance, so a
+   still frame is not mistaken for a photo result. */
+/* 16/9, not the photo grid's 4/3. Video thumbnails are widescreen or portrait,
+   and cropping them to 4/3 threw away the part of the frame that tells you what
+   the clip is. Two columns rather than three because a video still needs to be
+   big enough to read at a glance. */
+.vidgrid{grid-template-columns:repeat(2,1fr);max-height:330px}
+/* The image carries the aspect ratio, not the button. Putting aspect-ratio on
+   the button left the grid sizing its rows at 50px while the buttons resolved
+   to 179px, so every row overlapped the one below it and the whole result set
+   read as garbage. Sizing the img instead gives the row real content to measure. */
+.vidgrid .stockitem{aspect-ratio:auto;height:auto;background:#000}
+.vidgrid .stockitem img{aspect-ratio:16/9;height:auto}
+.stockitem .dur{position:absolute;right:3px;bottom:3px;background:rgba(0,0,0,.78);color:#fff;font-size:8.5px;font-weight:600;padding:2px 5px;border-radius:4px;font-variant-numeric:tabular-nums}
+.stockitem .play{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none}
+.stockitem .play::before{content:'';width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,.55);
+  box-shadow:0 0 0 1px rgba(255,255,255,.35) inset}
+.stockitem .play::after{content:'';position:absolute;width:0;height:0;margin-left:2px;
+  border-left:8px solid #fff;border-top:5px solid transparent;border-bottom:5px solid transparent}
 .mbtns button[data-stock].on{border-color:var(--accent);color:var(--accent);background:var(--sel)}
 .creditline{flex-basis:100%;width:100%;min-width:0;font-size:10px;color:var(--txt-3);margin-top:2px;line-height:1.45;
   overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
@@ -1225,7 +1245,7 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
 
         <div class="legalbox">
           <b style="font-size:13px">Video or animation</b>
-          <div class="tiny" style="margin-top:5px;line-height:1.6">Paste a YouTube, Vimeo or direct .mp4 link and it appears as a section. Hosted video keeps the page small; an uploaded file would bloat the export, so links are the honest option here.</div>
+          <div class="tiny" style="margin-top:5px;line-height:1.6">Paste a YouTube, Vimeo, Dailymotion or direct .mp4 link — or use Find below to search for one — and it appears as a section. Hosted video keeps the page small; an uploaded file would bloat the export, so links are the honest option here.</div>
           <input type="url" id="vidUrl" placeholder="https://youtube.com/watch?v=… or …/clip.mp4" style="margin-top:10px">
           <input type="text" id="vidCaption" placeholder="Caption (optional)" maxlength="90" style="margin-top:6px">
           <div class="row" style="margin-top:8px">
@@ -1237,6 +1257,22 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
             <button class="mini" id="btnVidClear" title="Remove the video section from this page." type="button">Remove</button>
           </div>
           <div id="vidStatus" class="tiny" style="margin-top:8px"></div>
+
+          <!-- Find a video. Same shape as the stock photo search directly below,
+               deliberately: the owner has already learned that control. -->
+          <div class="stockbox" style="margin-top:12px">
+            <div class="row" style="margin-bottom:8px">
+              <b style="font-size:13px">No video of your own?</b>
+            </div>
+            <div class="chips" id="vidSources" style="margin-bottom:8px"></div>
+            <div class="tiny" id="vidSourceNote" style="margin-bottom:8px"></div>
+            <div style="display:flex;gap:6px">
+              <input type="text" id="vidQ" placeholder="e.g. drone coastline, workshop, timelapse" maxlength="60" style="flex:1">
+              <button class="mini" id="vidGo" title="Search the selected video library." type="button">Find</button>
+            </div>
+            <div id="vidSearchStatus" class="tiny" style="margin-top:7px"></div>
+            <div id="vidResults" class="stockgrid vidgrid"></div>
+          </div>
         </div>
         <div id="mediaStatus" class="tiny"></div>
 
@@ -1842,7 +1878,23 @@ const THEMES={
     ink:'#241d14',ink2:'#5e5344',bg:'#faf5ec',panel:'#f1e8d9',line:'#e2d5c0',primary:'#8a5a1c',accent:'#3f6b52',
     display:"'Bitter'",body:"'Karla'",google:'Bitter:wght@600;700&family=Karla:wght@400;500;600',
     sysDisplay:"Georgia,'Times New Roman',serif",sysBody:"system-ui,-apple-system,Segoe UI",
-    radius:'10px',hero:'split',services:'cards',quotes:'featured',caps:false,weight:700,callBar:false,dark:false,density:88,depth:'tactile'}
+    radius:'10px',hero:'split',services:'cards',quotes:'featured',caps:false,weight:700,callBar:false,dark:false,density:88,depth:'tactile'},
+  /* Studio Kinetic — the creative-technology-agency look: a true black ground,
+     display type set enormous and tight in caps, and every small label in
+     uppercase monospace so the page reads like an instrument panel. primary is
+     white on purpose; the signature control in this style is a white pill with
+     black text, and making that the primary colour is what keeps the buttons,
+     the wordmark and the section rules all agreeing.
+
+     The reference uses Helvetica Now and Ballinger Mono, both licensed, so this
+     ships the closest freely-licensed pair: Archivo for the grotesque display
+     and JetBrains Mono for the labels. */
+  kinetic:{label:'Studio Kinetic',for:'Creative studios, production, digital agencies, 3D and motion',
+    ink:'#ffffff',ink2:'#a8a8a8',bg:'#000000',panel:'#111111',line:'#2b2b2b',primary:'#ffffff',accent:'#ff7a45',
+    display:"'Archivo'",body:"'Inter'",mono:"'JetBrains Mono'",
+    google:'Archivo:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500',
+    sysDisplay:"'Helvetica Neue',Arial",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'4px',hero:'center',services:'cards',quotes:'featured',caps:true,weight:800,callBar:false,dark:true,density:96,depth:'kinetic'}
 };
 const THEME_IDS=Object.keys(THEMES);
 const DEFAULT_THEME='trades';
@@ -3589,6 +3641,83 @@ async function searchStock(query,page){
   return stockSearch(query,page);
 }
 
+/* ---- VIDEO SEARCH -------------------------------------------------------
+   The same idea as the photo search, for the video section. Two sources, for
+   two different jobs:
+
+   Dailymotion needs no key at all, which matters because it is the only search
+   in the app an owner can use the moment they open it. Its results are embeds,
+   so the page stays light — the video is streamed by Dailymotion, not carried
+   in the export.
+
+   Pexels returns real downloadable .mp4 files under a no-credit licence, and
+   reuses the Pexels key the photo search already asks for. Those are the ones
+   worth using as a silent background loop.
+
+   What this deliberately does NOT do is host or re-upload anything. A found
+   video becomes a link in the same field a pasted link goes into, so every
+   downstream path — embed, export, share — is the one that already existed and
+   is already tested. */
+const VIDEO_SOURCES={
+  dailymotion:{label:'Dailymotion',note:'No key needed. Huge catalogue, embedded from Dailymotion so the page stays small.',key:null},
+  pexels:{label:'Pexels video',note:'Uses your Pexels key. Real .mp4 files, free for commercial use, no credit required — the right pick for a background loop.',key:'pexels'}
+};
+let videoSource='dailymotion';
+
+/* Seconds to m:ss, because a duration is the one thing every video result needs
+   and neither API returns it formatted. */
+const fmtDur=s=>{ s=Math.max(0,Math.round(+s||0));
+  const h=Math.floor(s/3600), m=Math.floor(s%3600/60), ss=String(s%60).padStart(2,'0');
+  return h?`${h}:${String(m).padStart(2,'0')}:${ss}`:`${m}:${ss}`; };
+
+async function dailymotionSearch(query,page){
+  const url='https://api.dailymotion.com/videos'
+    +'?search='+encodeURIComponent(query)
+    +'&fields=id,title,duration,thumbnail_360_url,owner.screenname,url,embed_url'
+    +'&limit=12&page='+(page||1)+'&sort=relevance';
+  let res;
+  try{ res=await fetch(url); }catch(e){ throw new Error('Could not reach Dailymotion.'); }
+  if(res.status===429) throw new Error('Dailymotion is rate limiting this connection. Wait a minute and try again.');
+  if(!res.ok) throw new Error(`Dailymotion search failed (HTTP ${res.status}).`);
+  const d=await res.json();
+  return (d.list||[]).filter(v=>v.id&&v.thumbnail_360_url).map(v=>({
+    id:'dm:'+v.id, thumb:v.thumbnail_360_url, title:v.title||'Dailymotion video',
+    creator:v['owner.screenname']||'Dailymotion', duration:v.duration||0,
+    /* The watch URL, not the embed URL. vidEmbed turns it into the embed form,
+       which keeps one place that knows how a Dailymotion URL is built. */
+    url:v.url||('https://www.dailymotion.com/video/'+v.id),
+    kind:'embed', sourceUrl:v.url||''
+  }));
+}
+
+async function pexelsVideoSearch(query,page){
+  if(!imgKeys.pexels) throw new Error('Add a Pexels API key under Settings to search Pexels video.');
+  let res;
+  try{ res=await fetch(`https://api.pexels.com/videos/search?query=${encodeURIComponent(query)}&per_page=12&page=${page||1}`,
+    {headers:{Authorization:imgKeys.pexels}}); }
+  catch(e){ throw new Error('Could not reach Pexels.'); }
+  if(res.status===401) throw new Error('Pexels rejected that API key.');
+  if(!res.ok) throw new Error(`Pexels video search failed (HTTP ${res.status}).`);
+  const d=await res.json();
+  return (d.videos||[]).map(v=>{
+    /* Pick the largest file at or under 1080p. Above that a background loop is
+       tens of megabytes the visitor pays for on a phone, and the section is
+       never rendered larger than the content column anyway. */
+    const files=(v.video_files||[]).filter(f=>/mp4/i.test(f.file_type||''))
+      .sort((a,b)=>(b.width||0)-(a.width||0));
+    const pick=files.find(f=>(f.width||0)<=1920)||files[0];
+    if(!pick) return null;
+    return {id:'pxv:'+v.id, thumb:v.image, title:(v.user&&v.user.name?v.user.name+' — Pexels':'Pexels video'),
+      creator:(v.user&&v.user.name)||'Pexels', duration:v.duration||0,
+      url:pick.link, kind:'file', sourceUrl:v.url||'', w:pick.width||0, h:pick.height||0};
+  }).filter(Boolean);
+}
+
+async function searchVideo(query,page){
+  if(videoSource==='pexels') return pexelsVideoSearch(query,page);
+  return dailymotionSearch(query,page);
+}
+
 async function stockSearch(query,page){
   const url=`${OV_API}?q=${encodeURIComponent(query)}&license_type=commercial&page_size=${OV_PAGE_SIZE}&page=${page||1}&mature=false`;
   let res;
@@ -4389,7 +4518,49 @@ ${prefs.motion?`
       .b{background:linear-gradient(180deg,${rgba('#ffffff',.18)},transparent 60%),${t.primary}}
       .b2{background:linear-gradient(180deg,${rgba('#ffffff',t.dark?.06:.7)},transparent 62%),${t.panel};
         box-shadow:0 1px 0 ${rgba('#ffffff',t.dark?.10:.8)} inset, 0 4px 10px ${rgba(t.ink,.10)}}
-      .b:active{transform:translateY(2px);box-shadow:0 2px 6px ${rgba(t.ink,.3)} inset}`
+      .b:active{transform:translateY(2px);box-shadow:0 2px 6px ${rgba(t.ink,.3)} inset}`,
+
+    /* Kinetic: the creative-technology-agency look. Depth here is not shadow —
+       it is contrast and scale. Cards go flat and edge-to-edge with hairline
+       rules, buttons become pills, the display type is pushed enormous and
+       tight, and every small label is set in uppercase monospace so the page
+       reads like an instrument panel rather than a brochure.
+
+       Two constraints kept this honest. The pill rule is .b then .b2 in that
+       order, at one class each, for the reason spelled out in the tactile block
+       above. And the ::after scan-line overlay sits on the section, never on
+       the body, so it cannot end up painted over the nav or a button. */
+    kinetic:`
+      .card,.q,.cxpanel,.rows .row,.num .item{border:1px solid ${t.line};background:${t.panel};
+        border-radius:${t.radius};box-shadow:none;transition:background .3s,border-color .3s,transform .3s}
+      .card:hover,.rows .row:hover,.num .item:hover{transform:none;background:${rgba(t.ink,.06)};border-color:${rgba(t.ink,.34)}}
+      .ico{border-radius:999px;background:${rgba(t.ink,.08)};border:1px solid ${t.line};color:${t.ink}}
+      .card:hover .ico{background:${t.accent};color:${bestOn(t.accent)};border-color:${t.accent}}
+      /* The signature control: a white pill in mono caps, exactly as measured. */
+      .b{border-radius:999px;font-family:${t.monoFont};font-weight:500;font-size:13px;
+        letter-spacing:.06em;padding:14px 28px;border-width:1px}
+      .b2{border-radius:999px}
+      .b:hover{transform:none;box-shadow:none;background:${t.accent};border-color:${t.accent};color:${bestOn(t.accent)}}
+      .b:active{transform:scale(.97)}
+      /* Micro-labels. The eyebrow, the stat labels, the numbered markers and the
+         attribution lines all become the same monospace HUD voice. */
+      .eyebrow,.num .n,.stat .l,.who,.areas span,.trust{font-family:${t.monoFont};
+        text-transform:uppercase;letter-spacing:.14em;font-size:11px}
+      .eyebrow{border-radius:999px;background:transparent;border-color:${t.line};color:${t.ink2}}
+      .num .item{border-top-width:1px}
+      /* Display type set the way the reference sets it: huge, tight, cropped. */
+      .hero h1{letter-spacing:-.045em;line-height:.9;font-size:clamp(44px,9vw,132px)}
+      /* Section headings go up, the hero headline does not. The reference sets
+         short project titles in caps, which works because they are two words.
+         A generated hero headline is a sentence, and a sentence at 132px in
+         caps is a wall — so the caps treatment stays where the text is short. */
+      .head h2{letter-spacing:-.02em;line-height:.94;text-transform:uppercase}
+      .feat blockquote{letter-spacing:-.02em}
+      /* A faint horizontal scan texture over the alternating bands only. */
+      .alt{position:relative}
+      .alt::after{content:'';position:absolute;inset:0;pointer-events:none;
+        background:repeating-linear-gradient(180deg,${rgba(t.ink,.030)} 0 1px,transparent 1px 4px)}
+      .alt > .w{position:relative;z-index:1}`
   }[t.depth]||'')}
 
   /* ---- whole-page ambient motion ----
@@ -4432,9 +4603,14 @@ ${prefs.motion?`
 function resolveTheme(id){
   const base=THEMES[id]||THEMES[DEFAULT_THEME];
   const sys=prefs.systemFonts;
+  /* monoFont always resolves to something. Themes that do not ask for a
+     monospace face get the system stack, so any rule can reference it without
+     first checking whether this particular theme declared one. */
+  const SYS_MONO="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace";
   return Object.assign({},base,{
     displayFont: sys?base.sysDisplay:`${base.display},${base.sysDisplay}`,
     bodyFont:    sys?base.sysBody:`${base.body},${base.sysBody}`,
+    monoFont:    (sys||!base.mono)?SYS_MONO:`${base.mono},${SYS_MONO}`,
     googleHref:  sys?'':`https://fonts.googleapis.com/css2?family=${base.google}&display=swap`
   });
 }
@@ -4822,6 +4998,12 @@ function buildSite(state,mode,pageIdx){
     if(hit) return `<iframe src="https://www.youtube-nocookie.com/embed/${esc(hit[1])}?rel=0" title="${esc(fallbackTitle)}" loading="lazy" allow="accelerometer;autoplay;clipboard-write;encrypted-media;picture-in-picture" allowfullscreen></iframe>`;
     hit=u.match(/vimeo\.com\/(?:video\/)?(\d+)/);
     if(hit) return `<iframe src="https://player.vimeo.com/video/${esc(hit[1])}" title="${esc(fallbackTitle)}" loading="lazy" allow="autoplay;fullscreen;picture-in-picture" allowfullscreen></iframe>`;
+    /* Dailymotion. Needed because the video search offers it, and without this
+       branch a searched result fell through to the catch-all iframe below —
+       which framed the full watch page, chrome and all, instead of the player.
+       Accepts both the watch URL and an already-built embed URL. */
+    hit=u.match(/dailymotion\.com\/(?:video|embed\/video)\/([a-zA-Z0-9]+)/)||u.match(/dai\.ly\/([a-zA-Z0-9]+)/);
+    if(hit) return `<iframe src="https://www.dailymotion.com/embed/video/${esc(hit[1])}" title="${esc(fallbackTitle)}" loading="lazy" allow="autoplay;fullscreen;picture-in-picture" allowfullscreen></iframe>`;
     if(/\.(mp4|webm|ogv)(\?|$)/i.test(u))
       /* controls on both paths. A looping autoplay video with no controls has
          no pause mechanism, which fails WCAG 2.2.2 for anything running past
@@ -7740,7 +7922,10 @@ $('bizType').addEventListener('change',()=>{
   $(id).value=imgKeys[k]||'';
   $(id).addEventListener('input',()=>{
     imgKeys[k]=$(id).value.trim(); saveImgKeys();
-    renderStockSources(); renderProspectSources();
+    /* Video sources too: Pexels video reads the same key as Pexels photos, so
+       typing the key has to unlock both chip rows or one of them keeps showing
+       a padlock over a key that is already set. */
+    renderStockSources(); renderProspectSources(); renderVideoSources();
   });
 });
 
@@ -8135,7 +8320,9 @@ $('btnVidAdd').onclick=()=>{
   // make sure the section is visible and sits just after About, where a video reads best
   c.hidden=c.hidden.filter(k=>k!=='video');
   renderPreview(); renderSections(); renderChecks(); pushHistory(siteState); lastShareURL='';
-  const kind=/youtu/.test(url)?'YouTube':/vimeo/.test(url)?'Vimeo':/\.(mp4|webm|ogv)/i.test(url)?'video file':'embed';
+  const kind=/youtu/.test(url)?'YouTube':/vimeo/.test(url)?'Vimeo'
+    :/dailymotion|dai\.ly/.test(url)?'Dailymotion'
+    :/\.(mp4|webm|ogv)/i.test(url)?'video file':'embed';
   $('vidStatus').textContent=`${kind} added to "${pageTitle(siteState,currentPage)}". It streams from the host, so your page stays small.`;
 };
 $('btnVidClear').onclick=()=>{
@@ -10855,6 +11042,70 @@ function renderStockSources(){
 renderStockSources();
 $('stockGo').onclick=runStockSearch;
 $('stockQ').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); runStockSearch(); } });
+
+/* ---- video search UI ----------------------------------------------------
+   Picking a result fills the same #vidUrl field a pasted link goes into and
+   leaves the owner to press "Add to page". It deliberately stops short of
+   adding the section itself: the caption and the loop switch sit between the
+   two, and silently skipping them would put a video on the page with neither. */
+let videoResults=[];
+function renderVideoSources(){
+  const host=$('vidSources'); if(!host) return;
+  host.innerHTML=Object.entries(VIDEO_SOURCES).map(([k,v])=>{
+    const locked=v.key&&!imgKeys[v.key];
+    return `<button type="button" class="chip${k===videoSource?' on':''}" data-vsrc="${k}" title="${esc(v.note)}${locked?' Needs an API key under Settings.':''}">${v.label}${locked?' 🔑':''}</button>`;
+  }).join('');
+  host.querySelectorAll('[data-vsrc]').forEach(b=>b.onclick=()=>{
+    videoSource=b.dataset.vsrc; renderVideoSources();
+    if(videoResults.length) runVideoSearch();
+  });
+  const v=VIDEO_SOURCES[videoSource];
+  const locked=v.key&&!imgKeys[v.key];
+  $('vidSourceNote').innerHTML=esc(v.note)+(locked?' <b>No key set yet, add one under Settings.</b>':'');
+}
+async function runVideoSearch(){
+  const q=$('vidQ').value.trim();
+  const st=$('vidSearchStatus'), out=$('vidResults');
+  if(!q){ st.textContent='Type what you are looking for first.'; st.className='tiny'; return; }
+  st.textContent='Searching…'; st.className='tiny'; out.innerHTML='';
+  try{
+    const list=await searchVideo(q,1);
+    videoResults=list;
+    if(!list.length){ st.textContent=`Nothing came back for "${q}". Try a broader word.`; return; }
+    st.textContent=`${list.length} results — click one to load it into the link box above.`;
+    out.innerHTML=list.map((r,i)=>
+      `<button type="button" class="stockitem" data-vi="${i}" title="${esc(r.title)} — ${esc(r.creator)}">
+         <!-- Not loading="lazy". These twelve thumbnails only exist because the
+              owner just pressed Find, so there is nothing to defer — and inside
+              a max-height grid the lazy heuristic left every one of them
+              permanently pending, which read as a broken search. -->
+         <img src="${esc(r.thumb)}" alt="${esc(r.title)}" decoding="async">
+         <span class="play"></span>
+         <span class="lic">${esc(r.kind==='file'?'MP4':VIDEO_SOURCES[videoSource].label)}</span>
+         ${r.duration?`<span class="dur">${esc(fmtDur(r.duration))}</span>`:''}
+       </button>`).join('');
+    out.querySelectorAll('[data-vi]').forEach(b=>b.onclick=()=>useVideo(videoResults[+b.dataset.vi]));
+  }catch(e){ st.textContent=e.message; st.className='tiny statusBad'; }
+}
+function useVideo(r){
+  if(!r) return;
+  $('vidUrl').value=r.url;
+  if(!$('vidCaption').value.trim() && r.kind!=='file') $('vidCaption').value=trimTitle(r.title);
+  /* A Pexels clip is a real file, so the loop switch is meaningful and this is
+     almost always what it is wanted for. A Dailymotion embed cannot loop, and
+     turning the switch on would be a promise the export cannot keep. */
+  const loopOn=$('vidLoop').classList.contains('on');
+  if(r.kind==='file' && !loopOn) $('vidLoop').classList.add('on');
+  if(r.kind!=='file' && loopOn) $('vidLoop').classList.remove('on');
+  $('vidSearchStatus').textContent=r.kind==='file'
+    ? `Loaded a Pexels .mp4 by ${r.creator}. Press "Add to page" — no credit required.`
+    : `Loaded "${trimTitle(r.title)}". Press "Add to page" to place it.`;
+  $('vidSearchStatus').className='tiny';
+  $('vidUrl').focus();
+}
+renderVideoSources();
+$('vidGo').onclick=runVideoSearch;
+$('vidQ').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); runVideoSearch(); } });
 
 /* ---- share ------------------------------------------------------------ */
 let shareIncludesImages=false, lastShareURL='';
