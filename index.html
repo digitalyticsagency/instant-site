@@ -1627,7 +1627,7 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
    already open never re-checks at all, so someone who left the app open on
    Monday can still be running Monday's build on Friday. The version probe
    below is the only honest way to notice that from inside the page. */
-const APP_VERSION='1.0.0';
+const APP_VERSION='1.0.1';
 const APP_BUILT='2026-07-28';
 const MODEL='claude-sonnet-4-6';
 const API_ENDPOINT='https://api.anthropic.com/v1/messages';
@@ -3969,7 +3969,14 @@ async function processRemoteImage(url,slot){
    unmeasurable at this page size (DOMContentLoaded ~8ms).
    Comments belong out here, not in the template literal — anything inside it
    is shipped in every exported page. */
-function siteCSS(t,editable){
+/* navBreak: the width below which the links collapse into the burger.
+   It is a parameter, not the old fixed 860px, because the right answer depends
+   entirely on this site's own header — a two-word trading name with three pages
+   fits on one line at 700px, and a long name with six pages and a phone number
+   does not fit at 1400px. Passing a measured value is what keeps the bar on one
+   line instead of wrapping the last link onto a second row. */
+function siteCSS(t,editable,navBreak){
+  navBreak=Math.max(720,Math.min(1600,Math.round(navBreak||860)));
   const d=t.density;
   const onPrimary=bestOn(t.primary), onAccent=bestOn(t.accent);
   const cta=ctaOf(t), ctaEnd=cta.end, onCta=cta.on;
@@ -4043,7 +4050,21 @@ ${editable?`[contenteditable]{outline:none}
   box-shadow:0 2px 8px rgba(0,0,0,.28);backdrop-filter:blur(6px)}
 .edx button[data-dup]:hover{background:#1a7f3e}
 .edx button[data-del]:hover,.edx button[data-delg]:hover{background:#c9302c}
-.areawrap>.edx{top:-10px;right:-6px}
+/* The editable service-area chip is a wrapper span around the editable span,
+   and the theme's own ".areas span" rule is a descendant selector, so it hit
+   BOTH. Every chip rendered as a pill inside a pill: two borders a few pixels
+   apart, which read as overlapping boxes, with the text of the inner one
+   clipped by the outer one's padding. Two classes beat one class plus one type,
+   so this wins without !important. The wrapper becomes a bare positioning
+   context and the inner span stays the pill. */
+.areas .areawrap{padding:0;border:0;background:transparent;border-radius:0;
+  display:inline-block;position:relative;font-size:inherit;letter-spacing:inherit;
+  text-transform:inherit;color:inherit;box-shadow:none}
+.areas .areawrap>[contenteditable]{display:inline-block}
+/* Room for the controls to sit above the chip without landing on the row above.
+   Editor-only, so the exported page keeps its tight 9px rhythm. */
+.areas{row-gap:30px}
+.areawrap>.edx{top:-13px;right:-6px}
 .areawrap>.edx button{width:20px;height:20px;font-size:12px;border-radius:6px}
 .edi:hover{outline:2px dashed ${rgba(t.primary,.5)};outline-offset:3px;border-radius:4px}
 section{position:relative}
@@ -4489,7 +4510,16 @@ ${t.callBar?`.callbar{display:none}
   .callbar a+a{background:${t.accent};color:${onAccent}}
   body{padding-bottom:58px}
 }`:''}
-@media(max-width:860px){
+/* Above the breakpoint the links must never wrap. .nl is allowed to shrink to
+   nothing (min-width:0) so the shortfall is absorbed by the trading name's
+   ellipsis rather than by pushing a link onto a second row. Below it, the
+   burger takes over — which is the honest answer when the links genuinely do
+   not fit, and is what the wrapping was standing in for. */
+@media(min-width:${navBreak+1}px){
+  .nl{flex-wrap:nowrap;flex:0 1 auto;min-width:0}
+  .nav .w{flex-wrap:nowrap}
+}
+@media(max-width:${navBreak}px){
   /* Before this, .nl was simply hidden and nothing replaced it, so every
      multi-page site was unnavigable on a phone — the pages existed but no
      visitor could reach them. */
@@ -5583,11 +5613,10 @@ function buildSite(state,mode,pageIdx){
     ? Array.from({length:pageCount(state)},(_,i)=>i)
         /* No count cap here any more. There used to be a .slice(0,7), from when
            the nav was a single non-wrapping row and an eighth page pushed the
-           phone number off the bar. The bar wraps now, so the cap only did harm:
-           the owner turns "menu" on for a page, gets no warning, and the page
-           simply never appears. Which pages appear is the owner's call, made
-           with the per-page menu toggle; the pre-flight warns when the list gets
-           long enough to wrap to a third line. */
+           phone number off the bar. Dropping links silently was the wrong fix
+           and so was wrapping them onto a second row; the right one is the
+           measured breakpoint below, which hands over to the burger at exactly
+           the width where one line stops being possible. */
         .filter(i=>i===0||(pageOf(state,i).inNav!==false&&!pageOf(state,i).legal&&!isBlogPost(pageOf(state,i))))
         .map(i=>{
           const lbl=esc(navLabel(state,i)), ttl=esc(pageTitle(state,i));
@@ -5598,6 +5627,31 @@ function buildSite(state,mode,pageIdx){
         })
         .join('')
     : anchorLinks;
+
+  /* ---- where the header stops fitting on one line ------------------------
+     Estimated from the text, because the export has no JavaScript and cannot
+     measure itself, and the app must produce the identical stylesheet either
+     way. Character-width averages for a 15px UI sans and a 20px bold display
+     face, rounded up rather than down — being 40px too cautious costs nothing
+     but a slightly early burger, while being 40px optimistic is the wrapped
+     second row this is here to prevent.
+
+     Deliberately not clever: no canvas measureText, no font metrics. Those
+     would be exact for the fallback font and wrong for the webfont, which may
+     not have loaded when the first paint happens. */
+  const navItemLabels = multi
+    ? Array.from({length:pageCount(state)},(_,i)=>i)
+        .filter(i=>i===0||(pageOf(state,i).inNav!==false&&!pageOf(state,i).legal&&!isBlogPost(pageOf(state,i))))
+        .map(i=>navLabel(state,i))
+    : anchorLinksRaw.map(k=>NAV_LABELS[k]);
+  const NAV_CH=8.1, NAV_GAP=26, LOGO_CH=11.5, TEL_CH=8.6, BTN_CH=8.2;
+  const navTextPx = navItemLabels.reduce((n,l)=>n+String(l).length*NAV_CH,0)
+                  + Math.max(0,navItemLabels.length-1)*NAV_GAP;
+  const logoPx   = logoImg.src ? 210 : Math.min(320,(m.businessName||'').length*LOGO_CH);
+  const telPx    = c.phone ? String(c.phone).length*TEL_CH + 18 : 0;
+  const ctaPx    = String((s.hero&&s.hero.cta_text)||'').length*BTN_CH + 44;
+  /* 48 container padding + 18 gap either side of the link list. */
+  const navBreakPx = Math.ceil(logoPx + navTextPx + telPx + ctaPx + 48 + 36);
 
   /* CC BY / BY-SA require visible attribution wherever the work is used. This
      line is a licence condition on the exported site — removing it would put
@@ -5682,7 +5736,13 @@ n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0
   }).join('')}</div>`:'';
 
   /* Every page except the policy pages, which get their own row below. */
-  const footPages=Array.from({length:pageCount(state)},(_,i)=>i).filter(i=>!pageOf(state,i).legal);
+  /* Individual posts are not pages, in the footer any more than in the top nav.
+     The footer listed every post by its full headline, so one blog article put
+     a three-line link in a column of one-word entries and the "Pages" list
+     stopped looking like a site map. Posts are reached from the blog index,
+     which is still listed — the same rule the top nav already followed. */
+  const footPages=Array.from({length:pageCount(state)},(_,i)=>i)
+    .filter(i=>!pageOf(state,i).legal&&!isBlogPost(pageOf(state,i)));
   const legalPages=Array.from({length:pageCount(state)},(_,i)=>i).filter(i=>i>0&&pageOf(state,i).legal);
   const pageLink=i=>inApp
     ? `<a href="#" data-page="${i}">${esc(pageTitle(state,i))}</a>`
@@ -5766,7 +5826,7 @@ ${heroImg.src&&!heroImg.src.startsWith('data:')?`<link rel="preload" as="image" 
 ${t.googleHref?`<link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="${t.googleHref}">`:'<!-- System fonts only: this page makes zero external requests. -->'}
-<style>${siteCSS(t,editable).replace(/\/\*[\s\S]*?\*\//g,'').replace(/\n{2,}/g,'\n')}</style>
+<style>${siteCSS(t,editable,navBreakPx).replace(/\/\*[\s\S]*?\*\//g,'').replace(/\n{2,}/g,'\n')}</style>
 ${trackingTags}
 <script type="application/ld+json">${JSON.stringify(ld)}<\/script>
 ${faqLd?`<script type="application/ld+json">${JSON.stringify(faqLd)}<\/script>`:''}
@@ -6357,15 +6417,15 @@ function renderTips(){
   if(!md.logo.src) add(2,'Add your logo',
     'Replaces the text wordmark in the nav. Even a simple one lifts perceived legitimacy.');
 
-  /* The nav used to silently drop everything past the seventh page, so a long
-     menu looked fine and quietly lost pages. It now shows every page you have
-     switched on, which means a long list wraps instead of disappearing — worth
-     saying out loud, because wrapping to three rows pushes the hero down the
-     screen on a laptop. */
+  /* The menu stays on one line and hands over to the burger when it cannot.
+     That is the right behaviour, but it means a long menu quietly moves the
+     hand-over point up the width range, and an owner on a wide monitor can end
+     up shipping a site that shows a burger on most laptops without ever seeing
+     it themselves. */
   const navCount=Array.from({length:pageCount(siteState)},(_,i)=>i)
     .filter(i=>i===0||(pageOf(siteState,i).inNav!==false&&!pageOf(siteState,i).legal&&!isBlogPost(pageOf(siteState,i)))).length;
   if(navCount>8) add(2,`${navCount} items in the top menu`,
-    `Every page you have switched on now appears, so the bar wraps onto extra rows instead of hiding pages. Above about eight it starts pushing the hero down the screen. Turn "menu" off for the less important pages in the Pages panel — they stay in the footer, stay linked and stay indexed.`);
+    `Every page you have switched on appears, and the bar keeps them on one line. Past about eight the line no longer fits a laptop, so the menu becomes a burger on smaller screens — check the Mobile preview. Turning "menu" off for the less important pages in the Pages panel raises the width where that happens; those pages stay in the footer, stay linked and stay indexed.`);
 
   /* A configured form with nowhere to appear is the most expensive silent
      failure here: the owner pastes in a Web3Forms key, believes leads are
