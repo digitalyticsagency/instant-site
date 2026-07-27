@@ -4213,6 +4213,11 @@ ${prefs.motion?`
     @keyframes popIn{from{opacity:0;transform:scale(.5)}to{opacity:1;transform:none}}
     .areas span{animation:fadeIn linear both;animation-timeline:view();animation-range:entry 8% cover 30%}
     .gal figure{animation:riseIn linear both;animation-timeline:view();animation-range:entry 8% cover 28%}
+    /* The video box was the one section that never joined in, so a page with a
+       video had a dead patch in the middle of an otherwise animated scroll.
+       The box, not its contents: animating an iframe or a playing video is a
+       compositor cost for no gain. */
+    .vidbox{animation:riseIn linear both;animation-timeline:view();animation-range:entry 8% cover 26%}
   }
   /* ---- whole-page ambient motion ----
      A single very large, very slow drifting wash behind everything. The rule
@@ -4634,13 +4639,23 @@ function buildSite(state,mode,pageIdx){
   const vid=s.video&&s.video.url?s.video:null;
   const vidEmbed=(v)=>{
     const u=String(v.url||'');
-    let m=u.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{6,})/);
-    if(m) return `<iframe src="https://www.youtube-nocookie.com/embed/${esc(m[1])}?rel=0" title="${esc(v.caption||m.businessName||'Video')}" loading="lazy" allow="accelerometer;autoplay;clipboard-write;encrypted-media;picture-in-picture" allowfullscreen></iframe>`;
-    m=u.match(/vimeo\.com\/(?:video\/)?(\d+)/);
-    if(m) return `<iframe src="https://player.vimeo.com/video/${esc(m[1])}" title="${esc(v.caption||'Video')}" loading="lazy" allow="autoplay;fullscreen;picture-in-picture" allowfullscreen></iframe>`;
+    /* `hit`, not `m`. The YouTube branch used to read m.businessName for its
+       fallback title, but m had already been reassigned to the regex match, so
+       it was always undefined and every uncaptioned embed announced itself as
+       "Video" — the outer m (the site meta) was shadowed. A screen reader user
+       heard "Video" where the author clearly meant the trading name. */
+    const fallbackTitle=v.caption||m.businessName||'Video';
+    let hit=u.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{6,})/);
+    if(hit) return `<iframe src="https://www.youtube-nocookie.com/embed/${esc(hit[1])}?rel=0" title="${esc(fallbackTitle)}" loading="lazy" allow="accelerometer;autoplay;clipboard-write;encrypted-media;picture-in-picture" allowfullscreen></iframe>`;
+    hit=u.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+    if(hit) return `<iframe src="https://player.vimeo.com/video/${esc(hit[1])}" title="${esc(fallbackTitle)}" loading="lazy" allow="autoplay;fullscreen;picture-in-picture" allowfullscreen></iframe>`;
     if(/\.(mp4|webm|ogv)(\?|$)/i.test(u))
-      return `<video src="${esc(u)}"${v.loop?' autoplay muted loop playsinline':' controls preload="metadata"'}></video>`;
-    return `<iframe src="${esc(u)}" title="${esc(v.caption||'Video')}" loading="lazy" allowfullscreen></iframe>`;
+      /* controls on both paths. A looping autoplay video with no controls has
+         no pause mechanism, which fails WCAG 2.2.2 for anything running past
+         five seconds — and is simply rude on a phone. Autoplay still works;
+         the viewer can now stop it. */
+      return `<video src="${esc(u)}" title="${esc(fallbackTitle)}" controls playsinline${v.loop?' autoplay muted loop':' preload="metadata"'}></video>`;
+    return `<iframe src="${esc(u)}" title="${esc(fallbackTitle)}" loading="lazy" allowfullscreen></iframe>`;
   };
   const videoHTML=!vid?'':`
 <section id="video"><div class="w">
