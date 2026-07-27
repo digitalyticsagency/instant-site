@@ -660,6 +660,11 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
 /* section manager */
 .secrow{display:flex;align-items:center;gap:9px;padding:8px 10px;border:1px solid var(--stroke);border-radius:11px;margin-bottom:6px;background:var(--bg)}
 .secrow.off{opacity:.5}
+/* Matches the page list, so reordering feels the same wherever you do it. */
+.secdrag{flex:none;cursor:grab;color:var(--txt-3);font-size:13px;line-height:1;padding:2px 0;user-select:none}
+.secdrag:active{cursor:grabbing}
+.secrow.dragging{opacity:.45}
+.secrow.dropinto{border-color:var(--accent);box-shadow:0 0 0 3px var(--ring)}
 .secmove{display:flex;flex-direction:column;gap:2px;flex:none}
 .secmove button{width:20px;height:16px;border-radius:4px;border:1px solid var(--stroke);background:var(--surface);font-size:9px;line-height:1;color:var(--txt-3)}
 .secmove button:hover:not(:disabled){background:var(--fill);color:var(--txt)}
@@ -4756,7 +4761,7 @@ function buildSite(state,mode,pageIdx){
   };
   const articleHTML=!bd?'':`
 <section id="article" class="article"><div class="w">
-  ${bd.category?`<div class="acat">${esc(bd.category)}</div>`:''}
+  ${bd.category?ed('blogData.category','div','acat',bd.category):''}
   ${ed('blogData.title','h1','atitle',bd.title||pageTitle(state,pageIdx))}
   <div class="abyline">${esc(m.businessName)}${m.location?' · '+esc(m.location):''}${
     s.blogDate?` · <time datetime="${esc(s.blogDate)}">${esc(fmtPostDate(s.blogDate,m.locale))}</time>`:''} · ${readMins} min read</div>
@@ -4883,7 +4888,7 @@ function buildSite(state,mode,pageIdx){
     hours:      ()=>`<section id="contact" class="cx cx-boxed alt"><div class="w"><div class="cxbox">${cH}${cP}
                      ${c.hours?`<div class="cxhours">${esc(c.hours).split(/[·|]/).map(x=>`<span>${esc(x.trim())}</span>`).join('')}</div>`:''}${callRow(1)}</div></div></section>`,
     urgent:     ()=>`<section id="contact" class="cx cx-urgent final"><div class="w"><div class="inner">
-                     ${m.standout?`<div class="eyebrow">${esc(m.standout)}</div>`:''}${cH}${cP}
+                     ${m.standout?ed('meta.standout','div','eyebrow',m.standout):''}${cH}${cP}
                      ${c.phone?`<a class="bigtel" href="${telHref(c.phone)}">${esc(c.phone)}</a>`:''}${callRow(1)}</div></div></section>`,
     twocol:     ()=>`<section id="contact" class="cx cx-two"><div class="w">${cH}${cP}
                      <div class="cxgrid"><div>${detailList}</div><div>${formBody(F)||callRow()}</div></div></section>`,
@@ -4898,7 +4903,7 @@ function buildSite(state,mode,pageIdx){
 
 
   const heroInner=`
-    ${m.standout?`<div class="eyebrow">${esc(m.standout)}</div>`:''}
+    ${m.standout?ed('meta.standout','div','eyebrow',m.standout):''}
     ${ed('hero.headline','h1','',s.hero.headline)}
     ${ed('hero.subheadline','p','sub',s.hero.subheadline)}
     <div class="cta-row">
@@ -5274,7 +5279,21 @@ function renderPreview(){
       el.addEventListener('input',()=>{
         let v=el.textContent;
         if(el.tagName==='BLOCKQUOTE') v=v.replace(/^[“"']+|[”"']+$/g,'');
-        setByPath(pageOf(siteState,currentPage),el.dataset.path,v.trim());
+        /* Paths are page-relative by default. A "meta." prefix targets the
+           site-wide object instead, which is what lets a field that lives in
+           the brief — the eyebrow above the headline — be edited where the
+           owner is actually looking. The matching panel input is refreshed at
+           the same time, or the two would disagree until the next reload and
+           whichever was touched last would silently win. */
+        const path=el.dataset.path;
+        if(path.startsWith('meta.')){
+          const key=path.slice(5);
+          setByPath(siteState.meta,key,v.trim());
+          const mirror={standout:'standout'}[key];
+          if(mirror&&$(mirror)&&$(mirror).value!==v.trim()) $(mirror).value=v.trim();
+        }else{
+          setByPath(pageOf(siteState,currentPage),path,v.trim());
+        }
         schedulePersist();
       });
       el.addEventListener('paste',e=>{                // keep edits plain text
@@ -10352,10 +10371,11 @@ function renderSections(){
   host.innerHTML=rows.map((k)=>{
     const i=c.order.indexOf(k);
     const meta=SECTION_META[k], off=hidden.has(k), empty=!sectionHasContent(k);
-    return `<div class="secrow${off?' off':''}">
+    return `<div class="secrow${off?' off':''}" data-sec="${k}" draggable="true">
+      <span class="secdrag" title="Drag to reorder">⠿</span>
       <div class="secmove">
-        <button type="button" data-up="${k}" ${i===0?'disabled':''} title="Move up">↑</button>
-        <button type="button" data-down="${k}" ${i===c.order.length-1?'disabled':''} title="Move down">↓</button>
+        <button type="button" data-up="${k}" ${i===0?'disabled':''} title="Move up" aria-label="Move ${esc(meta.label)} up">↑</button>
+        <button type="button" data-down="${k}" ${i===c.order.length-1?'disabled':''} title="Move down" aria-label="Move ${esc(meta.label)} down">↓</button>
       </div>
       <div class="secinfo"><div class="secname">${meta.label}${empty?' <em>· empty</em>':''}</div>
         <div class="secnote">${esc(((curPage().headings||{})[k]||{}).h||meta.note)}</div></div>
@@ -10363,6 +10383,47 @@ function renderSections(){
                    :`<div class="switch sm${off?'':' on'}" data-toggle="${k}" role="switch" tabindex="0"></div>`}
     </div>`;
   }).join('');
+  /* Drag and drop, alongside the arrows rather than replacing them — dragging
+     is faster with a mouse and impossible with a keyboard, so the list needs
+     both. Order is moved within the saved section order rather than the
+     filtered rows on screen, otherwise reordering while a search is active
+     would move a section to the wrong place. */
+  let secFrom=null;
+  const endSecDrag=()=>{ secFrom=null;
+    host.querySelectorAll('.secrow').forEach(r=>r.classList.remove('dragging','dropinto')); };
+  /* NOT moveSection — that name already belongs to the module-scope
+     moveSection(key,dir) that the arrow buttons call. Declaring a second one
+     here shadowed it inside renderSections(), so every arrow click ran this
+     function with dir as its toKey, found no such section and returned
+     silently. The arrows looked dead and nothing threw. */
+  function dropSectionOn(fromKey,toKey){
+    if(!fromKey||!toKey||fromKey===toKey) return;
+    const cfg=sectionCfg(), ord=cfg.order.slice();
+    const a=ord.indexOf(fromKey), b=ord.indexOf(toKey);
+    if(a<0||b<0) return;
+    ord.splice(b,0,ord.splice(a,1)[0]);
+    cfg.order=ord;
+    renderPreview(); renderSections(); pushHistory(siteState); lastShareURL='';
+  }
+  host.querySelectorAll('.secrow').forEach(row=>{
+    row.addEventListener('dragstart',e=>{
+      secFrom=row.dataset.sec; row.classList.add('dragging');
+      e.dataTransfer.effectAllowed='move';
+      try{ e.dataTransfer.setData('text/plain',secFrom); }catch{}
+    });
+    row.addEventListener('dragend',endSecDrag);
+    row.addEventListener('dragover',e=>{ if(secFrom==null) return;
+      e.preventDefault(); e.dataTransfer.dropEffect='move'; row.classList.add('dropinto'); });
+    row.addEventListener('dragleave',()=>row.classList.remove('dropinto'));
+    row.addEventListener('drop',e=>{
+      e.preventDefault();
+      const to=row.dataset.sec, from=secFrom;
+      endSecDrag();
+      if(from) dropSectionOn(from,to);
+    });
+  });
+  host.addEventListener('drop',endSecDrag);
+
   host.querySelectorAll('[data-toggle]').forEach(el=>{
     const go=()=>{
       const k=el.dataset.toggle, i=c.hidden.indexOf(k);
