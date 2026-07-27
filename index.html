@@ -67,6 +67,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
+<!-- GitHub Pages serves this file with a fixed `cache-control: max-age=600`
+     and gives you no way to change response headers. These do not override
+     that — a real header always beats a meta tag — but they do stop some
+     browsers and intermediate proxies holding the page beyond it, and they
+     cost nothing. The reliable half of the fix is the version probe in the
+     script, which asks version.json whether this build is still current. -->
+<meta http-equiv="cache-control" content="no-cache, must-revalidate">
+<meta http-equiv="pragma" content="no-cache">
 <title>Instant Site — AI Website Generator</title>
 <meta name="description" content="Generate a complete, fast, conversion-ready one-page website for a local service business in about 30 seconds. Bring your own Anthropic API key.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><text y='19' font-size='19'>⚡</text></svg>">
@@ -186,6 +194,23 @@ header{
 .brand-logo{width:26px;height:26px;border-radius:7px;object-fit:cover;flex:none}
 .brand-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 header .spacer{flex:1}
+/* Update bar. Fixed to the bottom rather than the top so it never covers the
+   header controls, and it is the only thing in the app allowed to sit above the
+   preview — being told your app is stale is worth one strip of screen. */
+.updbar{
+  position:fixed;left:50%;bottom:18px;transform:translateX(-50%) translateY(140%);
+  z-index:90;display:flex;align-items:center;gap:14px;
+  padding:11px 12px 11px 18px;border-radius:var(--r-pill);
+  background:var(--surface);border:1px solid var(--stroke);
+  box-shadow:0 12px 40px rgba(0,0,0,.28);font-size:13px;color:var(--txt);
+  transition:transform .32s var(--ease);max-width:calc(100vw - 32px)}
+.updbar.show{transform:translateX(-50%) translateY(0)}
+.updbar b{font-weight:600}
+.updbar .tiny{color:var(--txt-3);font-size:11.5px}
+.updbar button{padding:7px 15px;border-radius:var(--r-pill);border:0;cursor:pointer;
+  font-size:12.5px;font-weight:600;background:var(--accent-fill);color:#fff;white-space:nowrap}
+.updbar button.ghost{background:transparent;color:var(--txt-3);font-weight:500;padding:7px 6px}
+@media (prefers-reduced-motion:reduce){ .updbar{transition:none} }
 .hbtn{
   display:inline-flex;align-items:center;gap:6px;padding:7px 15px;border-radius:var(--r-pill);
   font-size:13px;font-weight:500;border:1px solid var(--stroke);background:var(--surface);
@@ -882,6 +907,17 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
   </div>
 </header>
 
+<!-- role=status, not alert: a new build is worth noticing, not worth
+     interrupting whatever the owner is typing. -->
+<div class="updbar" id="updBar" role="status" aria-live="polite" hidden>
+  <div>
+    <b>A newer version is available</b>
+    <div class="tiny" id="updNote"></div>
+  </div>
+  <button type="button" id="updGo">Reload</button>
+  <button type="button" class="ghost" id="updLater">Later</button>
+</div>
+
 <div class="mtabs" id="mtabs">
   <button id="mtBrief" title="Show the brief and settings." class="on">Brief &amp; settings</button>
   <button id="mtPreview" title="Show the preview.">Preview</button>
@@ -1358,6 +1394,13 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
     <details class="sec" id="secSettings">
       <summary>Settings <span class="tag" id="tagKey">no key</span></summary>
       <div class="body">
+        <div class="field">
+          <label>Version <span class="tag" data-appver></span></label>
+          <div class="tiny" id="verNote">Checking for updates…</div>
+          <div class="row" style="margin-top:6px">
+            <button class="mini" id="btnCheckVer" type="button" title="Ask the server whether a newer build has been published.">Check for updates</button>
+          </div>
+        </div>
         <div class="field" id="adminField">
           <label>Admin <span class="tag" id="adminTag">signed out</span></label>
           <div class="row">
@@ -1573,6 +1616,19 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
 /* ==========================================================================
    1. CONFIG
    ========================================================================== */
+/* ---- version ------------------------------------------------------------
+   Bump APP_VERSION and version.json together on every release. They are two
+   files on purpose: version.json is a few dozen bytes, so the running app can
+   ask "is there something newer?" without refetching 760 KB of itself.
+
+   Why this exists at all: GitHub Pages serves this file with a fixed
+   `cache-control: max-age=600` and does not let you change headers. For ten
+   minutes after a push, browsers keep serving the old copy — and a tab that is
+   already open never re-checks at all, so someone who left the app open on
+   Monday can still be running Monday's build on Friday. The version probe
+   below is the only honest way to notice that from inside the page. */
+const APP_VERSION='1.0.0';
+const APP_BUILT='2026-07-28';
 const MODEL='claude-sonnet-4-6';
 const API_ENDPOINT='https://api.anthropic.com/v1/messages';
 const API_VERSION='2023-06-01';
@@ -11268,6 +11324,66 @@ function useVideo(r){
 renderVideoSources();
 $('vidGo').onclick=runVideoSearch;
 $('vidQ').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); runVideoSearch(); } });
+
+/* ---- version and update detection --------------------------------------
+   version.json is fetched with cache:'no-store' AND a cache-busting query.
+   Belt and braces on purpose: no-store is what should be enough, but some
+   proxies and older Safari ignore it on a same-origin GET, and the query is
+   the part nothing can cache around.
+
+   Checked on load, when the tab is brought back to the front, and hourly for a
+   tab left open all day. Deliberately not polled aggressively — a stale build
+   is an annoyance, not an emergency, and this is somebody's data plan. */
+const UPD_EVERY=3600e3;
+let updSeen='', updTimer=0;
+function showVersion(){
+  document.querySelectorAll('[data-appver]').forEach(el=>{ el.textContent=APP_VERSION; });
+}
+async function checkVersion(manual){
+  const note=$('verNote');
+  const say=t=>{ if(note) note.textContent=t; };
+  if(manual) say('Checking…');
+  let live;
+  try{
+    const r=await fetch(`version.json?t=${Date.now()}`,{cache:'no-store'});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    live=await r.json();
+  }catch{
+    /* Offline, or opened straight off the disk with no server. Neither is a
+       fault worth shouting about — the app works fine either way. */
+    say(`Version ${APP_VERSION}, built ${APP_BUILT}. Could not reach the update check${location.protocol==='file:'?' (opened as a local file)':''}.`);
+    return;
+  }
+  const v=String(live&&live.version||'').trim();
+  if(!v||v===APP_VERSION){
+    say(`Version ${APP_VERSION}, built ${APP_BUILT}. This is the latest.`);
+    return;
+  }
+  say(`Version ${APP_VERSION} — ${v} is available.`);
+  if(v===updSeen) return;
+  updSeen=v;
+  const bar=$('updBar');
+  $('updNote').textContent=`You are running ${APP_VERSION}. ${v} is live${live.built?`, built ${live.built}`:''}.`;
+  bar.hidden=false;
+  requestAnimationFrame(()=>bar.classList.add('show'));
+}
+$('updGo').onclick=()=>{
+  /* Not location.reload(). GitHub Pages caches this file for ten minutes and a
+     plain reload can be served straight back out of that cache, which would
+     "update" the app to the same build it is already running. A changed URL is
+     the one thing the cache cannot match. */
+  location.replace(location.pathname+'?v='+encodeURIComponent(updSeen)+location.hash);
+};
+$('updLater').onclick=()=>{
+  const bar=$('updBar');
+  bar.classList.remove('show');
+  setTimeout(()=>{ bar.hidden=true; },350);
+};
+$('btnCheckVer').onclick=()=>checkVersion(true);
+showVersion();
+checkVersion();
+updTimer=setInterval(checkVersion,UPD_EVERY);
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) checkVersion(); });
 
 /* ---- share ------------------------------------------------------------ */
 let shareIncludesImages=false, lastShareURL='';

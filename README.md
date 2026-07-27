@@ -6,6 +6,14 @@ Describe a business, pick a theme, and get a complete one-page website: hero, se
 
 **Live app:** https://digitalyticsagency.github.io/instant-site/
 
+**Current version:** 1.0.0 — shown under Settings in the app, with a *Check for updates* button.
+
+### Releasing
+
+Bump `APP_VERSION` in `index.html` and `version` in `version.json` **together**, then push. Both are checked against each other by the pre-flight, and a mismatch means every visitor is told there is an update that does not exist.
+
+GitHub Pages serves the app with a fixed `cache-control: max-age=600` and gives you no way to change response headers, so for ten minutes after a push some browsers keep serving the old build — and a tab that was already open never re-checks at all. The app therefore polls `version.json` (a few dozen bytes, fetched with `cache: 'no-store'` and a cache-busting query) on load, whenever the tab is brought back to the front, and hourly. If the live version differs it offers a reload, which navigates to a changed URL rather than calling `location.reload()` — a plain reload can be served straight back out of the same cache.
+
 ---
 
 ## What it does
