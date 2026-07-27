@@ -2616,6 +2616,11 @@ function motionRuntime(level,t){
 
 /* Page sections, in default order. Reorderable and hideable per page. */
 const SECTION_ORDER=['hero','stats','services','process','about','video','gallery','reviews','faq','areas','article','legal','contact'];
+/* Ten of the twenty closing sections render the enquiry form; the other ten are
+   call-and-email only, and the DEFAULT ('gradient') is one of those. Module
+   scope because renderTips() needs it to warn when a configured form has
+   nowhere to appear — keep this in step with CONTACT_LAYOUTS in buildSite(). */
+const CONTACT_WITH_FORM=['split','formfirst','banded','stacked','boxed','quote','callback','booking','twocol','inline'];
 const NAV_LABELS={services:'Services',process:'How it works',about:'About',gallery:'Work',reviews:'Reviews',faq:'FAQ',areas:'Areas',contact:'Contact'};
 const SECTION_META={
   hero:{label:'Hero',always:true,note:'Headline, buttons and trust row'},
@@ -5708,6 +5713,21 @@ function renderTips(){
     'FAQs pre-answer the objections that stop people calling — price basis, timing, guarantees. They also add FAQPage schema, which can win extra space in Google results. Use the FAQ regenerate button.');
   if(!md.logo.src) add(2,'Add your logo',
     'Replaces the text wordmark in the nav. Even a simple one lifts perceived legitimacy.');
+
+  /* A configured form with nowhere to appear is the most expensive silent
+     failure here: the owner pastes in a Web3Forms key, believes leads are
+     being captured, and the page renders call buttons instead. Ten of the
+     twenty closing sections carry the form and the default is not one of them,
+     so this is easy to hit and impossible to notice from the panel. */
+  const layoutNow=(s.contactLayout||m.contactLayout||'gradient');
+  const layoutHasForm=CONTACT_WITH_FORM.includes(layoutNow);
+  const provider=((m.form||{}).provider||'').trim();
+  const providerReady=(provider==='web3forms'&&((m.form||{}).web3key||'').trim())
+    ||((provider==='formspree'||provider==='custom')&&((m.form||{}).action||'').trim());
+  if(providerReady&&!layoutHasForm) add(1,'Your enquiry form is not on the page',
+    `You have set up <b>${esc(provider)}</b>, but the closing section you have chosen shows call and email buttons only — there is no form anywhere on this page, so nothing can reach your inbox. Pick a closing section that includes one under <b>Closing section &amp; enquiry form</b>.`);
+  else if(!providerReady&&layoutHasForm&&c.email) add(2,'Connect the enquiry form',
+    'The form on the page posts through the visitor\'s own email app, which many people never complete. Connecting Web3Forms or Formspree under <b>Closing section &amp; enquiry form</b> sends submissions straight to you instead.');
 
   /* Credentials are collected in the brief and then quietly dropped if blank.
      On a trade or health site they are the strongest trust signal there is, and
