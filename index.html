@@ -1894,9 +1894,107 @@ const THEMES={
     display:"'Archivo'",body:"'Inter'",mono:"'JetBrains Mono'",
     google:'Archivo:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500',
     sysDisplay:"'Helvetica Neue',Arial",sysBody:"system-ui,-apple-system,Segoe UI",
-    radius:'4px',hero:'center',services:'cards',quotes:'featured',caps:true,weight:800,callBar:false,dark:true,density:96,depth:'kinetic'}
+    radius:'4px',hero:'center',services:'cards',quotes:'featured',caps:true,weight:800,callBar:false,dark:true,density:96,depth:'kinetic'},
+
+  /* ---- the studio family ------------------------------------------------
+     Ten more in the same territory as Studio Kinetic, spread across three
+     depth treatments so they read as different studios rather than as one
+     theme in ten colourways: kinetic (instrument panel), brut (Swiss, printed,
+     nothing floats) and lumen (light as the material, for render and motion
+     work). Display faces are deliberately all different — the typeface is what
+     the eye reads first, and ten themes sharing one grotesque would defeat the
+     point of having ten. */
+  noir:{label:'Studio Noir',for:'Film, photography, post-production, luxury creative',
+    ink:'#ffffff',ink2:'#a5a5a5',bg:'#050505',panel:'#131313',line:'#2e2e2e',primary:'#ffffff',accent:'#c9a227',
+    display:"'Syne'",body:"'Inter'",mono:"'JetBrains Mono'",
+    google:'Syne:wght@700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500',
+    sysDisplay:"'Helvetica Neue',Arial",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'4px',hero:'center',services:'list',quotes:'featured',caps:true,weight:800,callBar:false,dark:true,density:98,depth:'kinetic'},
+
+  flux:{label:'Flux Motion',for:'Motion design, real-time 3D, interactive installations',
+    ink:'#eaf6ff',ink2:'#9fb3c4',bg:'#05080d',panel:'#0e141c',line:'#1e2a36',primary:'#67d9ff',accent:'#7c8cff',
+    display:"'Space Grotesk'",body:"'Inter'",mono:"'Space Mono'",
+    google:'Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700',
+    sysDisplay:"system-ui,-apple-system,Segoe UI",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'12px',hero:'center',services:'cards',quotes:'cards',caps:false,weight:700,callBar:false,dark:true,density:94,depth:'lumen'},
+
+  /* gridiron, not brutal — `brutal` is already taken by Brutalist Loud above.
+     A duplicate key in an object literal does not error, it silently wins, so
+     naming this one `brutal` deleted an existing theme and the count went up by
+     nine instead of ten. That off-by-one was the only symptom. */
+  gridiron:{label:'Brutal Grid',for:'Design studios, typographers, print and identity work',
+    ink:'#0a0a0a',ink2:'#4a4a4a',bg:'#f4f1ea',panel:'#ffffff',line:'#0a0a0a',primary:'#0a0a0a',accent:'#c0161d',
+    display:"'Bricolage Grotesque'",body:"'Inter'",mono:"'IBM Plex Mono'",
+    google:'Bricolage+Grotesque:wght@700;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500',
+    sysDisplay:"'Helvetica Neue',Arial",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'0px',hero:'split',services:'numbered',quotes:'cards',caps:true,weight:800,callBar:false,dark:false,density:88,depth:'brut'},
+
+  atelier:{label:'Atelier Mono',for:'Architects, furniture makers, editorial and craft studios',
+    ink:'#1a1712',ink2:'#57503f',bg:'#faf7f0',panel:'#ffffff',line:'#1a1712',primary:'#1a1712',accent:'#8a5a00',
+    display:"'Fraunces'",body:"'Inter'",mono:"'IBM Plex Mono'",
+    google:'Fraunces:wght@700;900&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500',
+    sysDisplay:"Georgia,'Times New Roman',serif",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'0px',hero:'center',services:'list',quotes:'featured',caps:false,weight:900,callBar:false,dark:false,density:96,depth:'brut'},
+
+  vapor:{label:'Vapor Deck',for:'Music, events, nightlife, gaming and streaming brands',
+    ink:'#f6effc',ink2:'#a99cbb',bg:'#0a0610',panel:'#150e1f',line:'#2a1f3a',primary:'#d98cff',accent:'#ff5fa8',
+    display:"'Outfit'",body:"'Inter'",mono:"'Space Mono'",
+    google:'Outfit:wght@600;700;800&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700',
+    sysDisplay:"system-ui,-apple-system,Segoe UI",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'14px',hero:'center',services:'cards',quotes:'featured',caps:false,weight:800,callBar:false,dark:true,density:94,depth:'lumen'},
+
+  signal:{label:'Signal Lab',for:'R&D teams, data and AI products, technical consultancies',
+    ink:'#f2f4ef',ink2:'#a3a89c',bg:'#0c0e0a',panel:'#161a12',line:'#272d20',primary:'#c3ff3d',accent:'#8ef0c8',
+    display:"'Chivo'",body:"'Inter'",mono:"'Roboto Mono'",
+    google:'Chivo:wght@700;900&family=Inter:wght@400;500;600&family=Roboto+Mono:wght@400;500',
+    sysDisplay:"'Helvetica Neue',Arial",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'4px',hero:'split',services:'numbered',quotes:'cards',caps:true,weight:900,callBar:false,dark:true,density:92,depth:'kinetic'},
+
+  prism:{label:'Prism Render',for:'Archviz, product rendering, CGI and visual effects',
+    ink:'#f7f4ef',ink2:'#a8a29a',bg:'#080706',panel:'#14120f',line:'#2a2621',primary:'#ffb547',accent:'#ff7a45',
+    display:"'Manrope'",body:"'Inter'",mono:"'JetBrains Mono'",
+    google:'Manrope:wght@700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500',
+    sysDisplay:"system-ui,-apple-system,Segoe UI",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'12px',hero:'center',services:'cards',quotes:'featured',caps:false,weight:800,callBar:false,dark:true,density:96,depth:'lumen'},
+
+  kiosk:{label:'Kiosk Press',for:'Publishers, galleries, festivals and cultural programmes',
+    ink:'#101010',ink2:'#4d4d4d',bg:'#ffffff',panel:'#f2f2f2',line:'#101010',primary:'#101010',accent:'#1b44c4',
+    display:"'Anton'",body:"'Inter'",mono:"'IBM Plex Mono'",
+    google:'Anton&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500',
+    sysDisplay:"'Helvetica Neue',Arial",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'0px',hero:'split',services:'list',quotes:'cards',caps:true,weight:400,callBar:false,dark:false,density:90,depth:'brut'},
+
+  onyx:{label:'Onyx Suite',for:'Production companies, agencies and premium service brands',
+    ink:'#f5f2ed',ink2:'#a49d92',bg:'#0a0908',panel:'#171412',line:'#2b2622',primary:'#e8ddc8',accent:'#b8894a',
+    display:"'Epilogue'",body:"'Inter'",mono:"'JetBrains Mono'",
+    google:'Epilogue:wght@700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500',
+    sysDisplay:"'Helvetica Neue',Arial",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'6px',hero:'split',services:'cards',quotes:'featured',caps:true,weight:800,callBar:false,dark:true,density:98,depth:'kinetic'},
+
+  terminal:{label:'Terminal Green',for:'Developer tools, security, engineering consultancies',
+    ink:'#d8ffe4',ink2:'#7fbf95',bg:'#000000',panel:'#0b120d',line:'#1b2b1f',primary:'#3dff88',accent:'#7df9ff',
+    display:"'JetBrains Mono'",body:"'Inter'",mono:"'JetBrains Mono'",
+    google:'JetBrains+Mono:wght@400;500;700;800&family=Inter:wght@400;500;600',
+    sysDisplay:"ui-monospace,SFMono-Regular,Menlo,monospace",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'2px',hero:'center',services:'list',quotes:'cards',caps:true,weight:700,callBar:false,dark:true,density:92,depth:'kinetic'}
 };
 const THEME_IDS=Object.keys(THEMES);
+/* Dev guard 4: duplicate theme keys. A repeated key in an object literal is
+   legal JavaScript — the last one silently wins and the earlier theme vanishes.
+   That is exactly how Brutalist Loud was lost for one commit, and the only
+   symptom was a theme count one lower than expected, which is easy to miss and
+   impossible to attribute later. Object.keys cannot see the duplicate, so this
+   counts the declarations in the source instead. */
+fetch(location.pathname).then(r=>r.text()).then(src=>{
+  const body=src.slice(src.indexOf('const THEMES={'),src.indexOf('const THEME_IDS='));
+  const declared=[...body.matchAll(/^\s{2}([A-Za-z_]\w*)\s*:\s*\{label:/gm)].map(m=>m[1]);
+  const seen={},dupes=[];
+  declared.forEach(k=>{ seen[k]=(seen[k]||0)+1; });
+  Object.keys(seen).forEach(k=>{ if(seen[k]>1) dupes.push(`${k} declared ${seen[k]}×`); });
+  if(dupes.length) console.error('[Instant Site] Duplicate theme keys — an earlier theme has been silently overwritten:',dupes);
+  else if(declared.length!==THEME_IDS.length)
+    console.error(`[Instant Site] ${declared.length} themes declared but ${THEME_IDS.length} survived.`);
+}).catch(()=>{});   // file:// and offline both fail here; the guard is a dev aid, not a dependency
 const DEFAULT_THEME='trades';
 /* Presets are a starting point, not a menu — any free text is accepted and
    passed to the model verbatim, and anything the user types is remembered. */
@@ -4546,7 +4644,18 @@ ${prefs.motion?`
          attribution lines all become the same monospace HUD voice. */
       .eyebrow,.num .n,.stat .l,.who,.areas span,.trust{font-family:${t.monoFont};
         text-transform:uppercase;letter-spacing:.14em;font-size:11px}
-      .eyebrow{border-radius:999px;background:transparent;border-color:${t.line};color:${t.ink2}}
+      /* Dot-plus-label, not a pill. Every section marker on the reference site —
+         careers, contact, each contact card — is a small filled dot followed by
+         a monospace label, and it is the single most recognisable thing about
+         the style after the display type. */
+      .eyebrow{border:0;background:transparent;padding:0;border-radius:0;color:${t.ink2};
+        display:inline-flex;align-items:center;gap:9px}
+      .eyebrow::before{content:'';width:7px;height:7px;border-radius:50%;background:${t.accent};flex:none}
+      /* A hairline above each section head, as on the careers page. */
+      .head{border-top:1px solid ${t.line};padding-top:24px}
+      /* The hero contact card's term/definition pairs become HUD labels too. */
+      .hcard dt{font-family:${t.monoFont};text-transform:uppercase;letter-spacing:.12em;
+        font-size:10.5px;color:${t.ink2}}
       .num .item{border-top-width:1px}
       /* Display type set the way the reference sets it: huge, tight, cropped. */
       .hero h1{letter-spacing:-.045em;line-height:.9;font-size:clamp(44px,9vw,132px)}
@@ -4560,7 +4669,60 @@ ${prefs.motion?`
       .alt{position:relative}
       .alt::after{content:'';position:absolute;inset:0;pointer-events:none;
         background:repeating-linear-gradient(180deg,${rgba(t.ink,.030)} 0 1px,transparent 1px 4px)}
-      .alt > .w{position:relative;z-index:1}`
+      .alt > .w{position:relative;z-index:1}`,
+
+    /* Brut: Swiss/brutalist. The opposite instinct to the shadow families —
+       nothing floats, nothing glows. Depth comes from weight: heavy rules, zero
+       radius, and a hard offset on hover instead of a lift. Suits studios that
+       want to look like a printed catalogue rather than a screen. */
+    brut:`
+      .card,.q,.cxpanel,.rows .row,.num .item{border:2px solid ${t.ink};background:${t.bg};
+        border-radius:0;box-shadow:none;transition:transform .16s,box-shadow .16s}
+      .card:hover,.rows .row:hover,.num .item:hover{transform:translate(-3px,-3px);
+        box-shadow:6px 6px 0 ${t.ink}}
+      .ico{border-radius:0;background:${t.ink};color:${bestOn(t.ink)};border:0}
+      .card:hover .ico{background:${t.accent};color:${bestOn(t.accent)}}
+      .b{border-radius:0;border-width:2px;font-family:${t.monoFont};font-weight:500;
+        font-size:13px;letter-spacing:.08em;padding:15px 28px}
+      .b2{border-radius:0;border-width:2px;border-color:${t.ink}}
+      .b:hover{transform:translate(-2px,-2px);box-shadow:4px 4px 0 ${t.ink}}
+      .b:active{transform:none;box-shadow:none}
+      .eyebrow,.num .n,.stat .l,.who,.areas span,.trust{font-family:${t.monoFont};
+        text-transform:uppercase;letter-spacing:.12em;font-size:11px}
+      .eyebrow{border:2px solid ${t.ink};border-radius:0;background:${t.bg};color:${t.ink};padding:6px 12px}
+      .areas span{border-radius:0;border:1px solid ${t.ink}}
+      /* Oversized numerals are the whole point of a numbered layout here. */
+      .num .n{font-family:${t.displayFont};font-size:34px;letter-spacing:-.02em;color:${t.accent};line-height:1}
+      .head{border-top:3px solid ${t.ink};padding-top:20px}
+      .head h2{letter-spacing:-.03em;text-transform:uppercase}
+      .hero h1{letter-spacing:-.04em;line-height:.92}`,
+
+    /* Lumen: light as the material. Cards sit on a soft radial bloom in the
+       theme's own accent, edges stay dark, and hover raises the bloom rather
+       than the card. Built for motion, 3D and render studios, where the work
+       itself glows. The blooms are ::before layers under the content, so no
+       text ever sits on an unmeasured gradient. */
+    lumen:`
+      .card,.q,.cxpanel,.rows .row,.num .item{position:relative;border:1px solid ${t.line};
+        background:${t.panel};border-radius:calc(${t.radius} + 6px);overflow:hidden;
+        transition:border-color .35s,transform .35s}
+      .card::before,.q::before,.num .item::before{content:'';position:absolute;inset:-40% -10% auto -10%;height:150%;
+        pointer-events:none;opacity:.5;transition:opacity .35s;
+        background:radial-gradient(60% 55% at 50% 0%,${rgba(t.accent,.30)},transparent 70%)}
+      .card:hover,.q:hover,.num .item:hover{transform:translateY(-3px);border-color:${rgba(t.accent,.55)}}
+      .card:hover::before,.q:hover::before,.num .item:hover::before{opacity:1}
+      .card > *,.q > *,.num .item > *{position:relative;z-index:1}
+      .ico{border-radius:999px;background:${rgba(t.accent,.20)};color:${t.ink};
+        box-shadow:0 0 22px ${rgba(t.accent,.35)}}
+      .b{border-radius:999px;box-shadow:0 0 26px ${rgba(t.primary,.34)}}
+      .b2{border-radius:999px;box-shadow:none}
+      .b:hover{box-shadow:0 0 40px ${rgba(t.primary,.5)};transform:translateY(-2px)}
+      .eyebrow,.num .n,.stat .l,.who,.areas span,.trust{font-family:${t.monoFont};
+        text-transform:uppercase;letter-spacing:.14em;font-size:11px}
+      .eyebrow{border-color:${rgba(t.accent,.5)};background:${rgba(t.accent,.10)};color:${t.ink}}
+      .stat .v{text-shadow:0 0 30px ${rgba(t.primary,.45)}}
+      .hero h1{letter-spacing:-.035em;line-height:.95}
+      .hero::before{background:radial-gradient(760px 460px at 50% -10%,${rgba(t.accent,.22)},transparent 65%)}`
   }[t.depth]||'')}
 
   /* ---- whole-page ambient motion ----
