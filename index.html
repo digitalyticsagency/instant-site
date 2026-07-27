@@ -1768,7 +1768,64 @@ const THEMES={
     ink:'#f3f1f8',ink2:'#a5a0b5',bg:'#0e0b16',panel:'#1a1526',line:'#2a2338',primary:'#7db9ff',accent:'#f0a3c8',
     display:"'Syne'",body:"'Inter'",google:'Syne:wght@600;800&family=Inter:wght@400;500;600',
     sysDisplay:"system-ui,-apple-system,Segoe UI",sysBody:"system-ui,-apple-system,Segoe UI",
-    radius:'18px',hero:'banner',services:'cards',quotes:'featured',caps:false,weight:800,callBar:false,dark:true,density:90,story:true}
+    radius:'18px',hero:'banner',services:'cards',quotes:'featured',caps:false,weight:800,callBar:false,dark:true,density:90,story:true},
+
+  /* ---- depth family ------------------------------------------------------
+     Ten themes that read as dimensional rather than flat. The depth comes from
+     layered shadow, translucency and inset light in siteCSS — no WebGL, no
+     canvas, no library, so the export stays script-free. Palettes were checked
+     against verifyThemes() before being added: every one clears AA on all ten
+     pairs, with the tightest at 5.35:1. */
+  relief:{label:'Soft Relief',for:'Clinics, dentists, wellness, calm services',
+    ink:'#1b1f26',ink2:'#525a67',bg:'#eef1f6',panel:'#e4e9f1',line:'#d2d9e4',primary:'#2f5d9e',accent:'#8a4b2a',
+    display:"'Manrope'",body:"'Manrope'",google:'Manrope:wght@400;500;600;800',
+    sysDisplay:"system-ui,-apple-system,Segoe UI",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'16px',hero:'center',services:'cards',quotes:'cards',caps:false,weight:800,callBar:false,dark:false,density:86,depth:'soft'},
+  emboss:{label:'Soft Emboss',for:'Accountants, advisors, quiet professional work',
+    ink:'#1a1c20',ink2:'#565a63',bg:'#f0f0f3',panel:'#e6e6eb',line:'#d5d5dd',primary:'#3a5bbf',accent:'#96421f',
+    display:"'Plus Jakarta Sans'",body:"'Plus Jakarta Sans'",google:'Plus+Jakarta+Sans:wght@400;500;600;800',
+    sysDisplay:"system-ui,-apple-system,Segoe UI",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'14px',hero:'split',services:'cards',quotes:'cards',caps:false,weight:700,callBar:false,dark:false,density:84,depth:'soft'},
+  glassfrost:{label:'Glass Frost',for:'Tech-adjacent services, security, installers',
+    ink:'#f2f5fa',ink2:'#a8b2c4',bg:'#0f1420',panel:'#1a2130',line:'#2b3446',primary:'#6fb0ff',accent:'#ffb15c',
+    display:"'Space Grotesk'",body:"'Inter'",google:'Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600',
+    sysDisplay:"system-ui,-apple-system,Segoe UI",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'16px',hero:'banner',services:'cards',quotes:'featured',caps:false,weight:700,callBar:false,dark:true,density:88,depth:'glass'},
+  spatial:{label:'Spatial Clear',for:'Design studios, architects, premium fitouts',
+    ink:'#f5f6f9',ink2:'#a6acb8',bg:'#101216',panel:'#1b1e25',line:'#2c313a',primary:'#8ab4ff',accent:'#f2a0b8',
+    display:"'Outfit'",body:"'Inter'",google:'Outfit:wght@500;700&family=Inter:wght@400;500;600',
+    sysDisplay:"system-ui,-apple-system,Segoe UI",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'20px',hero:'center',services:'cards',quotes:'featured',caps:false,weight:600,callBar:false,dark:true,density:92,depth:'glass'},
+  clay:{label:'Clay Studio',for:'Salons, pet care, childcare, friendly local trades',
+    ink:'#241c2b',ink2:'#5d5168',bg:'#f7f1fa',panel:'#efe5f4',line:'#e0d2e8',primary:'#7b3fa8',accent:'#a8442f',
+    display:"'Nunito'",body:"'Nunito Sans'",google:'Nunito:wght@600;800&family=Nunito+Sans:wght@400;500;600',
+    sysDisplay:"'Trebuchet MS',system-ui",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'18px',hero:'center',services:'cards',quotes:'cards',caps:false,weight:800,callBar:true,dark:false,density:82,depth:'clay'},
+  press:{label:'Rubber Press',for:'Gardeners, cleaners, mobile services',
+    ink:'#101a17',ink2:'#4a5c56',bg:'#f2f8f5',panel:'#e6f0eb',line:'#d3e3db',primary:'#116b52',accent:'#9c3f2c',
+    display:"'Figtree'",body:"'Figtree'",google:'Figtree:wght@400;500;600;800',
+    sysDisplay:"system-ui,-apple-system,Segoe UI",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'16px',hero:'split',services:'cards',quotes:'cards',caps:false,weight:800,callBar:true,dark:false,density:80,depth:'clay'},
+  strata:{label:'Layered Strata',for:'Builders, landscapers, staged project work',
+    ink:'#12181c',ink2:'#4c5a63',bg:'#f4f7f8',panel:'#e8eef0',line:'#d6e0e4',primary:'#136a75',accent:'#9a4420',
+    display:"'Archivo'",body:"'Archivo'",google:'Archivo:wght@400;500;600;700',
+    sysDisplay:"system-ui,-apple-system,Segoe UI",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'8px',hero:'split',services:'numbered',quotes:'cards',caps:false,weight:700,callBar:true,dark:false,density:78,depth:'layered'},
+  parallax:{label:'Parallax Deep',for:'Photographers, drone, video, showrooms',
+    ink:'#f2f3f7',ink2:'#a0a6b4',bg:'#0d1017',panel:'#171b24',line:'#272d3a',primary:'#7fb3ff',accent:'#ffab5e',
+    display:"'Sora'",body:"'Inter'",google:'Sora:wght@500;700&family=Inter:wght@400;500;600',
+    sysDisplay:"system-ui,-apple-system,Segoe UI",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'14px',hero:'banner',services:'list',quotes:'featured',caps:false,weight:700,callBar:false,dark:true,density:90,depth:'layered'},
+  hyperreal:{label:'Hyper Real',for:'Automotive, engineering, industrial',
+    ink:'#f4f4f6',ink2:'#9fa3ad',bg:'#0b0c10',panel:'#15171d',line:'#252932',primary:'#5cc8ff',accent:'#ff9f45',
+    display:"'Chakra Petch'",body:"'Inter'",google:'Chakra+Petch:wght@600;700&family=Inter:wght@400;500;600',
+    sysDisplay:"'Helvetica Neue',Arial",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'6px',hero:'banner',services:'cards',quotes:'cards',caps:true,weight:700,callBar:true,dark:true,density:76,depth:'tactile'},
+  tactile:{label:'Tactile Craft',for:'Joiners, upholsterers, restorers, makers',
+    ink:'#241d14',ink2:'#5e5344',bg:'#faf5ec',panel:'#f1e8d9',line:'#e2d5c0',primary:'#8a5a1c',accent:'#3f6b52',
+    display:"'Bitter'",body:"'Karla'",google:'Bitter:wght@600;700&family=Karla:wght@400;500;600',
+    sysDisplay:"Georgia,'Times New Roman',serif",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'10px',hero:'split',services:'cards',quotes:'featured',caps:false,weight:700,callBar:false,dark:false,density:88,depth:'tactile'}
 };
 const THEME_IDS=Object.keys(THEMES);
 const DEFAULT_THEME='trades';
@@ -4224,6 +4281,73 @@ ${prefs.motion?`
        compositor cost for no gain. */
     .vidbox{animation:riseIn linear both;animation-timeline:view();animation-range:entry 8% cover 26%}
   }
+  /* ---- depth treatments ------------------------------------------------
+     Themes may declare a depth family. It is CSS only — layered shadows,
+     translucency and inset light — so the export stays script-free and works
+     with no WebGL, no canvas and no library. Real 3D would mean Three.js at
+     ~736 KB on every visit, which is the opposite of what this product sells.
+
+     Each family styles every surface a service can render as — cards, list
+     rows and numbered items all appear depending on the theme's services
+     variant — plus the quote, the contact panel and the icon,
+     the button, so a theme reads as one material rather than a set of effects.
+     Nothing here touches text colour, because the contrast guarantees in
+     verifyThemes() are computed from the palette and must stay true. */
+  ${!t.depth?'':({
+    /* Neumorphic: light from the top-left, dual shadow, no border. Panels are
+       tinted rather than pure so both shadows have something to sit against. */
+    soft:`
+      .card,.q,.cxpanel,.rows .row,.num .item{border:0;background:${t.panel};
+        box-shadow:6px 6px 16px ${rgba(t.ink,.10)}, -6px -6px 16px ${rgba('#ffffff',t.dark?.04:.85)}}
+      .card:hover,.rows .row:hover,.num .item:hover{transform:translateY(-3px);
+        box-shadow:10px 10px 24px ${rgba(t.ink,.13)}, -8px -8px 20px ${rgba('#ffffff',t.dark?.05:.9)}}
+      .ico{box-shadow:inset 3px 3px 8px ${rgba(t.ink,.12)}, inset -3px -3px 8px ${rgba('#ffffff',t.dark?.05:.7)};background:${t.panel}}
+      .b{box-shadow:4px 4px 12px ${rgba(t.ink,.18)}}
+      .b:active{transform:translateY(1px);box-shadow:inset 3px 3px 8px ${rgba(t.ink,.28)}}`,
+
+    /* Glass: translucent panels over the ambient wash. @supports because
+       without backdrop-filter a translucent panel is just a washed-out card,
+       so unsupported browsers get a solid one instead. */
+    glass:`
+      .card,.q,.cxpanel,.rows .row,.num .item{border:1px solid ${rgba(t.ink,t.dark?.14:.10)};background:${rgba(t.panel,.72)}}
+      @supports (backdrop-filter:blur(1px)){
+        .card,.q,.cxpanel,.rows .row,.num .item{backdrop-filter:blur(14px) saturate(140%);-webkit-backdrop-filter:blur(14px) saturate(140%);
+          background:${rgba(t.panel,.55)};
+          box-shadow:0 1px 0 ${rgba('#ffffff',t.dark?.10:.55)} inset, 0 18px 40px ${rgba(t.ink,.16)}}
+      }
+      .card:hover,.rows .row:hover,.num .item:hover{transform:translateY(-3px);box-shadow:0 1px 0 ${rgba('#ffffff',t.dark?.14:.7)} inset, 0 24px 52px ${rgba(t.ink,.22)}}
+      .ico{background:${rgba(t.primary,.18)};box-shadow:0 1px 0 ${rgba('#ffffff',t.dark?.12:.6)} inset}`,
+
+    /* Clay: fat radius, soft wide shadow, a lit top edge. */
+    clay:`
+      .card,.q,.cxpanel,.rows .row,.num .item{border:0;background:${t.panel};border-radius:calc(${t.radius} + 14px);
+        box-shadow:0 14px 30px ${rgba(t.ink,.14)}, 0 2px 0 ${rgba('#ffffff',t.dark?.06:.9)} inset}
+      .card:hover,.rows .row:hover,.num .item:hover{transform:translateY(-4px);box-shadow:0 22px 44px ${rgba(t.ink,.18)}, 0 2px 0 ${rgba('#ffffff',t.dark?.08:.95)} inset}
+      .ico{border-radius:calc(${t.radius} + 10px);background:${rgba(t.primary,.16)};
+        box-shadow:0 6px 14px ${rgba(t.ink,.12)}, 0 2px 0 ${rgba('#ffffff',t.dark?.06:.85)} inset}
+      .b{border-radius:calc(${t.radius} + 12px);box-shadow:0 8px 18px ${rgba(t.primary,.38)}}
+      .b:active{transform:translateY(2px);box-shadow:0 3px 8px ${rgba(t.primary,.42)}}`,
+
+    /* Layered: several offset shadows so a card reads as a stack of sheets. */
+    layered:`
+      .card,.q,.cxpanel,.rows .row,.num .item{border:1px solid ${t.line};background:${t.panel};
+        box-shadow:0 1px 0 ${t.line}, 0 6px 0 -2px ${t.panel}, 0 7px 0 -2px ${t.line}, 0 18px 34px ${rgba(t.ink,.16)}}
+      .card:hover,.rows .row:hover,.num .item:hover{transform:translateY(-4px);
+        box-shadow:0 1px 0 ${t.line}, 0 8px 0 -2px ${t.panel}, 0 9px 0 -2px ${t.line}, 0 28px 48px ${rgba(t.ink,.22)}}
+      .ico{box-shadow:0 4px 0 -1px ${rgba(t.primary,.22)}, 0 8px 16px ${rgba(t.ink,.14)}}`,
+
+    /* Tactile: a real gradient face with an inset rim, and it presses in. */
+    tactile:`
+      .card,.q,.cxpanel,.rows .row,.num .item{border:1px solid ${t.line};
+        background:linear-gradient(180deg,${rgba('#ffffff',t.dark?.05:.75)},transparent 58%),${t.panel};
+        box-shadow:0 1px 0 ${rgba('#ffffff',t.dark?.10:.8)} inset, 0 10px 24px ${rgba(t.ink,.12)}}
+      .card:hover,.rows .row:hover,.num .item:hover{transform:translateY(-2px);box-shadow:0 1px 0 ${rgba('#ffffff',t.dark?.12:.9)} inset, 0 16px 32px ${rgba(t.ink,.16)}}
+      .ico{background:linear-gradient(180deg,${rgba(t.primary,.22)},${rgba(t.primary,.10)});
+        box-shadow:0 1px 0 ${rgba('#ffffff',t.dark?.10:.7)} inset}
+      .b{background:linear-gradient(180deg,${rgba('#ffffff',.18)},transparent 60%),${t.primary}}
+      .b:active{transform:translateY(2px);box-shadow:0 2px 6px ${rgba(t.ink,.3)} inset}`
+  }[t.depth]||'')}
+
   /* ---- whole-page ambient motion ----
      A single very large, very slow drifting wash behind everything. The rule
      is that it should be almost subliminal: 38s and 44s cycles, ~4% alpha, and
