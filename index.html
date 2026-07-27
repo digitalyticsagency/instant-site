@@ -3794,6 +3794,15 @@ section:hover>.edsec{opacity:1;pointer-events:auto}
    and a nav that only opens with JS would break that for every visitor with a
    blocked script. Off-screen rather than display:none so it stays keyboard
    reachable; the label is the visible control. */
+/* Bypass blocks (WCAG 2.4.1). A keyboard visitor otherwise tabs the whole nav
+   again on every page. Off-screen rather than display:none, because a hidden
+   element is not focusable and the link has to be reachable to be useful; it
+   flies in on focus. onPrimary is already contrast-checked against primary. */
+.skip{position:absolute;left:12px;top:-64px;z-index:100;padding:12px 20px;border-radius:${t.radius};
+  background:${t.primary};color:${onPrimary};text-decoration:none;font-weight:600;font-size:15px;
+  transition:top .18s ease}
+.skip:focus{top:12px}
+main:focus{outline:none}
 .navtoggle{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
 .burger{display:none;flex-direction:column;justify-content:center;gap:5px;width:44px;height:44px;
   padding:10px;cursor:pointer;border-radius:10px;flex:none;-webkit-tap-highlight-color:transparent}
@@ -5356,6 +5365,7 @@ ${breadcrumbLd?`<script type="application/ld+json">${JSON.stringify(breadcrumbLd
 ${articleLd?`<script type="application/ld+json">${JSON.stringify(articleLd)}<\/script>`:''}
 </head>
 <body>
+<a class="skip" href="#main">Skip to content</a>
 <nav class="nav" id="top"><div class="w">
   ${logoImg.src
     ? `<div class="logo"${slot('logo','Replace logo')}><img class="logoimg" src="${logoImg.src}"${dim(logoImg)} alt="${esc(logoImg.alt||m.businessName)}"></div>`
@@ -5369,7 +5379,9 @@ ${articleLd?`<script type="application/ld+json">${JSON.stringify(articleLd)}<\/s
   ${navLinks?'<label for="navtoggle" class="burger" aria-label="Open menu"><span></span><span></span><span></span></label>':''}
 </div></nav>
 
+<main id="main" tabindex="-1">
 ${sectionsHTML}
+</main>
 
 <footer class="foot" id="site-footer">
   <div class="w footgrid">
@@ -6575,11 +6587,14 @@ async function wpThemeFiles(state){
   // Split one built page into head / nav / body / footer.
   const carve=(html)=>{
     const headEnd=html.indexOf('</head>');
-    const navStart=html.indexOf('<nav class="nav">');
+    /* Prefix match on every landmark, for the same reason. The nav tag grew an
+       id="top" for the back-to-top link and this went on matching the exact old
+       string, so navStart was -1 — which made nav a slice from the last
+       character of the document and body a slice starting mid-nav. The footer
+       had already been bitten by this and fixed; the nav had not. Anything that
+       carves markup by string has to match a prefix, never a whole tag. */
+    const navStart=html.indexOf('<nav class="nav"');
     const navEnd=html.indexOf('</nav>')+6;
-    // Prefix match: the footer tag carries an id now, and will grow more
-    // attributes. An exact-string match here silently returned -1, which put
-    // the whole footer inside the body template and left footer.php empty.
     const footStart=html.indexOf('<footer class="foot"');
     const bodyEnd=html.indexOf('</body>');
     return {
