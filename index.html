@@ -4076,9 +4076,13 @@ section{padding:${d}px 0}
   display:flex;gap:16px;flex-wrap:wrap;align-items:center;justify-content:space-between}
 .copyright-right{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
 .legallinks{display:flex;gap:16px;flex-wrap:wrap}
-.totop{display:inline-flex;align-items:center;gap:6px;opacity:.85}
+/* Was opacity:.85 lifted to 1 on hover. On a phone there is no hover, so it
+   simply stayed dimmed forever — the one control whose job is rescuing someone
+   who has scrolled to the bottom of a long page. Full strength by default;
+   hover and keyboard focus now underline instead, which works on every input. */
+.totop{display:inline-flex;align-items:center;gap:6px}
 .totop svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
-.totop:hover{opacity:1}
+.totop:hover,.totop:focus-visible{text-decoration:underline;text-underline-offset:3px}
 ${t.callBar?`.callbar{display:none}
 @media(max-width:760px){
   .callbar{display:grid;grid-template-columns:1fr 1fr;position:fixed;left:0;right:0;bottom:0;z-index:50;box-shadow:0 -4px 20px rgba(0,0,0,.16)}
@@ -5142,7 +5146,7 @@ ${breadcrumbLd?`<script type="application/ld+json">${JSON.stringify(breadcrumbLd
 ${articleLd?`<script type="application/ld+json">${JSON.stringify(articleLd)}<\/script>`:''}
 </head>
 <body>
-<nav class="nav"><div class="w">
+<nav class="nav" id="top"><div class="w">
   ${logoImg.src
     ? `<div class="logo"${slot('logo','Replace logo')}><img class="logoimg" src="${logoImg.src}" alt="${esc(logoImg.alt||m.businessName)}"></div>`
     : `<div class="logo"${slot('logo','Add a logo')}>${esc(m.businessName)}</div>`}
@@ -6463,7 +6467,7 @@ ${headMeta}
 <?php wp_body_open(); ?>
 <a class="screen-reader-text" href="#content"><?php esc_html_e( 'Skip to content', '${slug}' ); ?></a>
 
-<nav class="nav">
+<nav class="nav" id="top">
   <div class="w">
     <div class="logo">
       <?php if ( has_custom_logo() ) { the_custom_logo(); } else { ?>
