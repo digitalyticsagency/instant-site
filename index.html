@@ -1363,6 +1363,15 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
         <div class="tiny">Switching theme after generating is instant and costs no API call.</div>
         <div class="themefilter" id="themeFilter"></div>
         <div class="themes" id="themeGrid"></div>
+
+        <div class="bpbox" style="margin-top:14px">
+          <div class="row" style="margin-bottom:6px">
+            <b style="font-size:13px">Menu style</b>
+            <span class="tiny" id="menuWho"></span>
+          </div>
+          <div class="tiny" style="margin-bottom:8px">The menu is a burger button at every screen size, so a long name or a lot of pages can never break the header. These are ten ways it opens.</div>
+          <div id="menuList" class="bpgrid"></div>
+        </div>
       </div>
     </details>
 
@@ -1652,7 +1661,7 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
    already open never re-checks at all, so someone who left the app open on
    Monday can still be running Monday's build on Friday. The version probe
    below is the only honest way to notice that from inside the page. */
-const APP_VERSION='1.2.0';
+const APP_VERSION='1.3.0';
 const APP_BUILT='2026-07-28';
 const MODEL='claude-sonnet-4-6';
 const API_ENDPOINT='https://api.anthropic.com/v1/messages';
@@ -3072,6 +3081,111 @@ const BLUEPRINTS={
     hint:'work comes by referral and the site only needs to confirm the business is real',
     order:['hero','services','reviews','contact'],off:['stats','process','about','video','gallery','faq','areas']}
 };
+/* ---- menu styles --------------------------------------------------------
+   Ten ways the burger can open, five of them genuinely three-dimensional
+   (perspective + rotate3d + translateZ, not a shadow pretending). All ten are
+   pure CSS driven by the one checkbox, so the export still ships no JavaScript.
+
+   `d3` marks the 3D ones for the picker. `scrim` means the style covers enough
+   of the page that tapping outside should close it. */
+const MENUS={
+  sheet:{label:'Drop sheet',for:'The default. A full-width panel under the bar.',d3:false,scrim:false},
+  card:{label:'Dropdown card',for:'Compact card anchored to the top right.',d3:false,scrim:false},
+  drawer:{label:'Side drawer',for:'Slides in from the right, full height.',d3:false,scrim:true},
+  rail:{label:'Left rail',for:'Narrow full-height column from the left.',d3:false,scrim:true},
+  curtain:{label:'Full screen',for:'Covers everything, large centred links.',d3:false,scrim:false},
+  flip:{label:'Flip panel (3D)',for:'Hinges down from the bar on the X axis.',d3:true,scrim:false},
+  cube:{label:'Cube turn (3D)',for:'Swings in like the face of a box.',d3:true,scrim:false},
+  stack:{label:'Depth stack (3D)',for:'Links fly forward out of depth, staggered.',d3:true,scrim:false},
+  fold:{label:'Origami fold (3D)',for:'Panel and links unfold on separate hinges.',d3:true,scrim:false},
+  portal:{label:'Portal (3D)',for:'Full screen, links arrive from far away.',d3:true,scrim:true}
+};
+const MENU_KEYS=Object.keys(MENUS);
+const DEFAULT_MENU='sheet';
+/* Stagger for the styles that animate each link. Ten steps is plenty — a nav
+   with more than ten items has a bigger problem than its animation. */
+const menuStagger=(sel,step)=>Array.from({length:10},(_,i)=>
+  `.navtoggle:checked~.nl ${sel}:nth-child(${i+1}){transition-delay:${(0.03+i*step).toFixed(3)}s}`).join('');
+function menuCSS(t,id){
+  const big=`border-bottom:0;font-family:${t.displayFont},sans-serif;font-weight:${t.weight};
+    ${t.caps?'text-transform:uppercase;letter-spacing:.03em;':''}`;
+  return ({
+    sheet:`.nl{transform:translateY(-14px)}
+      .navtoggle:checked~.nl{transform:none}`,
+
+    card:`.nl{left:auto;right:24px;width:min(290px,calc(100vw - 32px));border-top:1px solid ${t.line};
+        border:1px solid ${t.line};border-radius:calc(${t.radius} + 10px);padding:8px;
+        transform-origin:100% 0;transform:translateY(-10px) scale(.96)}
+      .nl a{border-bottom:0;padding:11px 13px;border-radius:${t.radius}}
+      .nl a:hover{background:${rgba(t.primary,.12)};color:${t.primary}}
+      .navtoggle:checked~.nl{transform:none}`,
+
+    drawer:`.nl{position:fixed;top:0;right:0;left:auto;bottom:0;width:min(340px,86vw);
+        padding:92px 26px 26px;border-top:0;border-left:1px solid ${t.line};
+        box-shadow:-30px 0 70px ${rgba(t.ink,t.dark?.7:.2)};
+        transform:translateX(100%);overflow-y:auto}
+      .navtoggle:checked~.nl{transform:none}
+      .navscrim{display:block}`,
+
+    rail:`.nl{position:fixed;top:0;left:0;bottom:0;right:auto;width:min(300px,84vw);
+        padding:92px 24px 24px;border-top:0;border-right:1px solid ${t.line};
+        box-shadow:30px 0 70px ${rgba(t.ink,t.dark?.7:.2)};
+        transform:translateX(-100%);overflow-y:auto}
+      .navtoggle:checked~.nl{transform:none}
+      .navscrim{display:block}`,
+
+    curtain:`.nl{position:fixed;inset:0;border:0;padding:96px 28px 32px;
+        justify-content:center;align-items:center;gap:4px;overflow-y:auto;
+        background:${t.bg};transform:scale(1.05)}
+      .nl a{${big}font-size:clamp(24px,5.4vw,44px);padding:8px 4px;text-align:center;line-height:1.1}
+      .nl a:hover{color:${t.primary}}
+      .navtoggle:checked~.nl{transform:none}`,
+
+    /* ---- the 3D five ---- */
+    /* perspective goes on .nav, which is already a positioned (sticky) element,
+       so the absolutely-placed panel keeps anchoring to it. None of these three
+       use position:fixed, because an ancestor with perspective becomes the
+       containing block for fixed descendants and the panel would stop covering
+       the viewport. */
+    flip:`.nav{perspective:1500px}
+      .nl{transform-origin:50% 0;transform:rotateX(-92deg);
+        transition:opacity .2s ease,transform .48s cubic-bezier(.22,1,.36,1),visibility .48s}
+      .navtoggle:checked~.nl{transform:rotateX(0)}`,
+
+    cube:`.nav{perspective:1600px}
+      .nl{transform-origin:100% 50%;transform:rotateY(-88deg);
+        transition:opacity .22s ease,transform .5s cubic-bezier(.22,1,.36,1),visibility .5s}
+      .navtoggle:checked~.nl{transform:rotateY(0)}`,
+
+    stack:`.nl{perspective:900px;transform:none}
+      .nl a{transform:translateZ(-280px) translateY(-16px);opacity:0;
+        transition:transform .52s cubic-bezier(.22,1,.36,1),opacity .4s ease}
+      .navtoggle:checked~.nl a{transform:none;opacity:1}
+      ${menuStagger('a',0.045)}`,
+
+    fold:`.nav{perspective:1300px}
+      .nl{transform-origin:50% 0;transform:rotateX(-82deg);
+        transition:opacity .2s ease,transform .46s cubic-bezier(.22,1,.36,1),visibility .46s}
+      .nl a{transform-origin:50% 0;transform:rotateX(58deg);opacity:0;
+        transition:transform .44s cubic-bezier(.22,1,.36,1),opacity .34s ease}
+      .navtoggle:checked~.nl{transform:none}
+      .navtoggle:checked~.nl a{transform:none;opacity:1}
+      ${menuStagger('a',0.04)}`,
+
+    /* portal puts the perspective on the panel itself, not an ancestor, so the
+       panel can still be position:fixed and cover the viewport. */
+    portal:`.nl{position:fixed;inset:0;border:0;padding:96px 28px 32px;
+        justify-content:center;align-items:center;gap:6px;overflow-y:auto;
+        background:${rgba(t.bg,.97)};perspective:1000px;transform:none}
+      .nl a{${big}font-size:clamp(20px,4.4vw,36px);padding:6px 4px;text-align:center;
+        transform:translateZ(-720px) rotateX(26deg);opacity:0;
+        transition:transform .62s cubic-bezier(.22,1,.36,1),opacity .46s ease}
+      .nl a:hover{color:${t.primary}}
+      .navtoggle:checked~.nl a{transform:none;opacity:1}
+      ${menuStagger('a',0.05)}
+      .navscrim{display:block}`
+  }[id]||'');
+}
 const BLUEPRINT_KEYS=Object.keys(BLUEPRINTS);
 const DEFAULT_BLUEPRINT='classic';
 /* Deterministic fallback, used when the model omits the field or invents a key.
@@ -4142,14 +4256,13 @@ async function processRemoteImage(url,slot){
    unmeasurable at this page size (DOMContentLoaded ~8ms).
    Comments belong out here, not in the template literal — anything inside it
    is shipped in every exported page. */
-/* navBreak: the width below which the links collapse into the burger.
-   It is a parameter, not the old fixed 860px, because the right answer depends
-   entirely on this site's own header — a two-word trading name with three pages
-   fits on one line at 700px, and a long name with six pages and a phone number
-   does not fit at 1400px. Passing a measured value is what keeps the bar on one
-   line instead of wrapping the last link onto a second row. */
-function siteCSS(t,editable,navBreak){
-  navBreak=Math.max(720,Math.min(1600,Math.round(navBreak||860)));
+/* The third parameter used to be a per-site breakpoint estimated from the text
+   width of the trading name, the link labels, the phone number and the button.
+   It is gone: the menu is a burger at every width, so there is no
+   content-derived breakpoint left to compute. `menu` is which of the ten
+   opening styles this site uses. */
+function siteCSS(t,editable,menu){
+  menu=MENUS[menu]?menu:DEFAULT_MENU;
   const d=t.density;
   const onPrimary=bestOn(t.primary), onAccent=bestOn(t.accent);
   const cta=ctaOf(t), ctaEnd=cta.end, onCta=cta.on;
@@ -4247,23 +4360,43 @@ section:hover>.edsec{opacity:1;pointer-events:auto}
 .nav{position:sticky;top:0;z-index:30;background:${t.bg};border-bottom:1px solid ${t.line}}
 .nav .w{display:flex;align-items:center;justify-content:space-between;gap:12px 18px;padding-top:15px;padding-bottom:15px;flex-wrap:wrap}
 .logo{font-family:${t.displayFont},sans-serif;font-weight:${t.weight};font-size:20px;color:${t.primary};${t.caps?'text-transform:uppercase;letter-spacing:.04em;':''}}
-/* Links wrap to their own row rather than being cut off.
-   This was flex-wrap:nowrap with overflow:hidden, which meant that once a site
-   had more than about five pages the extra links were silently CLIPPED — the
-   last one rendered as a half-word against the edge and the rest simply were
-   not there. Clipping navigation is the worst available failure: the pages
-   exist, nothing looks broken, and no visitor can reach them.
-   The 320px flex-basis is the whole mechanism. While the row has 320px spare
-   the links sit inline as before; when it does not, they take a line of their
-   own instead of being trimmed. Pure CSS, so the export stays script-free. */
-.nl{display:flex;gap:10px 26px;font-size:15px;font-weight:500;min-width:0;flex-wrap:wrap;flex:1 1 320px;overflow:visible}
-.nl a{color:${t.ink2};text-decoration:none;transition:color .2s;white-space:nowrap}
-/* Shrink order matters in the band just above the mobile breakpoint, where the
-   nav links are still shown but space is tight. Nothing could shrink, so a long
-   business name pushed the call to action clean off the right edge. The logo
-   gives way first and ellipsises, the links give way next, and the CTA never
-   shrinks — losing the button is the one outcome that costs a lead. */
-.logo{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* ---- the menu -----------------------------------------------------------
+   The links live behind the burger at EVERY width, which is the one arrangement
+   that cannot overflow. Three previous attempts each traded one failure for
+   another: nowrap with overflow:hidden clipped links silently; wrapping pushed
+   the last link onto a second row; and a breakpoint estimated from character
+   counts guessed low on a long trading name and let the row overlap the phone
+   number. A row that is never asked to hold an unknown number of links has none
+   of those failure modes.
+
+   The panel animates rather than toggling display, so the ten opening styles
+   below have something to transition. That means it must stay in the DOM: hidden
+   with visibility, which is what keeps it out of the tab order while closed. */
+.nl{position:absolute;top:100%;left:0;right:0;z-index:40;
+  display:flex;flex-direction:column;gap:0;
+  background:${t.panel};border-top:1px solid ${t.line};
+  box-shadow:0 26px 60px ${rgba(t.ink,t.dark?.6:.16)};
+  padding:6px 24px 14px;font-size:16px;font-weight:500;
+  opacity:0;visibility:hidden;pointer-events:none;
+  transition:opacity .26s ease,transform .34s cubic-bezier(.22,1,.36,1),visibility .34s}
+.navtoggle:checked~.nl{opacity:1;visibility:visible;pointer-events:auto}
+.nl a{color:${t.ink};text-decoration:none;transition:color .2s;
+  padding:13px 2px;border-bottom:1px solid ${t.line};white-space:nowrap}
+.nl a:last-child{border-bottom:0}
+.nl a.here::after{display:none}
+/* Tap-outside-to-close. Only the overlay styles switch it on; a dropdown under
+   the bar does not need to trap the rest of the page. */
+/* Black, not rgba(t.ink,...). ink is the TEXT colour, which on a dark theme is
+   near-white — so an ink scrim lightened the page instead of dimming it, and the
+   drawer read as a panel floating on a washed-out screenshot. A scrim's job is
+   to remove contrast from what is behind it, which means darkening on both. */
+.navscrim{display:none;position:fixed;inset:0;z-index:38;background:rgba(0,0,0,${t.dark?.62:.45});
+  opacity:0;visibility:hidden;transition:opacity .26s,visibility .26s;cursor:pointer}
+.navtoggle:checked~.navscrim{opacity:1;visibility:visible}
+/* The chosen opening style. Emitted after the base rules so it can override
+   position, transform-origin and the transition without !important. */
+${menuCSS(t,menu)}
+.logo{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .navcta{flex:none}
 /* The checkbox is the entire mobile menu mechanism. Exports ship no JavaScript,
    and a nav that only opens with JS would break that for every visitor with a
@@ -4279,8 +4412,14 @@ section:hover>.edsec{opacity:1;pointer-events:auto}
 .skip:focus{top:12px}
 main:focus{outline:none}
 .navtoggle{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
-.burger{display:none;flex-direction:column;justify-content:center;gap:5px;width:44px;height:44px;
-  padding:10px;cursor:pointer;border-radius:10px;flex:none;-webkit-tap-highlight-color:transparent}
+/* Always shown. z-index above the panel so the burger is still the close
+   affordance when a style covers the whole viewport. */
+.burger{display:flex;flex-direction:column;justify-content:center;gap:5px;width:44px;height:44px;
+  padding:10px;cursor:pointer;border-radius:10px;flex:none;position:relative;z-index:60;
+  -webkit-tap-highlight-color:transparent}
+.navtoggle:checked~.burger span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+.navtoggle:checked~.burger span:nth-child(2){opacity:0}
+.navtoggle:checked~.burger span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
 .burger span{display:block;height:2px;border-radius:2px;background:${t.ink};transition:transform .25s,opacity .2s}
 .navtoggle:focus-visible~.burger{outline:2px solid ${t.primary};outline-offset:2px}
 .nl a:hover{color:${t.primary}}
@@ -4685,16 +4824,12 @@ ${t.callBar?`.callbar{display:none}
   .callbar a+a{background:${t.accent};color:${onAccent}}
   body{padding-bottom:58px}
 }`:''}
-/* Above the breakpoint the links must never wrap. .nl is allowed to shrink to
-   nothing (min-width:0) so the shortfall is absorbed by the trading name's
-   ellipsis rather than by pushing a link onto a second row. Below it, the
-   burger takes over — which is the honest answer when the links genuinely do
-   not fit, and is what the wrapping was standing in for. */
-@media(min-width:${navBreak+1}px){
-  .nl{flex-wrap:nowrap;flex:0 1 auto;min-width:0}
-  .nav .w{flex-wrap:nowrap}
-}
-@media(max-width:${navBreak}px){
+/* Fixed 860px again, and only for genuine small-screen layout. The nav no
+   longer has a breakpoint of its own: the links live behind the burger at every
+   width, so there is nothing left to overflow. The estimated breakpoint this
+   replaces was a guess at text width, and when the guess came in low the row
+   did not wrap — it overlapped, which is worse than the bug it fixed. */
+@media(max-width:860px){
   /* Before this, .nl was simply hidden and nothing replaced it, so every
      multi-page site was unnavigable on a phone — the pages existed but no
      visitor could reach them. */
@@ -4714,16 +4849,7 @@ ${t.callBar?`.callbar{display:none}
     display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
   .logo:has(img){display:block;overflow:visible}
   .navcta{order:2;flex:none;margin-left:auto;gap:14px}
-  .burger{display:flex;order:3;flex:none;margin-right:-8px}
-  .nl{display:none;order:4;flex-basis:100%;flex-direction:column;gap:0;
-    border-top:1px solid ${t.line};margin-top:4px}
-  .navtoggle:checked~.nl{display:flex}
-  .nl a{padding:13px 2px;border-bottom:1px solid ${t.line};font-size:16px}
-  .nl a:last-child{border-bottom:0}
-  .nl a.here::after{display:none}
-  .navtoggle:checked~.burger span:nth-child(1){transform:translateY(7px) rotate(45deg)}
-  .navtoggle:checked~.burger span:nth-child(2){opacity:0}
-  .navtoggle:checked~.burger span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+  .burger{order:3;margin-right:-8px}
   .navtel{font-size:14.5px}
   section{padding:${Math.round(d*.72)}px 0}
   .hero{padding:${Math.round(d*.8)}px 0 ${Math.round(d*.7)}px}
@@ -5927,30 +6053,10 @@ function buildSite(state,mode,pageIdx){
         .join('')
     : anchorLinks;
 
-  /* ---- where the header stops fitting on one line ------------------------
-     Estimated from the text, because the export has no JavaScript and cannot
-     measure itself, and the app must produce the identical stylesheet either
-     way. Character-width averages for a 15px UI sans and a 20px bold display
-     face, rounded up rather than down — being 40px too cautious costs nothing
-     but a slightly early burger, while being 40px optimistic is the wrapped
-     second row this is here to prevent.
-
-     Deliberately not clever: no canvas measureText, no font metrics. Those
-     would be exact for the fallback font and wrong for the webfont, which may
-     not have loaded when the first paint happens. */
-  const navItemLabels = multi
-    ? Array.from({length:pageCount(state)},(_,i)=>i)
-        .filter(i=>i===0||(pageOf(state,i).inNav!==false&&!pageOf(state,i).legal&&!isBlogPost(pageOf(state,i))))
-        .map(i=>navLabel(state,i))
-    : anchorLinksRaw.map(k=>NAV_LABELS[k]);
-  const NAV_CH=8.1, NAV_GAP=26, LOGO_CH=11.5, TEL_CH=8.6, BTN_CH=8.2;
-  const navTextPx = navItemLabels.reduce((n,l)=>n+String(l).length*NAV_CH,0)
-                  + Math.max(0,navItemLabels.length-1)*NAV_GAP;
-  const logoPx   = logoImg.src ? 210 : Math.min(320,(m.businessName||'').length*LOGO_CH);
-  const telPx    = c.phone ? String(c.phone).length*TEL_CH + 18 : 0;
-  const ctaPx    = String((s.hero&&s.hero.cta_text)||'').length*BTN_CH + 44;
-  /* 48 container padding + 18 gap either side of the link list. */
-  const navBreakPx = Math.ceil(logoPx + navTextPx + telPx + ctaPx + 48 + 36);
+  /* Which of the ten opening styles this site uses. The width estimation that
+     used to live here is gone: it existed to guess when the inline link row
+     stopped fitting, and there is no inline link row any more. */
+  const menuStyle = MENUS[m.menu] ? m.menu : DEFAULT_MENU;
 
   /* CC BY / BY-SA require visible attribution wherever the work is used. This
      line is a licence condition on the exported site — removing it would put
@@ -6125,7 +6231,7 @@ ${heroImg.src&&!heroImg.src.startsWith('data:')?`<link rel="preload" as="image" 
 ${t.googleHref?`<link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="${t.googleHref}">`:'<!-- System fonts only: this page makes zero external requests. -->'}
-<style>${siteCSS(t,editable,navBreakPx).replace(/\/\*[\s\S]*?\*\//g,'').replace(/\n{2,}/g,'\n')}</style>
+<style>${siteCSS(t,editable,menuStyle).replace(/\/\*[\s\S]*?\*\//g,'').replace(/\n{2,}/g,'\n')}</style>
 ${trackingTags}
 <script type="application/ld+json">${JSON.stringify(ld)}<\/script>
 ${faqLd?`<script type="application/ld+json">${JSON.stringify(faqLd)}<\/script>`:''}
@@ -6139,12 +6245,13 @@ ${articleLd?`<script type="application/ld+json">${JSON.stringify(articleLd)}<\/s
     ? `<div class="logo"${slot('logo','Replace logo')}><img class="logoimg" src="${logoImg.src}"${dim(logoImg)} alt="${esc(logoImg.alt||m.businessName)}"></div>`
     : `<div class="logo"${slot('logo','Add a logo')}>${esc(m.businessName)}</div>`}
   ${navLinks?'<input type="checkbox" id="navtoggle" class="navtoggle">':''}
-  <div class="nl">${navLinks}</div>
+  ${navLinks?'<label for="navtoggle" class="navscrim" aria-hidden="true" tabindex="-1"></label>':''}
+  <div class="nl" id="navmenu">${navLinks}</div>
   <div class="navcta">
     ${c.phone?`<a class="navtel" href="${telHref(c.phone)}">${esc(c.phone)}</a>`:''}
     <a href="${primaryHref}" class="b bs">${esc(s.hero.cta_text)}</a>
   </div>
-  ${navLinks?'<label for="navtoggle" class="burger" aria-label="Open menu"><span></span><span></span><span></span></label>':''}
+  ${navLinks?'<label for="navtoggle" class="burger" aria-label="Menu" aria-controls="navmenu"><span></span><span></span><span></span></label>':''}
 </div></nav>
 
 <main id="main" tabindex="-1">
@@ -6890,7 +6997,7 @@ async function generate(brief){
     bumpSites();
     currentId='is_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
     lastShareURL=''; $('shareUrl').value=''; $('shareMeta').textContent='';
-    stopLoading(); renderPreview(); renderThemeStrip(); renderChecks(); renderTips(); renderMediaPanel(); renderPages(); renderSections(); loadSeoFields(); loadLinkFields(); loadLeadUI(); renderCxPick(); renderHfPick(); pushHistory(siteState);
+    stopLoading(); renderPreview(); renderThemeStrip(); renderChecks(); renderTips(); renderMediaPanel(); renderPages(); renderSections(); renderMenus(); loadSeoFields(); loadLinkFields(); loadLeadUI(); renderCxPick(); renderHfPick(); pushHistory(siteState);
     $('secMedia').open=true; $('secLinks').open=true;
     selectTab('preview'); showWork();
     if(window.innerWidth<=900) mobileTab('preview');
@@ -8192,7 +8299,7 @@ function renderHistory(){
     prefs.theme=siteState.meta.theme; savePrefs();
     lastShareURL=''; $('shareUrl').value=''; $('shareMeta').textContent='';
     loadBriefFromSite();   // panel must describe the site you just opened
-    renderPreview(); renderThemeGrid(); renderThemeStrip(); renderChecks(); renderTips(); renderMediaPanel(); renderPages(); renderSections(); loadSeoFields(); loadLinkFields(); loadLeadUI(); renderCxPick(); renderHfPick(); renderHistory();
+    renderPreview(); renderThemeGrid(); renderThemeStrip(); renderChecks(); renderTips(); renderMediaPanel(); renderPages(); renderSections(); renderMenus(); loadSeoFields(); loadLinkFields(); loadLeadUI(); renderCxPick(); renderHfPick(); renderHistory();
     selectTab('preview'); showWork(); refreshStatus();
     if(window.innerWidth<=1240) $('app').classList.remove('showrail');
     if(window.innerWidth<=900) mobileTab('preview');
@@ -8202,6 +8309,9 @@ function renderHistory(){
 function migrate(s){
   s.meta=s.meta||{};
   if(!THEMES[s.meta.theme]) s.meta.theme=(PACKS[s.meta.type]&&PACKS[s.meta.type].theme)||DEFAULT_THEME;
+  /* Backfilled, not defaulted at read time: every site saved before the menu
+     styles existed gets the drop sheet, which is what it was already rendering. */
+  if(!MENUS[s.meta.menu]) s.meta.menu=DEFAULT_MENU;
   s.meta.contact=s.meta.contact||{};
   if(!Array.isArray(s.faqs)) s.faqs=[];
   // `media` postdates earlier saves — backfill so old history still renders.
@@ -11708,6 +11818,28 @@ function renderStockSources(){
     +(v.key?' No attribution required, so nothing is added to your footer.'
            :' Credit is captured automatically and printed in the exported footer, which these licences require.');
 }
+/* ---- menu style picker --------------------------------------------------
+   Lives with the theme rather than the sections, because which style suits a
+   site is a look decision. Applying one is a pure re-render: the markup is
+   identical for all ten, only the stylesheet differs. */
+function renderMenus(){
+  const host=$('menuList'); if(!host) return;
+  const cur=(siteState&&MENUS[siteState.meta.menu])?siteState.meta.menu:DEFAULT_MENU;
+  host.innerHTML=MENU_KEYS.map(k=>{
+    const mn=MENUS[k];
+    return `<button type="button" class="bp${k===cur?' on':''}" data-menu="${k}"
+      aria-pressed="${k===cur?'true':'false'}" title="${esc(mn.for)}"${siteState?'':' disabled'}>
+      <b>${esc(mn.label)}</b><span>${esc(mn.for)}</span></button>`;
+  }).join('');
+  host.querySelectorAll('[data-menu]').forEach(b=>b.onclick=()=>{
+    if(!siteState) return;
+    siteState.meta.menu=b.dataset.menu;
+    renderMenus(); renderPreview(); pushHistory(siteState); lastShareURL='';
+  });
+  const who=MENUS[cur];
+  $('menuWho').textContent=who?who.label:'';
+}
+renderMenus();
 renderStockSources();
 $('stockGo').onclick=runStockSearch;
 $('stockQ').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); runStockSearch(); } });
