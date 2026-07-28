@@ -1661,7 +1661,7 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
    already open never re-checks at all, so someone who left the app open on
    Monday can still be running Monday's build on Friday. The version probe
    below is the only honest way to notice that from inside the page. */
-const APP_VERSION='1.3.0';
+const APP_VERSION='1.3.1';
 const APP_BUILT='2026-07-28';
 const MODEL='claude-sonnet-4-6';
 const API_ENDPOINT='https://api.anthropic.com/v1/messages';
@@ -3104,6 +3104,14 @@ const MENU_KEYS=Object.keys(MENUS);
 const DEFAULT_MENU='sheet';
 /* Stagger for the styles that animate each link. Ten steps is plenty — a nav
    with more than ten items has a bigger problem than its animation. */
+/* Shadow colour. A shadow is an absence of light, so on a dark theme it is
+   black — NOT rgba(t.ink,...). ink is the text colour, near-white on a dark
+   ground, so an ink shadow at any real strength paints a white halo instead of
+   a shadow. At the .55-.7 the 3D families used, those halos spilled out of one
+   section and across the next, which is what read as sections overlapping in
+   the share preview. On light themes ink is already near-black, so this is a
+   no-op there. Module scope because menuCSS needs it too. */
+const shadeOf=(t,a)=>rgba(t.dark?'#000000':t.ink,a);
 const menuStagger=(sel,step)=>Array.from({length:10},(_,i)=>
   `.navtoggle:checked~.nl ${sel}:nth-child(${i+1}){transition-delay:${(0.03+i*step).toFixed(3)}s}`).join('');
 function menuCSS(t,id){
@@ -3122,14 +3130,14 @@ function menuCSS(t,id){
 
     drawer:`.nl{position:fixed;top:0;right:0;left:auto;bottom:0;width:min(340px,86vw);
         padding:92px 26px 26px;border-top:0;border-left:1px solid ${t.line};
-        box-shadow:-30px 0 70px ${rgba(t.ink,t.dark?.7:.2)};
+        box-shadow:-30px 0 70px ${shadeOf(t,t.dark?.6:.2)};
         transform:translateX(100%);overflow-y:auto}
       .navtoggle:checked~.nl{transform:none}
       .navscrim{display:block}`,
 
     rail:`.nl{position:fixed;top:0;left:0;bottom:0;right:auto;width:min(300px,84vw);
         padding:92px 24px 24px;border-top:0;border-right:1px solid ${t.line};
-        box-shadow:30px 0 70px ${rgba(t.ink,t.dark?.7:.2)};
+        box-shadow:30px 0 70px ${shadeOf(t,t.dark?.6:.2)};
         transform:translateX(-100%);overflow-y:auto}
       .navtoggle:checked~.nl{transform:none}
       .navscrim{display:block}`,
@@ -4265,6 +4273,7 @@ function siteCSS(t,editable,menu){
   menu=MENUS[menu]?menu:DEFAULT_MENU;
   const d=t.density;
   const onPrimary=bestOn(t.primary), onAccent=bestOn(t.accent);
+  const sh=a=>shadeOf(t,a);   // see shadeOf: shadows are black on dark themes
   const cta=ctaOf(t), ctaEnd=cta.end, onCta=cta.on;
   return `*{box-sizing:border-box;margin:0;padding:0}
 html{-webkit-text-size-adjust:100%${jsSmoothOn()?'':';scroll-behavior:smooth'}}
@@ -4375,7 +4384,7 @@ section:hover>.edsec{opacity:1;pointer-events:auto}
 .nl{position:absolute;top:100%;left:0;right:0;z-index:40;
   display:flex;flex-direction:column;gap:0;
   background:${t.panel};border-top:1px solid ${t.line};
-  box-shadow:0 26px 60px ${rgba(t.ink,t.dark?.6:.16)};
+  box-shadow:0 26px 60px ${sh(t.dark?.55:.16)};
   padding:6px 24px 14px;font-size:16px;font-weight:500;
   opacity:0;visibility:hidden;pointer-events:none;
   transition:opacity .26s ease,transform .34s cubic-bezier(.22,1,.36,1),visibility .34s}
@@ -5131,16 +5140,16 @@ ${prefs.motion?`
       .grid,.rows,.num,.feat,.steps{perspective:1500px;perspective-origin:50% 38%}
       .card,.q,.cxpanel,.rows .row,.num .item{position:relative;transform-style:preserve-3d;
         border:1px solid ${t.line};background:${t.panel};border-radius:calc(${t.radius} + 8px);
-        box-shadow:0 20px 54px ${rgba(t.ink,t.dark?.55:.16)}, 0 1px 0 ${rgba('#ffffff',t.dark?.07:.7)} inset;
+        box-shadow:0 20px 54px ${sh(t.dark?.62:.16)}, 0 1px 0 ${rgba('#ffffff',t.dark?.07:.7)} inset;
         transition:transform .55s cubic-bezier(.22,1,.36,1),box-shadow .55s,border-color .55s}
       .card:hover,.q:hover,.rows .row:hover,.num .item:hover{
         transform:rotateX(4deg) rotateY(-7deg) translateZ(30px);
         border-color:${rgba(t.primary,.5)};
-        box-shadow:0 40px 90px ${rgba(t.ink,t.dark?.7:.22)}, 0 1px 0 ${rgba('#ffffff',t.dark?.10:.85)} inset}
+        box-shadow:0 40px 90px ${sh(t.dark?.7:.22)}, 0 1px 0 ${rgba('#ffffff',t.dark?.10:.85)} inset}
       /* The layers. Each child sits further forward than the last, so the card
          reads as depth rather than as a picture of depth. */
       .card .ico,.rows .row .ico{transform:translateZ(52px);
-        box-shadow:0 16px 30px ${rgba(t.ink,.4)}}
+        box-shadow:0 16px 30px ${sh(.45)}}
       .card h3,.rows .row h3,.num .item h3{transform:translateZ(30px)}
       .card p,.rows .row p,.num .item p{transform:translateZ(14px)}
       .num .n{transform:translateZ(40px)}
@@ -5150,7 +5159,7 @@ ${prefs.motion?`
       .b:hover{transform:translateZ(20px) rotateX(-9deg);box-shadow:0 22px 44px ${rgba(t.primary,.4)}}
       .b:active{transform:translateZ(4px)}
       .ico{border-radius:calc(${t.radius} + 6px);background:${rgba(t.primary,.16)};color:${t.ink}}
-      .fig{transform-style:preserve-3d;box-shadow:0 34px 80px ${rgba(t.ink,t.dark?.6:.2)}}
+      .fig{transform-style:preserve-3d;box-shadow:0 34px 80px ${sh(t.dark?.65:.2)}}
       .stat .v{text-shadow:0 10px 30px ${rgba(t.primary,.4)}}
       @media(prefers-reduced-motion:no-preference){
         @supports (animation-timeline: view()){
@@ -5182,7 +5191,7 @@ ${prefs.motion?`
       .grid,.rows,.num,.feat{perspective:1300px;perspective-origin:50% 40%}
       .card,.q,.cxpanel,.rows .row,.num .item{position:relative;transform-style:preserve-3d;
         background:${t.panel};border:1px solid ${t.line};border-radius:calc(${t.radius} + 10px);
-        box-shadow:0 18px 48px ${rgba(t.ink,t.dark?.5:.14)};
+        box-shadow:0 18px 48px ${sh(t.dark?.55:.14)};
         transition:transform .6s cubic-bezier(.22,1,.36,1),box-shadow .6s,border-color .6s}
       .card::after,.q::after,.num .item::after{content:'';position:absolute;inset:0;
         border-radius:inherit;pointer-events:none;z-index:2;
@@ -5194,12 +5203,12 @@ ${prefs.motion?`
       .card:hover,.q:hover,.num .item:hover,.rows .row:hover{
         transform:rotateY(-6deg) rotateX(3deg) translateZ(26px);
         border-color:${rgba(t.primary,.55)};
-        box-shadow:0 38px 84px ${rgba(t.ink,t.dark?.66:.2)}}
+        box-shadow:0 38px 84px ${sh(t.dark?.68:.2)}}
       /* Content above the sheen, and forward of the card face. */
       .card > *,.q > *,.num .item > *{position:relative;z-index:3}
       .card .ico{transform:translateZ(44px);border-radius:999px;
         background:linear-gradient(140deg,${rgba(t.primary,.34)},${rgba(t.accent,.26)});
-        color:${t.ink};box-shadow:0 14px 28px ${rgba(t.ink,.38)}}
+        color:${t.ink};box-shadow:0 14px 28px ${sh(.42)}}
       .card h3,.num .item h3{transform:translateZ(26px)}
       .card p,.num .item p{transform:translateZ(12px)}
       .b{border-radius:999px;transform-style:preserve-3d;
