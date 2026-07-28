@@ -1627,7 +1627,7 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
    already open never re-checks at all, so someone who left the app open on
    Monday can still be running Monday's build on Friday. The version probe
    below is the only honest way to notice that from inside the page. */
-const APP_VERSION='1.1.0';
+const APP_VERSION='1.1.1';
 const APP_BUILT='2026-07-28';
 const MODEL='claude-sonnet-4-6';
 const API_ENDPOINT='https://api.anthropic.com/v1/messages';
@@ -5509,7 +5509,14 @@ function buildSite(state,mode,pageIdx){
         /* The author's call to action is written for the email flow ("Send it
            to me"), which reads as nonsense on a link that downloads on click,
            so this case gets its own wording. */
-        if(guideFile) return `<a class="aupbtn" href="${esc(inApp?'#':guideHref)}"${inApp?'':' download'}>Download the ${esc(u.format||'guide')} (PDF)</a>
+        /* data-guide in app modes. The href had to be inert in the preview —
+           ../guides/x.pdf does not exist until the ZIP is built — but leaving it
+           at "#" meant the one button whose whole job is to hand over a file did
+           nothing, under a line of copy promising it downloads straight away.
+           The app owns makeLeadPdf(), so it can build the real PDF on click and
+           hand it over. The exported page keeps the plain relative href and no
+           JavaScript at all. */
+        if(guideFile) return `<a class="aupbtn" href="${esc(inApp?'#':guideHref)}"${inApp?` data-guide="${pageIdx}"`:' download'}>Download the ${esc(u.format||'guide')} (PDF)</a>
       <p class="aupnote">Downloads straight away, no email needed.</p>`;
         if(formAction||c.email) return `<form class="aupform"${post}>
         <input type="email" name="email" required placeholder="Your email" autocomplete="email">
@@ -6075,6 +6082,11 @@ function renderPreview(){
     // navigating the iframe to a file that does not exist yet.
     doc.querySelectorAll('[data-page]').forEach(a=>{
       a.addEventListener('click',e=>{ e.preventDefault(); gotoPage(+a.dataset.page); });
+    });
+    /* The lead-magnet button builds and hands over the real PDF, so the owner
+       can read what they are about to sell before exporting anything. */
+    doc.querySelectorAll('[data-guide]').forEach(a=>{
+      a.addEventListener('click',e=>{ e.preventDefault(); downloadGuide(siteState,+a.dataset.guide); });
     });
     doc.querySelectorAll('[data-path]').forEach(el=>{
       el.addEventListener('input',()=>{
@@ -7001,6 +7013,10 @@ async function renderProspectView(raw,review){
     pv.onload=()=>{
       const d=pv.contentDocument; if(!d) return;
       d.querySelectorAll('[data-page]').forEach(a=>a.addEventListener('click',e=>{ e.preventDefault(); paint(+a.dataset.page); }));
+      /* A prospect opening a share link gets the real guide too. It is the one
+         thing on the page that proves the blog is worth paying for, and `view`
+         carries everything makeLeadPdf needs. */
+      d.querySelectorAll('[data-guide]').forEach(a=>a.addEventListener('click',e=>{ e.preventDefault(); downloadGuide(view,+a.dataset.guide); }));
     };
     document.title=(i?pageTitle(view,i)+' | ':'')+view.meta.businessName+(!i&&view.meta.location?' | '+view.meta.location:'');
     if(rev) markPages();
@@ -7857,13 +7873,10 @@ async function download(){
        the link had nowhere to point and the visitor got nothing for their
        email. */
     for(const i of blogPosts(siteState)){
-      const pg=pageOf(siteState,i), lm=pg.blogData&&pg.blogData.leadMagnet;
-      if(!lm||!Array.isArray(lm.sections)||!lm.sections.length) continue;
-      try{
-        const name=`${slugify(pg.slug||'guide','guide')}-guide.pdf`;
-        const blob=makeLeadPdf(Object.assign({filename:name,cta:(pg.blogData.upgrade&&pg.blogData.upgrade.cta)||'Get in touch'},lm),siteState);
-        files.push({name:`guides/${name}`,bytes:new Uint8Array(await blob.arrayBuffer())});
-      }catch(e){ console.warn('lead-magnet PDF failed for page',i,e); }
+      const g=guideFor(siteState,i);
+      if(!g) continue;
+      try{ files.push({name:`guides/${g.name}`,bytes:new Uint8Array(await g.blob().arrayBuffer())}); }
+      catch(e){ console.warn('lead-magnet PDF failed for page',i,e); }
     }
     saveBlob(await makeZip(files),`${slug}.zip`);
     logUsage('download',`${files.length} files, ${pageCount(siteState)} pages`);
@@ -9585,6 +9598,30 @@ function pdfWrap(txt,size,bold,maxW){ const words=pdfFold(txt).split(/\s+/).filt
     if(pdfWidth(test,size,bold)>maxW&&line){ lines.push(line); line=wd; } else line=test; }
   if(line) lines.push(line); return lines.length?lines:['']; }
 
+/* One definition of "what guide does this page have, and what is it called".
+   The ZIP writer and the preview's download button both go through here, so the
+   filename in the export and the filename the owner gets when checking it in the
+   preview cannot drift apart — and neither can the decision about whether a
+   page has a guide at all. Returns null when it does not.
+
+   blob() is deliberately lazy: the caller decides when to spend the work, and
+   the ZIP path needs it inside its own try/catch. */
+function guideFor(state,idx){
+  const pg=pageOf(state,idx), bd=pg.blogData, lm=bd&&bd.leadMagnet;
+  if(!lm||!Array.isArray(lm.sections)||!lm.sections.length) return null;
+  const name=`${slugify(pg.slug||'guide','guide')}-guide.pdf`;
+  return { name, blob:()=>makeLeadPdf(Object.assign(
+    {filename:name,cta:(bd.upgrade&&bd.upgrade.cta)||'Get in touch'},lm),state) };
+}
+/* Wired to [data-guide] in the editor preview and the shared prospect view.
+   The exported page never runs this — it has a plain relative href to the file
+   the ZIP already contains. */
+function downloadGuide(state,idx){
+  const g=guideFor(state,idx);
+  if(!g){ console.warn('No lead magnet on page',idx); return false; }
+  try{ saveBlob(g.blob(),g.name); logUsage('guide-pdf',g.name); return true; }
+  catch(e){ console.warn('Guide PDF failed',e); return false; }
+}
 function makeLeadPdf(data,state){
   const m=state.meta, t=resolveTheme(m.theme);
   const W=595,H=842, ML=56, MR=56, MT=58, MB=56, maxW=W-ML-MR;
