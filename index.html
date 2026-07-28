@@ -1661,7 +1661,7 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
    already open never re-checks at all, so someone who left the app open on
    Monday can still be running Monday's build on Friday. The version probe
    below is the only honest way to notice that from inside the page. */
-const APP_VERSION='1.4.2';
+const APP_VERSION='1.4.3';
 const APP_BUILT='2026-07-28';
 const MODEL='claude-sonnet-4-6';
 const API_ENDPOINT='https://api.anthropic.com/v1/messages';
@@ -4518,7 +4518,14 @@ section:hover>.edsec{opacity:1;pointer-events:auto}
 .navtoggle:checked~.nl{opacity:1;visibility:visible;pointer-events:auto}
 .nl a{color:${t.ink};text-decoration:none;transition:color .2s;
   padding:13px 2px;border-bottom:1px solid ${t.line};white-space:nowrap}
-.nl a:last-child{border-bottom:0}
+/* Two markup shapes, one stylesheet. The static export emits bare <a> children;
+   WordPress emits <li><a> from wp_nav_menu and wp_list_pages. Measured on the
+   real theme: a bare .nl a:last-child matched EVERY link in WordPress, because
+   each one is the only child of its own <li>, so every separator disappeared —
+   and the list items kept their disc markers, which the static site never shows.
+   Selecting on the last child of .nl rather than the last <a> handles both. */
+.nl li{list-style:none;display:block}
+.nl > a:last-child,.nl > li:last-child > a{border-bottom:0}
 .nl a.here::after{display:none}
 /* Tap-outside-to-close. Only the overlay styles switch it on; a dropdown under
    the bar does not need to trap the rest of the page. */
@@ -7683,6 +7690,13 @@ function verifyWpTheme(files){
     if(!/class="burger"/.test(header))
       faults.push('style.css expects a .burger control but header.php has none — nothing could open the menu');
   }
+
+  /* 3b. WordPress emits menus as <li><a>, the static export as bare <a>. If the
+         stylesheet has no rule for .nl li, the list markers show and the item
+         separators collapse — both measured on a real export. Cosmetic, so it
+         warns rather than blocks. */
+  if(/wp_nav_menu|wp_list_pages/.test(header) && !/\.nl li\{/.test(css))
+    warn.push('header.php renders the menu as list items but style.css has no .nl li rule — bullets will show and the separators will collapse');
 
   /* 4. Exactly one main landmark per rendered page: header.php opens it, footer
         closes it, and no template may add a second. */
