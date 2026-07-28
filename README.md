@@ -6,7 +6,7 @@ Describe a business, pick a theme, and get a complete one-page website: hero, se
 
 **Live app:** https://digitalyticsagency.github.io/instant-site/
 
-**Current version:** 1.4.1 — shown under Settings in the app, with a *Check for updates* button.
+**Current version:** 1.4.2 — shown under Settings in the app, with a *Check for updates* button.
 
 ### Releasing
 

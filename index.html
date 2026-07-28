@@ -1661,7 +1661,7 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
    already open never re-checks at all, so someone who left the app open on
    Monday can still be running Monday's build on Friday. The version probe
    below is the only honest way to notice that from inside the page. */
-const APP_VERSION='1.4.1';
+const APP_VERSION='1.4.2';
 const APP_BUILT='2026-07-28';
 const MODEL='claude-sonnet-4-6';
 const API_ENDPOINT='https://api.anthropic.com/v1/messages';
@@ -7633,7 +7633,12 @@ function themeScreenshot(state){
    prove the theme runs; they can prove it is not broken in the specific ways it
    has been broken before. */
 function verifyWpTheme(files){
-  const faults=[];
+  /* Two tiers, because the first version of this had one and refused a download
+     over a 25 KB image nothing referenced. A guard that blocks a sale over
+     cosmetics is worse than the defect it caught. BLOCKING means the theme will
+     not work on a server: a fatal, unreachable navigation, a missing required
+     file. Everything else is a warning that is logged and shipped. */
+  const faults=[], warn=[];
   const raw=n=>{ const f=files.find(x=>x.name===n); return f?String(f.text||''):''; };
   /* Comments are stripped before any structural count. The first version of
      this guard reported two main landmarks in header.php because the HTML
@@ -7694,7 +7699,7 @@ function verifyWpTheme(files){
   ['charset','viewport'].forEach(k=>{
     const re=k==='charset'?/<meta\s+charset=/gi:/<meta\s+name="viewport"/gi;
     const n=(header.match(re)||[]).length;
-    if(n>1) faults.push(`header.php declares ${n} ${k} meta tags, expected 1`);
+    if(n>1) warn.push(`header.php declares ${n} ${k} meta tags, expected 1`);
   });
 
   /* 6. The required files, per the WordPress theme handbook. */
@@ -7708,7 +7713,7 @@ function verifyWpTheme(files){
   files.filter(f=>/^assets\//.test(f.name)).forEach(f=>{
     const base=f.name.split('/').pop();
     if(!all.includes(base)&&!css.includes(base))
-      faults.push(`${f.name} ships but no template or stylesheet refers to it`);
+      warn.push(`${f.name} ships but no template or stylesheet refers to it`);
   });
 
   /* 8. Unbalanced PHP blocks. Not a parser, but a mismatched if/endif or a
@@ -7727,7 +7732,7 @@ function verifyWpTheme(files){
       if(alt!==end) faults.push(`${f.name} has ${alt} alternative-syntax ${o}: openers and ${end} ${c}; closers`);
     });
   });
-  return faults;
+  return {blocking:faults,warnings:warn};
 }
 async function wpThemeFiles(state){
   const m=state.meta, t=resolveTheme(m.theme);
@@ -7751,6 +7756,18 @@ async function wpThemeFiles(state){
     ['hero','about','logo'].forEach(k=>grab(md[k],k));
     (md.gallery||[]).forEach(g=>grab(g,'work'));
   }
+  /* The logo is collected into /assets/ like every other image, but header.php
+     and footer.php are hand-written and only knew about WordPress's own custom
+     logo setting — which a freshly installed theme has not got. So the logo the
+     owner uploaded was packaged into the ZIP and then referenced by nothing,
+     and the site showed the trading name as text instead. It is now the
+     fallback before text, with the WordPress setting still winning if the
+     client sets one. */
+  const logoAsset=(()=>{ const l=(pageOf(state,0).media||{}).logo;
+    return (l&&l.src&&assets[l.src])||''; })();
+  const logoImgTag=cls=>logoAsset
+    ? `<img class="${cls}" src="<?php echo esc_url( get_template_directory_uri() . '/${logoAsset}' ); ?>" alt="<?php bloginfo( 'name' ); ?>">`
+    : '';
   const swapAssets=html=>{
     let out=html;
     Object.entries(assets).forEach(([src,name])=>{
@@ -7977,7 +7994,7 @@ ${headMeta}
   <div class="w">
     <div class="logo">
       <?php if ( has_custom_logo() ) { the_custom_logo(); } else { ?>
-        <a href="<?php echo esc_url( home_url( '/' ) ); ?>" rel="home"><?php bloginfo( 'name' ); ?></a>
+        <a href="<?php echo esc_url( home_url( '/' ) ); ?>" rel="home">${logoAsset?logoImgTag('logoimg'):`<?php bloginfo( 'name' ); ?>`}</a>
       <?php } ?>
     </div>
     <!--
@@ -8040,7 +8057,7 @@ $socials = array_filter( array_map( 'trim', explode( "\\n", ${slug.replace(/-/g,
   <div class="w footgrid">
     <div class="footbrand">
       <?php if ( has_custom_logo() ) : the_custom_logo(); else : ?>
-        <div class="footmark"><?php bloginfo( 'name' ); ?></div>
+        ${logoAsset?logoImgTag('footlogo'):`<div class="footmark"><?php bloginfo( 'name' ); ?></div>`}
       <?php endif; ?>
       <?php if ( $tagline ) : ?><p class="footline"><?php echo esc_html( $tagline ); ?></p><?php endif; ?>
       <?php if ( $socials ) : ?>
@@ -9418,12 +9435,13 @@ async function downloadWordPress(){
     /* Guard before the ZIP is written, not after. A broken theme that reaches
        the customer costs a support round trip and their trust; a build that
        refuses costs nobody anything. */
-    const wpFaults=verifyWpTheme(files);
-    if(wpFaults.length){
-      console.error('[Instant Site] WordPress theme build is faulty:',wpFaults);
+    const wpCheck=verifyWpTheme(files);
+    if(wpCheck.warnings.length) console.warn('[Instant Site] WordPress theme warnings:',wpCheck.warnings);
+    if(wpCheck.blocking.length){
+      console.error('[Instant Site] WordPress theme build is faulty:',wpCheck.blocking);
       label.textContent='Build blocked';
-      alert('The WordPress theme did not build correctly, so it has not been downloaded:\n\n'
-        +wpFaults.map(f=>'• '+f).join('\n')
+      alert('The WordPress theme would not work once installed, so it has not been downloaded:\n\n'
+        +wpCheck.blocking.map(f=>'• '+f).join('\n')
         +'\n\nThis is a fault in the generator rather than anything you did. Please report it.');
       return;
     }
