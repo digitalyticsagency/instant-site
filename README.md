@@ -6,7 +6,7 @@ Describe a business, pick a theme, and get a complete one-page website: hero, se
 
 **Live app:** https://digitalyticsagency.github.io/instant-site/
 
-**Current version:** 1.3.0 — shown under Settings in the app, with a *Check for updates* button.
+**Current version:** 1.4.0 — shown under Settings in the app, with a *Check for updates* button.
 
 ### Releasing
 
@@ -25,6 +25,7 @@ The app therefore polls `version.json` (a few dozen bytes, fetched with `cache: 
 - **62 themes**, each tuned to a buyer segment (see below), filterable by family. Switching theme after generating is instant and costs **no API call** — the content is theme-independent.
 - **10 page blueprints, chosen by the AI.** Every site used to arrive with the same thirteen sections in the same order — right for a plumber, wrong for a photographer, an ad landing page and a therapist. Claude now picks a structure from ten (Standard, Proof first, Offer landing page, Work first, Local search, Story led, How it works, Video first, Long form trust, One screen) based on how the business actually wins work, and says why in a sentence you can read. You can override it with one click. A blueprint only reorders and hides sections, so nothing you have written is ever lost.
 - **10 menu styles, 5 of them 3D.** The menu is a burger button at every screen size, which is the one arrangement a long trading name or a lot of pages cannot break. Ten ways it opens: drop sheet, dropdown card, side drawer, left rail, full screen, and five built on real CSS 3D — flip panel, cube turn, depth stack, origami fold and portal. All pure CSS off one checkbox, so the export still ships no JavaScript.
+- **Video in any image slot.** The hero, About and every gallery tile take a looping video as well as a still: autoplaying, muted, no controls, with the still kept underneath as the poster and the reduced-motion fallback. Its motion is scroll-driven in CSS, so this costs no JavaScript. True frame-by-frame scrubbing of the playhead needs script and rides on the opt-in JS layer.
 - **Inline editing.** Click any text in the preview and type. Edits write straight into the single source of truth, so the export always matches what you see.
 - **Per-section regeneration.** Redo just the hero, services, about, reviews or FAQ without touching the rest of the page.
 - **Contact details wired end-to-end.** Phone, email, hours, service area and a booking link flow into the nav, hero card, contact section, footer and LocalBusiness JSON-LD automatically — no placeholder `hello@example.com` to hunt down.
@@ -81,7 +82,7 @@ Measured on a Trades Bold export with every section populated; hiding the option
 
 **These figures are for the default settings**, where the JavaScript level is `Off`. That is the only configuration that is genuinely script-free. Opting into the JS libraries under Settings changes the picture a long way — Smooth scroll adds ~13 KB, GSAP effects ~128 KB and the WebGL hero ~736 KB, all fetched from jsDelivr on every visit — and the pre-flight check reports the real total whenever they are on. The client report generated from a site measures the actual export rather than repeating this table, so it stays honest either way.
 
-All CSS is inlined, icons are inline SVG, and below-fold sections use `content-visibility`. At ~10 KB over the wire the page is a single round trip — real-world load time is dominated by your host's TTFB, not the page itself.
+All CSS is inlined and icons are inline SVG. At ~10 KB over the wire the page is a single round trip — real-world load time is dominated by your host's TTFB, not the page itself.
 
 ## Interface
 

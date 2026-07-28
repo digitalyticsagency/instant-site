@@ -1661,7 +1661,7 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
    already open never re-checks at all, so someone who left the app open on
    Monday can still be running Monday's build on Friday. The version probe
    below is the only honest way to notice that from inside the page. */
-const APP_VERSION='1.3.1';
+const APP_VERSION='1.4.0';
 const APP_BUILT='2026-07-28';
 const MODEL='claude-sonnet-4-6';
 const API_ENDPOINT='https://api.anthropic.com/v1/messages';
@@ -2573,6 +2573,57 @@ function motionRuntime(level,t){
   var LV=${JSON.stringify(level)};
   function ready(fn){ document.readyState!=='loading'?fn():document.addEventListener('DOMContentLoaded',fn); }
 
+  /* ---- scroll-scrubbed video --------------------------------------------
+     The one part of the brief CSS genuinely cannot do: setting a video's
+     currentTime from scroll position. CSS can move the layer on a view
+     timeline — that ships with every export and needs no JavaScript — but the
+     PLAYHEAD needs script, so it lives here on the opt-in layer where the
+     owner has already accepted the cost.
+
+     Written to be cheap and to fail safe. No library. rAF-coalesced so a fast
+     wheel does not queue a seek per event. Any video that cannot be scrubbed
+     (still loading, no duration, streaming) is left alone and keeps looping on
+     its own, which is the behaviour the export has by default. */
+  function scrubVideos(){
+    var vids=[].slice.call(document.querySelectorAll('.herovid,.vwrap > video'));
+    if(!vids.length) return;
+    var pending=false;
+    vids.forEach(function(v){
+      /* Autoplay and scrubbing cannot both drive the same element: the loop
+         would fight every seek. Scrubbed videos are paused and positioned. */
+      v.removeAttribute('autoplay'); v.loop=false;
+      try{ v.pause(); }catch(e){}
+    });
+    function frame(){
+      pending=false;
+      var vh=window.innerHeight||1;
+      for(var i=0;i<vids.length;i++){
+        var v=vids[i];
+        var d=v.duration;
+        if(!d||!isFinite(d)||v.readyState<1) continue;
+        var r=v.getBoundingClientRect();
+        if(r.bottom<0||r.top>vh) continue;                 // off-screen, skip the seek
+        /* 0 when the element's top hits the bottom of the viewport, 1 when its
+           bottom leaves the top — the same span CSS calls "cover". */
+        var p=(vh-r.top)/(vh+r.height);
+        p=p<0?0:p>1?1:p;
+        var target=p*(d-0.05);
+        if(Math.abs(v.currentTime-target)>0.03){
+          try{ v.currentTime=target; }catch(e){}
+        }
+      }
+    }
+    function onScroll(){ if(!pending){ pending=true; requestAnimationFrame(frame); } }
+    addEventListener('scroll',onScroll,{passive:true});
+    addEventListener('resize',onScroll,{passive:true});
+    /* Seeking needs metadata. Run once per video as soon as each one has it. */
+    vids.forEach(function(v){
+      if(v.readyState>=1) onScroll();
+      else v.addEventListener('loadedmetadata',onScroll,{once:true});
+    });
+    onScroll();
+  }
+
   function smooth(){
     if(typeof Lenis==='undefined') return null;
     var l=new Lenis({
@@ -2982,6 +3033,10 @@ function motionRuntime(level,t){
          to clean up after a broken motion layer. A safety net cannot be
          downstream of the thing it protects. */
       var l=null;
+      /* Runs at every JS level, including 'smooth': scrubbing needs no library,
+         so there is no reason to make it wait for GSAP. Isolated like the rest —
+         a throw here must not take out the effects below it. */
+      try{ scrubVideos(); }catch(e){}
       if(LV==='smooth'||LV==='gsap'||LV==='webgl'){ try{ l=smooth(); }catch(e){} }
       if(LV==='gsap'||LV==='webgl'){ try{ effects(l); }catch(e){} }
       if(LV==='webgl'){ try{ webgl(); }catch(e){} }
@@ -3969,7 +4024,10 @@ const MEDIA_SLOTS={
   article:{label:'Blog image', max:1400, quality:.80, minW:640, targetKB:120, hint:'A relevant photo for the top of the post.'}
 };
 const GALLERY_MAX=6;
-const blankMedia=()=>({hero:{src:'',alt:'',credit:null},about:{src:'',alt:'',credit:null},logo:{src:'',alt:'',credit:null},gallery:[]});
+/* `vid` sits alongside `src` on every visual slot: a link to a video or animation
+   that plays in place of the still. The still is kept, not replaced — it is the
+   poster, the reduced-motion fallback, and what shows if the video 404s. */
+const blankMedia=()=>({hero:{src:'',alt:'',credit:null,vid:''},about:{src:'',alt:'',credit:null,vid:''},logo:{src:'',alt:'',credit:null},gallery:[]});
 
 /* ==========================================================================
    STOCK PHOTOS — Openverse (openverse.org), the WordPress-run index of
@@ -4274,6 +4332,75 @@ function siteCSS(t,editable,menu){
   const d=t.density;
   const onPrimary=bestOn(t.primary), onAccent=bestOn(t.accent);
   const sh=a=>shadeOf(t,a);   // see shadeOf: shadows are black on dark themes
+  /* ---- in-place video --------------------------------------------------
+     Any visual slot can hold a looping video instead of a still. Requirements
+     from the brief: autoplay, loop, NO controls, and motion that responds to
+     scroll. All four are met without a line of JavaScript.
+
+     No controls is a real accessibility decision, not an oversight. WCAG 2.2.2
+     requires a pause mechanism for anything that animates for more than five
+     seconds — which is why the standalone video SECTION keeps its controls.
+     These are decorative background layers, so instead of controls they get the
+     other permitted route: they are muted, they carry no information the page
+     does not also state in text, and prefers-reduced-motion removes them
+     entirely and shows the still underneath. That is why the still is kept
+     rather than replaced.
+
+     "Progresses with scrolling" is the transform, not the playhead. Scrubbing a
+     video's currentTime from scroll position needs JavaScript and the export has
+     none; what CSS can do is drive the layer's scale and position from a view
+     timeline, so the frame genuinely moves as you scroll. True frame scrubbing
+     is on the opt-in JS layer, where the cost is visible. */
+  const vidLayer=`
+.vwrap{position:relative;overflow:hidden;width:100%;height:100%}
+.gal figure .vwrap,.fig .vwrap{border-radius:inherit}
+.vwrap > img,.vwrap > video{display:block;width:100%;height:100%;object-fit:cover}
+.vwrap > video{position:absolute;inset:0;z-index:1;pointer-events:none}
+/* The still sits underneath as the poster and the reduced-motion fallback. */
+.vwrap.hasvid > img{position:absolute;inset:0;z-index:0}
+/* Futuristic pass: a faint scanning sheen and a vignette over the footage, so a
+   plain clip reads as a deliberate element rather than a dropped-in file. */
+.vwrap.hasvid::after{content:'';position:absolute;inset:0;z-index:2;pointer-events:none;
+  background:
+    linear-gradient(180deg,${rgba(t.bg,.34)} 0%,transparent 26%,transparent 72%,${rgba(t.bg,.46)} 100%),
+    repeating-linear-gradient(180deg,${rgba(t.ink,.045)} 0 1px,transparent 1px 3px)}
+.vwrap.hasvid::before{content:'';position:absolute;inset:-1px;z-index:3;pointer-events:none;
+  border-radius:inherit;box-shadow:inset 0 0 0 1px ${rgba(t.primary,.30)},inset 0 0 42px ${rgba(t.primary,.16)}}
+@media(prefers-reduced-motion:no-preference){
+  @supports (animation-timeline: view()){
+    /* The scroll response. The footage drifts and scales across the section's
+       own view timeline, so the movement is tied to scroll position rather than
+       to a clock. */
+    @keyframes vidDrift{
+      from{transform:scale(1.16) translate3d(0,-2.2%,0)}
+      to{transform:scale(1.02) translate3d(0,2.2%,0)}}
+    .vwrap > video{animation:vidDrift linear both;animation-timeline:view();
+      animation-range:cover 0% cover 100%}
+    @keyframes scanSweep{from{background-position:0 -100%,0 0}to{background-position:0 200%,0 0}}
+    .vwrap.hasvid::after{background-size:100% 60%,100% 100%;background-repeat:no-repeat,repeat;
+      animation:scanSweep linear both;animation-timeline:view();animation-range:cover 0% cover 100%}
+  }
+}
+/* The hero's footage is a layer inside the header, behind the ::before scrim
+   (z-index 1) and the content (z-index 2), so the existing photo-hero treatment
+   keeps working unchanged. */
+.hero > .herovid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
+  z-index:0;pointer-events:none}
+@media(prefers-reduced-motion:no-preference){
+  @supports (animation-timeline: view()){
+    .hero > .herovid{animation:vidDrift linear both;animation-timeline:view();
+      animation-range:cover 0% cover 100%}
+  }
+}
+@media(prefers-reduced-motion:reduce){ .hero > .herovid{display:none} }
+/* Reduce: the video is removed outright and the still shows through. Not paused
+   — removed, because a paused first frame of a clip chosen for motion is rarely
+   the frame anyone would have picked. */
+@media(prefers-reduced-motion:reduce){
+  .vwrap > video{display:none}
+  .vwrap.hasvid > img{position:relative}
+  .vwrap.hasvid::after,.vwrap.hasvid::before{animation:none}
+}`;
   const cta=ctaOf(t), ctaEnd=cta.end, onCta=cta.on;
   return `*{box-sizing:border-box;margin:0;padding:0}
 html{-webkit-text-size-adjust:100%${jsSmoothOn()?'':';scroll-behavior:smooth'}}
@@ -4405,6 +4532,7 @@ section:hover>.edsec{opacity:1;pointer-events:auto}
 /* The chosen opening style. Emitted after the base rules so it can override
    position, transform-origin and the transition without !important. */
 ${menuCSS(t,menu)}
+${vidLayer}
 .logo{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .navcta{flex:none}
 /* The checkbox is the entire mobile menu mechanism. Exports ship no JavaScript,
@@ -5435,6 +5563,22 @@ function buildSite(state,mode,pageIdx){
   const head=(k,defH,defSub)=>`<div class="head mid">${hdH(k,defH)}${hdSub(k,defH,defSub)}</div>`;
   // In editable mode every slot is a click target; in export they are plain markup.
   const slot=(name,cta)=>editable?` data-media="${name}" data-cta="${esc(cta)}" title="${esc(cta)}"`:'';
+  /* One renderer for every visual slot that can hold a video. Emits the still
+     always, and layers a muted looping video over it when one is set. No
+     controls: these are decorative background layers, and the CSS removes them
+     entirely under prefers-reduced-motion so the still shows through. The still
+     is also the poster, so the first paint is never an empty black box. */
+  const mediaFill=(o,altText,extraClass)=>{
+    const hasVid=!!(o&&o.vid&&String(o.vid).trim());
+    const img=o&&o.src
+      ? `<img src="${esc(o.src)}"${dim(o)} alt="${esc(altText)}" loading="lazy" decoding="async">`
+      : '';
+    const vid=hasVid
+      ? `<video src="${esc(String(o.vid).trim())}"${o&&o.src?` poster="${esc(o.src)}"`:''}
+          autoplay muted loop playsinline preload="metadata" aria-hidden="true" tabindex="-1"></video>`
+      : '';
+    return `<div class="vwrap${hasVid?' hasvid':''}${extraClass?' '+extraClass:''}">${img}${vid}</div>`;
+  };
   const star='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.9 6.2 6.6.9-4.8 4.6 1.2 6.6L12 17.2 6.1 20.3l1.2-6.6L2.5 9.1l6.6-.9z"/></svg>';
   const tick='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg>';
   /* Button destinations. An explicit override in meta.links always wins;
@@ -5522,7 +5666,7 @@ function buildSite(state,mode,pageIdx){
   const galleryHTML=gallery.length?`
 <section id="gallery"><div class="w">
   ${head('gallery','Recent work',`A few jobs from around ${m.location||'the area'}.`)}
-  <div class="gal">${gallery.map((g,i)=>`<figure class="${editable?'edi':''}">${editable?`<span class="edx" contenteditable="false"><button type="button" data-delg="${i}" title="Remove photo">✕</button></span>`:''}<img src="${g.src}"${dim(g)} alt="${esc(g.alt||'Recent work by '+m.businessName)}" loading="lazy" decoding="async"></figure>`).join('')}</div>
+  <div class="gal">${gallery.map((g,i)=>`<figure class="${editable?'edi':''}">${editable?`<span class="edx" contenteditable="false"><button type="button" data-delg="${i}" title="Remove photo">✕</button></span>`:''}${mediaFill(g,g.alt||'Recent work by '+m.businessName)}</figure>`).join('')}</div>
 </div></section>`:'';
 
   /* Policy pages are ordinary pages carrying one long-form section, so they
@@ -5557,8 +5701,8 @@ function buildSite(state,mode,pageIdx){
     ${ed('about','p','',s.about)}
     ${c.hours?`<p style="margin-top:18px"><strong>Hours:</strong> ${esc(c.hours)}</p>`:''}
   </div>
-  ${aboutImg.src
-    ? `<div class="fig"${slot('about','Replace photo')}><img src="${aboutImg.src}"${dim(aboutImg)} alt="${esc(aboutImg.alt||m.businessName+' team at work')}" loading="lazy" decoding="async"></div>`
+  ${(aboutImg.src||aboutImg.vid)
+    ? `<div class="fig"${slot('about','Replace photo or video')}>${mediaFill(aboutImg,aboutImg.alt||m.businessName+' team at work')}</div>`
     : `<!-- REMINDER: swap this placeholder for a real photo and write descriptive alt text. -->
   <div class="fig" role="img" aria-label="Placeholder, replace with a photo of the team or recent work"${slot('about','Add a photo')}>${iconSVG('camera')}</div>`}
 </div></section>`;
@@ -5991,12 +6135,20 @@ function buildSite(state,mode,pageIdx){
   const HERO_FORM_KEYS=Object.keys(HERO_FORMS);
   const heroAside=(HERO_FORMS[hf]||HERO_FORMS.none)()||heroCard;
 
-  const heroPhoto=heroImg.src?` photo`:'';
+  /* A video makes the hero a photo hero too: the footage is dark, so the copy
+     needs the same white-on-scrim treatment a still photo gets. Without this the
+     theme's normal ink colour sat on top of moving footage. */
+  const heroVid=(heroImg.vid&&String(heroImg.vid).trim())||'';
+  const heroPhoto=(heroImg.src||heroVid)?` photo`:'';
   const heroStyle=heroImg.src?` style="background-image:url(${heroImg.src})"`:'';
+  const heroVidEl=heroVid
+    ? `<video class="herovid" src="${esc(heroVid)}"${heroImg.src?` poster="${esc(heroImg.src)}"`:''}
+        autoplay muted loop playsinline preload="metadata" aria-hidden="true" tabindex="-1"></video>`
+    : '';
   const heroSlot=slot('hero',heroImg.src?'Replace background':'Add a background photo');
   const heroHTML=(t.hero==='split'&&heroAside)
-    ?`<header class="hero split${heroPhoto}"${heroStyle}${heroSlot}><div class="w"><div>${heroInner}</div>${heroAside}</div></header>`
-    :`<header class="hero ${t.hero==='banner'?'banner':'center'}${heroPhoto}"${heroStyle}${heroSlot}><div class="w">${heroInner}</div></header>`;
+    ?`<header class="hero split${heroPhoto}"${heroStyle}${heroSlot}>${heroVidEl}<div class="w"><div>${heroInner}</div>${heroAside}</div></header>`
+    :`<header class="hero ${t.hero==='banner'?'banner':'center'}${heroPhoto}"${heroStyle}${heroSlot}>${heroVidEl}<div class="w">${heroInner}</div></header>`;
 
   /* Sections are assembled from an ordered list so they can be reordered and
      hidden without touching the builder. Anything empty renders as '' and
@@ -9275,6 +9427,9 @@ function renderMediaPanel(){
         <div class="mname">${cfg.label}</div>
         <div class="mhint">${cur.src?'Added — alt text below':cfg.hint}</div>
         ${cur.src?`<input class="malt" type="text" data-alt="${k}" maxlength="140" placeholder="Describe this image (alt text)" value="${esc(cur.alt)}">`:''}
+        ${k==='logo'?'':`<input class="malt" type="url" data-vid="${k}" maxlength="400"
+          placeholder="…or paste an .mp4 / .webm to loop here" value="${esc(cur.vid||'')}"
+          title="A looping animation for this slot. Plays muted with no controls, and the still above is used as the poster and the reduced-motion fallback.">`}
       </div>
       <div class="mbtns">
         <button type="button" data-pick="${k}">${cur.src?'Replace':'Upload'}</button>
@@ -9309,6 +9464,15 @@ function renderMediaPanel(){
   host.querySelectorAll('[data-alt]').forEach(i=>i.addEventListener('input',()=>{
     curPage().media[i.dataset.alt].alt=i.value;
     clearTimeout(i._t); i._t=setTimeout(()=>{ renderPreview(); renderChecks(); pushHistory(siteState); },600);
+  }));
+  /* Stored as a LINK, never fetched and inlined. A ten-second clip is megabytes;
+     inlining one would blow the 45 KB export the whole product is built on, and
+     the pre-flight weight check would be reporting a number nobody could fix. */
+  host.querySelectorAll('[data-vid]').forEach(i=>i.addEventListener('input',()=>{
+    const k=i.dataset.vid, M=curPage();
+    M.media=M.media||blankMedia(); M.media[k]=M.media[k]||{src:'',alt:'',credit:null,vid:''};
+    M.media[k].vid=i.value.trim();
+    clearTimeout(i._t); i._t=setTimeout(()=>{ renderPreview(); renderChecks(); renderTips(); pushHistory(siteState); },600);
   }));
 }
 $('mediaFile').onchange=e=>{ const f=e.target.files[0]; if(f) applyImage(f); };
@@ -10089,9 +10253,108 @@ const APP_TECH=[
   'Lead capture wraps Web3Forms, Formspree or any webhook, with a hidden source_page field for attribution and an opt-in exit-intent pop-up.',
   'Prospecting finds businesses with no website from OpenStreetMap (keyless), Google Places or Foursquare, then Claude analyses a pasted listing.'
 ];
+/* ---- what this owner's own data actually shows ---------------------------
+   The improvement prompt used to be a fixed template with two usage numbers
+   dropped in, which meant Claude got the same brief on day one and after fifty
+   sites and could only ever answer in generalities. This reads the history, the
+   roster and the usage counters and states what is actually true of THIS
+   install: which trades they build for, which themes and structures they reach
+   for, and — more useful than any of that — which features they have never once
+   touched. A feature paid for and never used is the cheapest thing to fix.
+
+   Deterministic, no API call. The optional AI analysis is folded in on top when
+   the owner has run it. */
+const LS_PROMPT_SEEN='instantsite_prompt_seen';
+function analyseLocal(){
+  const hist=loadHistory(), u=loadUsage(), inv=featureInventory();
+  let roster={}; try{ roster=loadRoster()||{}; }catch{}
+  const states=hist.map(h=>h.siteState).filter(Boolean);
+  const tally=(arr)=>{ const m={}; arr.forEach(v=>{ if(v==null||v==='') return; m[v]=(m[v]||0)+1; }); return m; };
+  const top=(m,n)=>Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,n)
+    .map(([k,v])=>`${k} (${v})`).join(', ')||'none yet';
+  const pages=st=>1+((st.pages||[]).length);
+  const anySlot=(st,f)=>{ const all=[st,...(st.pages||[])];
+    return all.some(p=>{ const md=p.media||{}; return f(md); }); };
+
+  const verticals=tally(states.map(st=>(st.meta||{}).type));
+  const themes=tally(states.map(st=>(st.meta||{}).theme));
+  const blueprints=tally(states.map(st=>((st.sections||{}).blueprint)||'(custom)'));
+  const menus=tally(states.map(st=>(st.meta||{}).menu||'sheet'));
+
+  /* Never-used features. Each line is a thing the tool does that this owner has
+     not once reached for, which is a far better prompt input than a feature
+     list they already know they have. */
+  const n=states.length||1;
+  const usedLogo   = states.filter(st=>anySlot(st,md=>md.logo&&md.logo.src)).length;
+  const usedHero   = states.filter(st=>anySlot(st,md=>md.hero&&md.hero.src)).length;
+  const usedGallery= states.filter(st=>anySlot(st,md=>(md.gallery||[]).length)).length;
+  const usedVideoSec=states.filter(st=>[st,...(st.pages||[])].some(p=>p.video&&p.video.url)).length;
+  const usedVideoBg =states.filter(st=>anySlot(st,md=>['hero','about'].some(k=>md[k]&&md[k].vid))).length;
+  const usedBlog   = states.filter(st=>(st.pages||[]).some(p=>p.blog||p.blogIndex)).length;
+  const usedMulti  = states.filter(st=>pages(st)>1).length;
+  const usedForm   = states.filter(st=>((st.meta||{}).form||{}).provider).length;
+  const usedSeo    = states.filter(st=>(((st.meta||{}).seo||{}).canonical||'').trim()).length;
+
+  const gaps=[];
+  const gap=(count,label)=>{ if(count===0) gaps.push(label); };
+  gap(usedLogo,'has never added a logo to any site');
+  gap(usedHero,'has never set a hero background image');
+  gap(usedGallery,'has never used the Recent work gallery');
+  gap(usedVideoSec,'has never added the video section');
+  gap(usedVideoBg,'has never used a looping video in an image slot');
+  gap(usedBlog,'has never generated a blog post');
+  gap(usedMulti,'has only ever built single-page sites');
+  gap(usedForm,'has never connected a form provider, so no site captures a lead by email');
+  gap(usedSeo,'has never set a canonical URL, so no site has correct sitemap or share metadata');
+  gap(Object.keys(roster).length,'has never used the client book to track a site through to paid');
+
+  const facts=[
+    `Sites in local history: ${hist.length}${hist.length>=HIST_CAP?` (at the ${HIST_CAP} cap, so older ones are gone)`:''}`,
+    `Sites generated all time: ${u.sites||0}, API calls: ${u.calls||0}, estimated spend: US$${usageCost(u).toFixed(2)}`,
+    (u.sites>0?`Average cost per site: US$${(usageCost(u)/u.sites).toFixed(2)}`:'No generations recorded yet'),
+    `Trades built for: ${top(verticals,4)}`,
+    `Themes chosen: ${top(themes,4)} — out of ${THEME_IDS.length} available`,
+    `Page structures used: ${top(blueprints,3)} — out of ${BLUEPRINT_KEYS.length} available`,
+    `Menu styles used: ${top(menus,3)} — out of ${MENU_KEYS.length} available`,
+    `Average pages per site: ${states.length?(states.reduce((a,st)=>a+pages(st),0)/states.length).toFixed(1):'0'}`,
+    `Clients tracked in the book: ${Object.keys(roster).length}`
+  ];
+  /* The single biggest lever, picked from the data rather than asserted. */
+  const focus = !u.sites ? 'This owner has not generated anything yet, so the priority is whatever gets the first site finished and sold.'
+    : gaps.length>=4 ? `This owner uses a narrow slice of the tool: ${gaps.length} whole features have never been touched once. The priority is almost certainly making the unused ones discoverable or removing them, not adding an eleventh thing.`
+    : Object.keys(themes).length<=2 ? 'This owner reaches for the same one or two themes every time, which suggests the theme library is not the bottleneck and choosing is a chore.'
+    : !Object.keys(roster).length ? 'This owner builds sites but tracks none of them to payment, so the gap is between generating and getting paid.'
+    : 'This owner uses most of the tool, so the priority is depth on what they already use rather than breadth.';
+  return {facts,gaps,focus,counts:{hist:hist.length,sites:u.sites||0,inv}};
+}
 function improvementPrompt(){
   const inv=featureInventory(), u=loadUsage();
   const invLine=Object.entries(inv).map(([k,v])=>`${v} ${k.toLowerCase()}`).join(', ');
+  const an=analyseLocal();
+  /* Fold in the AI analysis when the owner has run it, so the prompt carries
+     both the hard numbers and the reading of them. */
+  const aiPart = (typeof dashAnalysis!=='undefined' && dashAnalysis && dashAnalysis.summary)
+    ? `\nCLAUDE'S OWN READING OF THIS DATA\n${dashAnalysis.summary}\n`
+      + (dashAnalysis.sections||[]).map(sec=>`- ${sec.heading}: ${sec.body||''}`).join('\n') + '\n'
+    : '';
+  /* What changed since the last time this prompt was generated. Without it the
+     prompt is identical every time and the answer will be too; with it, a second
+     run is a genuinely different brief. */
+  let deltaPart='';
+  try{
+    const prev=JSON.parse(localStorage.getItem(LS_PROMPT_SEEN)||'null');
+    const now={sites:u.sites||0,hist:an.counts.hist,gaps:an.gaps.length,at:Date.now(),rev:(prev&&prev.rev||0)+1};
+    if(prev){
+      const bits=[];
+      if(now.sites!==prev.sites) bits.push(`${now.sites-prev.sites} more sites generated`);
+      if(now.gaps!==prev.gaps) bits.push(`${prev.gaps-now.gaps>0?(prev.gaps-now.gaps)+' previously unused features now used':(now.gaps-prev.gaps)+' more unused features'}`);
+      const days=Math.round((now.at-prev.at)/864e5);
+      deltaPart=`\nSINCE I LAST ASKED YOU THIS (revision ${now.rev}, ${days} day${days===1?'':'s'} ago)\n`
+        + (bits.length?bits.map(b=>'- '+b).join('\n'):'- Nothing measurable has changed, so if your last answer was right it is still right. Say so rather than inventing something new.')
+        + '\n';
+    }
+    localStorage.setItem(LS_PROMPT_SEEN,JSON.stringify(now));
+  }catch{}
   return `You are improving "Instant Site", a commercial single-file, client-side, no-backend website generator for local service businesses. Read these facts before proposing anything, and do not suggest a backend unless you first say plainly what it would cost and how it breaks the "one file, host anywhere" promise.
 
 ARCHITECTURE
@@ -10106,8 +10369,19 @@ MY USAGE ON THIS MACHINE
 - Tokens: ${(u.inTok||0).toLocaleString()} in, ${(u.outTok||0).toLocaleString()} out
 - Estimated spend at Sonnet rates: US$${usageCost(u).toFixed(2)}
 
+WHAT MY OWN DATA SHOWS
+${an.facts.map(x=>'- '+x).join('\n')}
+
+FEATURES I HAVE NEVER ONCE USED
+${an.gaps.length?an.gaps.map(x=>'- This install '+x).join('\n'):'- None. Every major feature has been used at least once.'}
+
+WHAT THE DATA SUGGESTS THE PRIORITY IS
+${an.focus}
+${aiPart}${deltaPart}
 WHAT I WANT
-Propose the highest-leverage improvements to this tool, ranked, each with: the user problem it solves, whether it keeps the zero-backend and zero-JS-export promises, the rough build effort, and any honest downside. Prioritise things that help a non-technical owner sell and run more sites. Do not restate features I already have; check the capability list first. Where something needs a backend or breaks a core promise, say so up front and let me decide.`;
+Propose the highest-leverage improvements to this tool, ranked, each with: the user problem it solves, whether it keeps the zero-backend and zero-JS-export promises, the rough build effort, and any honest downside. Prioritise things that help a non-technical owner sell and run more sites.
+
+Weight the never-used list heavily. A feature that exists and has never been reached for is either undiscoverable or not actually wanted, and finding out which is cheaper than building anything new. Do not restate features I already have; check the capability list first. Where something needs a backend or breaks a core promise, say so up front and let me decide. If the data above contradicts a suggestion you were going to make, say so rather than making it anyway.`;
 }
 function dashData(analysis){
   const u=loadUsage(), inv=featureInventory();
@@ -10222,8 +10496,22 @@ function openDash(){
   $('btnClientBuild')&&($('btnClientBuild').onclick=buildClientCopy);
   $('dashPdf').onclick=()=>{ saveBlob(makeLeadPdf(dashData(dashAnalysis),dashState()),'instant-site-report.pdf');
     $('dashNote').textContent='PDF downloaded, in your current theme.'; };
-  $('dashPrompt').onclick=async()=>{ const box=$('dashPromptBox'); box.classList.remove('hidden'); box.value=improvementPrompt(); box.select();
-    try{ await navigator.clipboard.writeText(box.value); $('dashNote').textContent='Improvement prompt copied — paste it into Claude Code.'; }
+  $('dashPrompt').onclick=async()=>{
+    const box=$('dashPromptBox'), btn=$('dashPrompt'), was=btn.textContent;
+    /* Run the AI reading first if there is a key and it has not been run yet, so
+       the prompt carries an analysis rather than only numbers. It is skipped
+       silently without a key: the data-grounded half needs no API call, and a
+       missing key must not stop the owner getting a prompt at all. */
+    if(getKey() && !dashAnalysis){
+      btn.disabled=true; btn.textContent='Analysing…';
+      $('dashNote').textContent='Reading your data before building the prompt…';
+      try{ await runDashAnalysis(); }catch(e){}
+      btn.disabled=false; btn.textContent=was;
+    }
+    box.classList.remove('hidden'); box.value=improvementPrompt(); box.select();
+    const words=box.value.trim().split(/\s+/).length;
+    try{ await navigator.clipboard.writeText(box.value);
+      $('dashNote').textContent=`Improvement prompt copied, ${words} words, built from your own data${dashAnalysis?' plus Claude\'s reading of it':''}. Paste it into Claude Code.`; }
     catch{ $('dashNote').textContent='Select the text below and copy it into Claude Code.'; } };
   $('dashReset').onclick=()=>{ if(!confirm('Reset the usage counters on this browser? This cannot be undone.')) return;
     saveUsage({calls:0,inTok:0,outTok:0,sites:0,first:0,last:0}); close(); openDash(); };
@@ -10231,18 +10519,34 @@ function openDash(){
     if(!getKey()){ $('dashNote').textContent='Add an API key under Settings to run the AI analysis.'; return; }
     const btn=$('dashAi'), was=btn.textContent; btn.disabled=true; btn.textContent='Analysing…';
     $('dashNote').textContent='Asking Claude to analyse your usage and the tool…';
-    const u=loadUsage(), inv=featureInventory();
-    const sys=`You are a product analyst. Given a usage snapshot and a capability list for a website-builder tool, write a short, honest analysis for the owner.
-Return ONLY raw JSON: {"summary":string,"sections":[{"heading":string,"body":string,"points":[string]}]}
-- "summary" is 2 sentences on where this owner is and the single biggest opportunity.
-- 3 to 4 sections: how they are using it, what to do more of, what to sell next, and one risk or gap. Each "body" is 2 to 3 sentences, "points" are 3 to 5 concrete actions.
-- Be specific and practical. Never invent numbers beyond those given. NEVER use an em dash.`;
-    const usr=`Usage: ${JSON.stringify({sites:u.sites,calls:u.calls,inTok:u.inTok,outTok:u.outTok,estCostUSD:+usageCost(u).toFixed(2)})}\nCapabilities: ${JSON.stringify(inv)}\n\nReturn the JSON now.`;
-    try{ const raw=await callClaude(sys,usr); dashAnalysis=cleanCopy(JSON.parse(stripFences(raw)));
+    try{ await runDashAnalysis();
       $('dashNote').innerHTML='<b>Analysis added.</b> '+esc(dashAnalysis.summary||'')+' Download the PDF to keep it.';
     }catch(e){ $('dashNote').textContent=e.message||'Could not run the analysis.'; }
     finally{ btn.disabled=false; btn.textContent=was; }
   };
+  /* Shared by the analysis button and the prompt button. Sends the derived
+     analysis too, not just the raw counters, so Claude is reading the same
+     findings the prompt will quote rather than re-deriving them from two
+     numbers. */
+  async function runDashAnalysis(){
+    const u=loadUsage(), inv=featureInventory(), an=analyseLocal();
+    const sys=`You are a product analyst. Given a usage snapshot, a capability list and a derived analysis of one owner's real data for a website-builder tool, write a short, honest analysis for that owner.
+Return ONLY raw JSON: {"summary":string,"sections":[{"heading":string,"body":string,"points":[string]}]}
+- "summary" is 2 sentences on where this owner is and the single biggest opportunity.
+- 3 to 4 sections: how they are using it, what to do more of, what to sell next, and one risk or gap. Each "body" is 2 to 3 sentences, "points" are 3 to 5 concrete actions.
+- The never-used list is the most useful input you have. A feature that exists and has never been reached for is either undiscoverable or unwanted. Say which you think it is.
+- Be specific and practical. Never invent numbers beyond those given. If the data is too thin to support a claim, say the data is thin rather than guessing. NEVER use an em dash.`;
+    const usr=`Usage: ${JSON.stringify({sites:u.sites,calls:u.calls,inTok:u.inTok,outTok:u.outTok,estCostUSD:+usageCost(u).toFixed(2)})}
+Capabilities: ${JSON.stringify(inv)}
+Derived facts: ${JSON.stringify(an.facts)}
+Never used: ${JSON.stringify(an.gaps)}
+Suggested priority: ${an.focus}
+
+Return the JSON now.`;
+    const raw=await callClaude(sys,usr);
+    dashAnalysis=cleanCopy(JSON.parse(stripFences(raw)));
+    return dashAnalysis;
+  }
 }
 $('btnDash').onclick=openDash;
 
