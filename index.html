@@ -1627,7 +1627,7 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
    already open never re-checks at all, so someone who left the app open on
    Monday can still be running Monday's build on Friday. The version probe
    below is the only honest way to notice that from inside the page. */
-const APP_VERSION='1.0.2';
+const APP_VERSION='1.1.0';
 const APP_BUILT='2026-07-28';
 const MODEL='claude-sonnet-4-6';
 const API_ENDPOINT='https://api.anthropic.com/v1/messages';
@@ -2032,7 +2032,52 @@ const THEMES={
     display:"'JetBrains Mono'",body:"'Inter'",mono:"'JetBrains Mono'",
     google:'JetBrains+Mono:wght@400;500;700;800&family=Inter:wght@400;500;600',
     sysDisplay:"ui-monospace,SFMono-Regular,Menlo,monospace",sysBody:"system-ui,-apple-system,Segoe UI",
-    radius:'2px',hero:'center',services:'list',quotes:'cards',caps:true,weight:700,callBar:false,dark:true,density:92,depth:'kinetic'}
+    radius:'2px',hero:'center',services:'list',quotes:'cards',caps:true,weight:700,callBar:false,dark:true,density:92,depth:'kinetic'},
+
+  /* ---- the 3D family ----------------------------------------------------
+     Five themes built on real CSS 3D — perspective, preserve-3d, translateZ —
+     so the card is a plane in space with its icon and heading standing in
+     front of it. No WebGL, so the export stays script-free and ~46 KB; the
+     Three.js hero remains available as the opt-in it already was, for anyone
+     who wants actual geometry and will pay the 736 KB for it.
+
+     All five are dark on purpose. Depth is read from light falling on a
+     surface, and a near-black ground is what gives the highlights and the
+     cast shadows anywhere to register. */
+  voidx:{label:'Void Depth',for:'Studios, product design, immersive and spatial work',
+    ink:'#eef0ff',ink2:'#a2a6c4',bg:'#05060c',panel:'#0f1120',line:'#22263c',primary:'#8b9dff',accent:'#56e1c8',
+    display:"'Sora'",body:"'Inter'",mono:"'JetBrains Mono'",
+    google:'Sora:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500',
+    sysDisplay:"system-ui,-apple-system,Segoe UI",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'14px',hero:'center',services:'cards',quotes:'featured',caps:false,weight:800,callBar:false,dark:true,density:100,depth:'spatial'},
+
+  helix:{label:'Helix Motion',for:'Engineering, robotics, simulation, technical product',
+    ink:'#e8fbfa',ink2:'#98b8b6',bg:'#03090a',panel:'#0c1618',line:'#1c2b2d',primary:'#5fe3d8',accent:'#ffb86b',
+    display:"'Urbanist'",body:"'Inter'",mono:"'IBM Plex Mono'",
+    google:'Urbanist:wght@700;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500',
+    sysDisplay:"system-ui,-apple-system,Segoe UI",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'12px',hero:'split',services:'numbered',quotes:'cards',caps:false,weight:800,callBar:false,dark:true,density:96,depth:'spatial'},
+
+  nebula:{label:'Nebula Field',for:'Planetariums, science comms, luxury experiential brands',
+    ink:'#f6f1ff',ink2:'#ada4c4',bg:'#070515',panel:'#121026',line:'#262240',primary:'#c9b6ff',accent:'#ffcc66',
+    display:"'Playfair Display'",body:"'Inter'",mono:"'JetBrains Mono'",
+    google:'Playfair+Display:wght@700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500',
+    sysDisplay:"Georgia,'Times New Roman',serif",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'16px',hero:'center',services:'list',quotes:'featured',caps:false,weight:800,callBar:false,dark:true,density:104,depth:'spatial'},
+
+  chroma:{label:'Chroma Shift',for:'Music, fashion, gaming, launch campaigns',
+    ink:'#fdeeff',ink2:'#b39dbc',bg:'#08050a',panel:'#150e18',line:'#2a1f2f',primary:'#ff77e0',accent:'#6ce0ff',
+    display:"'Unbounded'",body:"'Inter'",mono:"'Space Mono'",
+    google:'Unbounded:wght@700;800&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700',
+    sysDisplay:"'Helvetica Neue',Arial",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'18px',hero:'center',services:'cards',quotes:'featured',caps:false,weight:800,callBar:false,dark:true,density:98,depth:'holo'},
+
+  obsid:{label:'Obsidian Glass',for:'Architecture, jewellery, automotive, premium retail',
+    ink:'#f2f6ff',ink2:'#9fabc0',bg:'#04060a',panel:'#0e131c',line:'#1f2733',primary:'#cfe2ff',accent:'#7fd4ff',
+    display:"'Figtree'",body:"'Inter'",mono:"'IBM Plex Mono'",
+    google:'Figtree:wght@700;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500',
+    sysDisplay:"system-ui,-apple-system,Segoe UI",sysBody:"system-ui,-apple-system,Segoe UI",
+    radius:'16px',hero:'center',services:'cards',quotes:'cards',caps:false,weight:800,callBar:false,dark:true,density:100,depth:'holo'}
 };
 const THEME_IDS=Object.keys(THEMES);
 /* Dev guard 4: duplicate theme keys. A repeated key in an object literal is
@@ -4810,7 +4855,124 @@ ${prefs.motion?`
       .eyebrow{border-color:${rgba(t.accent,.5)};background:${rgba(t.accent,.10)};color:${t.ink}}
       .stat .v{text-shadow:0 0 30px ${rgba(t.primary,.45)}}
       .hero h1{letter-spacing:-.035em;line-height:.95}
-      .hero::before{background:radial-gradient(760px 460px at 50% -10%,${rgba(t.accent,.22)},transparent 65%)}`
+      .hero::before{background:radial-gradient(760px 460px at 50% -10%,${rgba(t.accent,.22)},transparent 65%)}`,
+
+    /* ---- spatial: a real 3D scene, no WebGL ---------------------------------
+       This is CSS 3D, not Three.js, and the difference is the whole product:
+       the reference style for "3D & Hyperrealism" needs a WebGL library at
+       ~736 KB per visit and is rated poor for performance and not accessible.
+       perspective + transform-style:preserve-3d + translateZ gets genuine
+       three-dimensional depth — the card is a plane in space and its icon,
+       heading and text sit at different distances in front of it — for zero
+       bytes of JavaScript and no measurable cost.
+
+       Three rules keep it honest. No overflow:hidden and no backdrop-filter on
+       anything carrying preserve-3d, because both force the browser to flatten
+       the scene and silently kill the effect. Nothing moves on its own: the
+       tilt is a hover transition and the entrance is scroll-driven, so motion
+       always answers something the visitor did. And every continuous animation
+       sits inside prefers-reduced-motion:no-preference, with the 3D neutralised
+       outright under reduce — vestibular triggers are not a style choice. */
+    spatial:`
+      .grid,.rows,.num,.feat,.steps{perspective:1500px;perspective-origin:50% 38%}
+      .card,.q,.cxpanel,.rows .row,.num .item{position:relative;transform-style:preserve-3d;
+        border:1px solid ${t.line};background:${t.panel};border-radius:calc(${t.radius} + 8px);
+        box-shadow:0 20px 54px ${rgba(t.ink,t.dark?.55:.16)}, 0 1px 0 ${rgba('#ffffff',t.dark?.07:.7)} inset;
+        transition:transform .55s cubic-bezier(.22,1,.36,1),box-shadow .55s,border-color .55s}
+      .card:hover,.q:hover,.rows .row:hover,.num .item:hover{
+        transform:rotateX(4deg) rotateY(-7deg) translateZ(30px);
+        border-color:${rgba(t.primary,.5)};
+        box-shadow:0 40px 90px ${rgba(t.ink,t.dark?.7:.22)}, 0 1px 0 ${rgba('#ffffff',t.dark?.10:.85)} inset}
+      /* The layers. Each child sits further forward than the last, so the card
+         reads as depth rather than as a picture of depth. */
+      .card .ico,.rows .row .ico{transform:translateZ(52px);
+        box-shadow:0 16px 30px ${rgba(t.ink,.4)}}
+      .card h3,.rows .row h3,.num .item h3{transform:translateZ(30px)}
+      .card p,.rows .row p,.num .item p{transform:translateZ(14px)}
+      .num .n{transform:translateZ(40px)}
+      .q blockquote{transform:translateZ(24px)}
+      .q .who{transform:translateZ(10px)}
+      .b{transform-style:preserve-3d;transition:transform .4s cubic-bezier(.22,1,.36,1),box-shadow .4s}
+      .b:hover{transform:translateZ(20px) rotateX(-9deg);box-shadow:0 22px 44px ${rgba(t.primary,.4)}}
+      .b:active{transform:translateZ(4px)}
+      .ico{border-radius:calc(${t.radius} + 6px);background:${rgba(t.primary,.16)};color:${t.ink}}
+      .fig{transform-style:preserve-3d;box-shadow:0 34px 80px ${rgba(t.ink,t.dark?.6:.2)}}
+      .stat .v{text-shadow:0 10px 30px ${rgba(t.primary,.4)}}
+      @media(prefers-reduced-motion:no-preference){
+        @supports (animation-timeline: view()){
+          /* Entrance in 3D: the plane swings up out of the page. Overrides the
+             base riseIn because this block is emitted after it. */
+          @keyframes swingIn{
+            from{opacity:0;transform:perspective(1500px) rotateX(-22deg) translateY(46px) translateZ(-140px)}
+            to{opacity:1;transform:perspective(1500px) rotateX(0) translateY(0) translateZ(0)}}
+          .card,.q,.rows .row,.num .item,.fig{
+            animation:swingIn linear both;animation-timeline:view();animation-range:entry 4% cover 30%}
+        }
+      }
+      /* Under reduce there is no tilt at all, not merely an untransitioned one. */
+      @media(prefers-reduced-motion:reduce){
+        .card,.q,.rows .row,.num .item,.b,.card .ico,.card h3,.card p,
+        .rows .row .ico,.rows .row h3,.rows .row p,.num .item h3,.num .item p,
+        .num .n,.q blockquote,.q .who{transform:none!important}
+        .grid,.rows,.num,.feat,.steps{perspective:none}
+      }`,
+
+    /* ---- holo: iridescent 3D --------------------------------------------
+       The same real 3D substrate as spatial, plus a chromatic sheen that
+       sweeps the card face. The sheen is hover-driven rather than looping,
+       which is deliberate: the design DB rates excessive motion a high-severity
+       accessibility problem and caps it at one or two moving things per view.
+       An iridescent surface that only shifts when you address it reads more
+       expensive than one that never stops. */
+    holo:`
+      .grid,.rows,.num,.feat{perspective:1300px;perspective-origin:50% 40%}
+      .card,.q,.cxpanel,.rows .row,.num .item{position:relative;transform-style:preserve-3d;
+        background:${t.panel};border:1px solid ${t.line};border-radius:calc(${t.radius} + 10px);
+        box-shadow:0 18px 48px ${rgba(t.ink,t.dark?.5:.14)};
+        transition:transform .6s cubic-bezier(.22,1,.36,1),box-shadow .6s,border-color .6s}
+      .card::after,.q::after,.num .item::after{content:'';position:absolute;inset:0;
+        border-radius:inherit;pointer-events:none;z-index:2;
+        background:linear-gradient(112deg,transparent 26%,${rgba(t.accent,.20)} 43%,
+          ${rgba(t.primary,.26)} 52%,${rgba(t.accent,.14)} 61%,transparent 78%);
+        background-size:260% 100%;background-position:0% 0;
+        transition:background-position .9s cubic-bezier(.22,1,.36,1),opacity .5s;opacity:.55}
+      .card:hover::after,.q:hover::after,.num .item:hover::after{background-position:100% 0;opacity:1}
+      .card:hover,.q:hover,.num .item:hover,.rows .row:hover{
+        transform:rotateY(-6deg) rotateX(3deg) translateZ(26px);
+        border-color:${rgba(t.primary,.55)};
+        box-shadow:0 38px 84px ${rgba(t.ink,t.dark?.66:.2)}}
+      /* Content above the sheen, and forward of the card face. */
+      .card > *,.q > *,.num .item > *{position:relative;z-index:3}
+      .card .ico{transform:translateZ(44px);border-radius:999px;
+        background:linear-gradient(140deg,${rgba(t.primary,.34)},${rgba(t.accent,.26)});
+        color:${t.ink};box-shadow:0 14px 28px ${rgba(t.ink,.38)}}
+      .card h3,.num .item h3{transform:translateZ(26px)}
+      .card p,.num .item p{transform:translateZ(12px)}
+      .b{border-radius:999px;transform-style:preserve-3d;
+        transition:transform .4s cubic-bezier(.22,1,.36,1),box-shadow .4s}
+      .b:hover{transform:translateZ(18px);box-shadow:0 20px 40px ${rgba(t.primary,.42)}}
+      .b2{border-radius:999px}
+      .eyebrow{border-color:${rgba(t.primary,.45)};background:${rgba(t.primary,.10)}}
+      /* Not gradient-clipped text. Both stops pass on this ground, so a
+         gradient would too — but the declaration it needs is color:transparent,
+         and anything auditing the computed colour reads that as a 1:1 failure.
+         Not worth being unprovable for. A glow gets the same lift. */
+      .stat .v{text-shadow:0 8px 26px ${rgba(t.accent,.45)}}
+      @media(prefers-reduced-motion:no-preference){
+        @supports (animation-timeline: view()){
+          @keyframes tiltIn{
+            from{opacity:0;transform:perspective(1300px) rotateY(-14deg) translateZ(-110px)}
+            to{opacity:1;transform:perspective(1300px) rotateY(0) translateZ(0)}}
+          .card,.q,.num .item{animation:tiltIn linear both;
+            animation-timeline:view();animation-range:entry 4% cover 30%}
+        }
+      }
+      @media(prefers-reduced-motion:reduce){
+        .card,.q,.rows .row,.num .item,.b,.card .ico,.card h3,.card p,
+        .num .item h3,.num .item p{transform:none!important}
+        .grid,.rows,.num,.feat{perspective:none}
+        .card::after,.q::after,.num .item::after{transition:none;opacity:.4}
+      }`
   }[t.depth]||'')}
 
   /* ---- whole-page ambient motion ----
@@ -6637,6 +6799,9 @@ let themeFilter='all';
 const THEME_FILTERS=[
   {k:'all',   label:'All',         match:()=>true},
   {k:'depth', label:'Dimensional', match:t=>!!t.depth},
+  /* The CSS-3D families, called 3D because that is what a buyer is looking for
+     when they want one. Still zero JavaScript in the export. */
+  {k:'3d',    label:'3D',          match:t=>t.depth==='spatial'||t.depth==='holo'},
   {k:'flat',  label:'Flat',        match:t=>!t.depth},
   {k:'light', label:'Light',       match:t=>!t.dark},
   {k:'dark',  label:'Dark',        match:t=>!!t.dark}
