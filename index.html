@@ -692,6 +692,18 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
 .pgnav input{padding:4px 8px;font-size:12px;border-radius:7px}
 
 /* section manager */
+/* Structure picker. Two columns, because ten options in one column pushes the
+   section list itself off the screen. */
+.bpbox{margin:10px 0 12px;padding:12px;border:1px solid var(--stroke);border-radius:13px;background:var(--bg)}
+.bpgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
+@media(max-width:600px){.bpgrid{grid-template-columns:1fr}}
+.bp{text-align:left;padding:9px 11px;border:1px solid var(--stroke);border-radius:10px;background:var(--surface);
+  cursor:pointer;transition:all .16s var(--ease);display:block;width:100%}
+.bp:hover{border-color:var(--accent);transform:translateY(-1px)}
+.bp.on{border-color:var(--accent);background:var(--sel);box-shadow:0 0 0 3px var(--ring)}
+.bp b{display:block;font-size:12.5px;font-weight:600;color:var(--txt);margin-bottom:2px}
+.bp span{display:block;font-size:11px;line-height:1.45;color:var(--txt-3)}
+.bp .cnt{margin-top:4px;font-size:10.5px;color:var(--txt-3);font-variant-numeric:tabular-nums}
 .secrow{display:flex;align-items:center;gap:9px;padding:8px 10px;border:1px solid var(--stroke);border-radius:11px;margin-bottom:6px;background:var(--bg)}
 .secrow.off{opacity:.5}
 /* Matches the page list, so reordering feels the same wherever you do it. */
@@ -1203,6 +1215,19 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
       <summary>Sections <span class="tag" id="tagSections">10</span></summary>
       <div class="body">
         <div class="tiny">Show, hide and reorder the page. Sections with no content are skipped automatically.</div>
+
+        <!-- Structure picker. Sits above the section list because it rewrites
+             that list wholesale, and finding it afterwards is confusing. -->
+        <div class="bpbox">
+          <div class="row" style="margin-bottom:6px">
+            <b style="font-size:13px">Page structure</b>
+            <span class="tiny" id="bpWho"></span>
+          </div>
+          <div class="tiny" id="bpReason" style="margin-bottom:8px"></div>
+          <div id="bpList" class="bpgrid"></div>
+          <div class="tiny" id="bpNote" style="margin-top:8px">Changing structure only reorders and hides sections. Nothing you have written is lost.</div>
+        </div>
+
         <input type="search" id="secFind" placeholder="Find a section — name, purpose or heading" autocomplete="off"
                aria-controls="sectionList" style="margin:10px 0 4px">
         <div id="secFindMeta" class="tiny"></div>
@@ -1627,7 +1652,7 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
    already open never re-checks at all, so someone who left the app open on
    Monday can still be running Monday's build on Friday. The version probe
    below is the only honest way to notice that from inside the page. */
-const APP_VERSION='1.1.1';
+const APP_VERSION='1.2.0';
 const APP_BUILT='2026-07-28';
 const MODEL='claude-sonnet-4-6';
 const API_ENDPOINT='https://api.anthropic.com/v1/messages';
@@ -2986,6 +3011,103 @@ const SECTION_META={
   video:{label:'Video',note:'An embedded video or looping animation'},
   contact:{label:'Closing CTA',always:true,note:'Final call to action'}
 };
+/* ---- page blueprints ----------------------------------------------------
+   Every generated site used to arrive with the same thirteen sections in the
+   same order, which is the right answer for a plumber and the wrong one for a
+   photographer, an ad landing page and a therapist. A blueprint is a section
+   ORDER plus a set switched off — nothing else. It never touches content, so
+   switching between them is free and reversible, and a section with nothing in
+   it renders nothing rather than an empty band.
+
+   `why` is written for the owner, not for the model: the panel shows it so the
+   choice is explicable rather than magic. The model gets `hint`. */
+const BLUEPRINTS={
+  classic:{label:'Standard service page',for:'Trades, home services, most local businesses',
+    why:'The dependable order. Says what you do, proves it, then asks.',
+    hint:'a conventional local service business with nothing unusual about how it sells',
+    order:['hero','stats','services','process','about','video','gallery','reviews','faq','areas','contact'],off:[]},
+
+  proofFirst:{label:'Proof first',for:'Trades, medical, legal, anything where trust is the barrier',
+    why:'Reviews and figures come before the sell, for buyers whose first question is whether you can be trusted.',
+    hint:'credibility is the main obstacle to enquiry — regulated, high-risk, or the reader is wary',
+    order:['hero','stats','reviews','services','about','process','faq','areas','contact'],off:['video','gallery']},
+
+  offer:{label:'Offer landing page',for:'Anyone running paid ads to a single offer',
+    why:'One offer, few exits. Everything that is not the offer or proof of it is switched off.',
+    hint:'paid traffic to one specific offer, where every extra section is a way to leave',
+    order:['hero','stats','services','reviews','faq','contact'],off:['process','about','video','gallery','areas']},
+
+  portfolio:{label:'Work first',for:'Photographers, builders, designers, landscapers',
+    why:'The work is the argument, so it comes before any copy about the work.',
+    hint:'the quality of finished work is the main thing that sells it, and there are photos',
+    order:['hero','gallery','services','about','reviews','faq','contact'],off:['stats','process','video','areas']},
+
+  local:{label:'Local search',for:'Multi-suburb operators competing on "near me"',
+    why:'Service list and area list sit high, where local search intent is answered fastest.',
+    hint:'competing mainly on local proximity across many named suburbs or towns',
+    order:['hero','services','areas','stats','reviews','process','faq','about','contact'],off:['video','gallery']},
+
+  story:{label:'Story led',for:'Coaches, therapists, consultants, single practitioners',
+    why:'You are the product, so the story comes second and does the work reviews would.',
+    hint:'the practitioner is the product and the buying decision is personal',
+    order:['hero','about','services','reviews','process','faq','contact'],off:['stats','video','gallery','areas']},
+
+  explainer:{label:'How it works',for:'Unfamiliar services, subscriptions, anything needing explanation',
+    why:'Leads with the process, because the reader has to understand it before they can want it.',
+    hint:'the reader does not yet understand what the service actually involves',
+    order:['hero','process','services','video','faq','reviews','stats','contact'],off:['about','gallery','areas']},
+
+  showreel:{label:'Video first',for:'Studios, gyms, venues, tourism, anything better shown than told',
+    why:'A video does the hero’s job better than a paragraph when the thing is visual.',
+    hint:'a video or moving footage is the strongest asset the business has',
+    order:['hero','video','services','gallery','reviews','about','faq','contact'],off:['stats','process','areas']},
+
+  credibility:{label:'Long form trust',for:'High-value work: architects, specialist trades, B2B',
+    why:'Everything, ordered for someone who intends to read the whole page before calling.',
+    hint:'an expensive, slow, considered purchase where the reader will read everything',
+    order:['hero','about','stats','services','process','gallery','reviews','faq','areas','contact'],off:['video']},
+
+  minimal:{label:'One screen',for:'Single-service operators, referral-led businesses',
+    why:'Almost a business card. For businesses that get work by word of mouth and need somewhere to point.',
+    hint:'work comes by referral and the site only needs to confirm the business is real',
+    order:['hero','services','reviews','contact'],off:['stats','process','about','video','gallery','faq','areas']}
+};
+const BLUEPRINT_KEYS=Object.keys(BLUEPRINTS);
+const DEFAULT_BLUEPRINT='classic';
+/* Deterministic fallback, used when the model omits the field or invents a key.
+   Never leaves the site without a coherent order. */
+const BLUEPRINT_BY_TYPE={tradie:'proofFirst',cleaning:'local',realestate:'portfolio',drone:'showreel',
+  coach:'story',medical:'proofFirst',hospitality:'showreel',fitness:'showreel',legal:'proofFirst',
+  auto:'proofFirst',corporate:'credibility'};
+/* Applies a blueprint to one page's section config. Sections the blueprint does
+   not name are appended and switched off rather than dropped, so a section that
+   is added to the app later cannot silently vanish from an older saved site. */
+function blueprintCfg(key,pg){
+  const bp=BLUEPRINTS[key]||BLUEPRINTS[DEFAULT_BLUEPRINT];
+  const order=bp.order.filter(k=>SECTION_META[k]);
+  const off=new Set(bp.off.filter(k=>SECTION_META[k]));
+  /* article and legal are page-type slots rather than home-page sections: the
+     article slot IS the blog post, and legal IS the policy text. No blueprint
+     names them, so without this they would be appended switched off — and
+     applying a structure while looking at a blog page would hide the post
+     itself. They stay visible on the page type that owns them. */
+  const isBlog=!!(pg&&(pg.blog||pg.blogIndex)), isLegal=!!(pg&&pg.legal);
+  SECTION_ORDER.forEach(k=>{
+    if(!order.includes(k)) order.push(k);
+    if(k==='article'){ if(isBlog) off.delete(k); else off.add(k); return; }
+    if(k==='legal'){ if(isLegal) off.delete(k); else off.add(k); return; }
+    if(!bp.order.includes(k)) off.add(k);
+  });
+  /* An article page leads with the post. Dropping it to wherever the blueprint
+     happened to leave the slot would put the hero, then services, then the
+     article the reader came for. */
+  if(isBlog||isLegal){
+    const slot=isBlog?'article':'legal';
+    const i=order.indexOf(slot);
+    if(i>1){ order.splice(i,1); order.splice(1,0,slot); }
+  }
+  return {blueprint:key,order,hidden:[...off]};
+}
 const INTENT_LABEL={transactional:'built to convert',informational:'built to answer',
   local:'built for local search',trust:'built to build trust'};
 const LOAD_LINES=['Drafting your hero section…','Writing service descriptions…','Answering the questions buyers ask…','Composing testimonials…','Tightening the copy…','Applying your theme…'];
@@ -3201,7 +3323,9 @@ Required JSON shape:
   "areas": [ string ],
   "contact_cta": string,
   "palette": { "primary": "#hex", "accent": "#hex", "background": "#hex" },
-  "seo_meta_description": string
+  "seo_meta_description": string${scope?'':`,
+  "blueprint": string,
+  "blueprint_reason": string`}
 }
 
 Rules:
@@ -3219,6 +3343,10 @@ Rules:
 - "contact_cta": one short sentence pushing the visitor to make contact.
 - "palette": colours suiting this trade and tone. "background" must be light. "primary" and "accent" must each hit 4.5:1 against "background".
 - "seo_meta_description": under 160 characters, includes the business name and location.
+${scope?'':`- "blueprint": which page STRUCTURE suits THIS business. Exactly one key from this list:
+${BLUEPRINT_KEYS.map(k=>`    "${k}" — ${BLUEPRINTS[k].hint}`).join('\n')}
+  Choose on how the business actually wins work, not on what sounds impressive. Most ordinary local businesses are "classic"; picking something exotic for a plumber makes the page worse. Only choose a narrower structure when its condition genuinely describes this brief. Never choose "portfolio" or "showreel" unless the brief implies photographs or video worth leading with — otherwise the page opens with an empty band.
+- "blueprint_reason": one short sentence addressed to the business owner, saying why that structure suits them. It is shown to them, so no jargon, and never mention a key name or the word blueprint.`}
 
 HOW TO WRITE. This copy is read by a homeowner on a phone who has a problem right now, not by a marketer. Every line has to earn its place.
 
@@ -6741,7 +6869,17 @@ async function generate(brief){
       links:{primary:'',secondary:'',secondaryLabel:''},
       sections:{order:SECTION_ORDER.slice(),hidden:[]}};
     parsed.media=blankMedia();
-    parsed.pages=[]; parsed.sections={order:SECTION_ORDER.slice(),hidden:[]};
+    /* The structure the model chose for this business, rather than the same
+       thirteen sections in the same order for everyone. Falls back to a
+       per-vertical default and then to `classic`, so an omitted or invented key
+       still produces a coherent page. */
+    const bpKey=BLUEPRINTS[parsed.blueprint] ? parsed.blueprint
+      : (BLUEPRINT_BY_TYPE[brief.type]||DEFAULT_BLUEPRINT);
+    const bpCfg=blueprintCfg(bpKey,parsed);
+    bpCfg.reason=isStr(parsed.blueprint_reason)?String(parsed.blueprint_reason).trim().slice(0,160):'';
+    bpCfg.chosenBy=BLUEPRINTS[parsed.blueprint]?'ai':'fallback';
+    delete parsed.blueprint; delete parsed.blueprint_reason;
+    parsed.pages=[]; parsed.sections=bpCfg;
     currentPage=0;
     siteState=parsed;
     // Run the same backfill the history-load path uses, so form, popup and the
@@ -11260,7 +11398,53 @@ function sectionHasContent(k){
     default: return true;
   }
 }
+/* ---- structure picker ---------------------------------------------------
+   Applying a blueprint rewrites order and hidden for THIS page only. Content is
+   never touched, which is what makes the ten options safe to try: the worst case
+   is that the owner clicks another one. */
+/* The owner has reordered or toggled by hand, so the page no longer matches the
+   structure it was generated with. Saying it still does would be a lie the
+   picker then repeats back to them, so the claim is dropped and the picker shows
+   "Custom order" until they choose a structure again. */
+function unsetBlueprint(c){ if(c){ delete c.blueprint; delete c.reason; delete c.chosenBy; } }
+function applyBlueprint(key){
+  if(!siteState||!BLUEPRINTS[key]) return;
+  const P=curPage();
+  const cfg=blueprintCfg(key,P);
+  /* Keep whatever the AI said about its original choice only while that choice
+     is still the active one — a reason for a structure you are no longer using
+     is worse than no reason. */
+  const prev=P.sections||{};
+  P.sections=Object.assign(cfg,{reason:prev.blueprint===key?prev.reason:'',
+                                chosenBy:prev.blueprint===key?prev.chosenBy:'owner'});
+  applySections();
+}
+function renderBlueprints(){
+  const host=$('bpList'); if(!host) return;
+  if(!siteState){ host.innerHTML=`<div class="tiny">Generate a site first.</div>`;
+    $('bpWho').textContent=''; $('bpReason').textContent=''; return; }
+  const c=sectionCfg();
+  const active=BLUEPRINTS[c.blueprint]?c.blueprint:'';
+  host.innerHTML=BLUEPRINT_KEYS.map(k=>{
+    const bp=BLUEPRINTS[k];
+    const on=bp.order.filter(s=>!bp.off.includes(s)).length;
+    return `<button type="button" class="bp${k===active?' on':''}" data-bp="${k}"
+      title="${esc(bp.why)}" aria-pressed="${k===active?'true':'false'}">
+      <b>${esc(bp.label)}</b><span>${esc(bp.for)}</span>
+      <span class="cnt">${on} sections</span></button>`;
+  }).join('');
+  host.querySelectorAll('[data-bp]').forEach(b=>b.onclick=()=>applyBlueprint(b.dataset.bp));
+  const bp=BLUEPRINTS[active];
+  $('bpWho').textContent=bp?bp.label:'Custom order';
+  /* Three states worth distinguishing: the AI chose it and said why, the AI
+     chose it and did not, or the owner has since reordered by hand. */
+  $('bpReason').textContent=!bp
+    ? 'You have reordered this page by hand. Pick a structure below to start again from a known-good order.'
+    : (c.reason ? (c.chosenBy==='ai'?`Claude chose this: ${c.reason}`:c.reason)
+                : bp.why);
+}
 function renderSections(){
+  renderBlueprints();
   const host=$('sectionList'); if(!host) return;
   if(!siteState){ host.innerHTML=`<div class="tiny">Generate a site first.</div>`; $('tagSections').textContent='—'; return; }
   const c=sectionCfg(), hidden=new Set(c.hidden);
@@ -11314,6 +11498,7 @@ function renderSections(){
     if(a<0||b<0) return;
     ord.splice(b,0,ord.splice(a,1)[0]);
     cfg.order=ord;
+    unsetBlueprint(cfg);
     renderPreview(); renderSections(); pushHistory(siteState); lastShareURL='';
   }
   host.querySelectorAll('.secrow').forEach(row=>{
@@ -11339,6 +11524,7 @@ function renderSections(){
     const go=()=>{
       const k=el.dataset.toggle, i=c.hidden.indexOf(k);
       if(i>=0) c.hidden.splice(i,1); else c.hidden.push(k);
+      unsetBlueprint(c);
       applySections();
     };
     el.onclick=go;
@@ -11358,6 +11544,7 @@ function moveSection(k,dir){
   if(j<0||j>=c.order.length) return;
   const moved=c.order.splice(i,1)[0];
   c.order.splice(j,0,moved);
+  unsetBlueprint(c);
   applySections();
 }
 function applySections(){

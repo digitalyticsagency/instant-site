@@ -6,7 +6,7 @@ Describe a business, pick a theme, and get a complete one-page website: hero, se
 
 **Live app:** https://digitalyticsagency.github.io/instant-site/
 
-**Current version:** 1.1.0 — shown under Settings in the app, with a *Check for updates* button.
+**Current version:** 1.2.0 — shown under Settings in the app, with a *Check for updates* button.
 
 ### Releasing
 
@@ -23,6 +23,7 @@ The app therefore polls `version.json` (a few dozen bytes, fetched with `cache: 
 ## What it does
 
 - **62 themes**, each tuned to a buyer segment (see below), filterable by family. Switching theme after generating is instant and costs **no API call** — the content is theme-independent.
+- **10 page blueprints, chosen by the AI.** Every site used to arrive with the same thirteen sections in the same order — right for a plumber, wrong for a photographer, an ad landing page and a therapist. Claude now picks a structure from ten (Standard, Proof first, Offer landing page, Work first, Local search, Story led, How it works, Video first, Long form trust, One screen) based on how the business actually wins work, and says why in a sentence you can read. You can override it with one click. A blueprint only reorders and hides sections, so nothing you have written is ever lost.
 - **Inline editing.** Click any text in the preview and type. Edits write straight into the single source of truth, so the export always matches what you see.
 - **Per-section regeneration.** Redo just the hero, services, about, reviews or FAQ without touching the rest of the page.
 - **Contact details wired end-to-end.** Phone, email, hours, service area and a booking link flow into the nav, hero card, contact section, footer and LocalBusiness JSON-LD automatically — no placeholder `hello@example.com` to hunt down.
