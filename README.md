@@ -6,7 +6,7 @@ Describe a business, pick a theme, and get a complete one-page website: hero, se
 
 **Live app:** https://digitalyticsagency.github.io/instant-site/
 
-**Current version:** 1.4.0 — shown under Settings in the app, with a *Check for updates* button.
+**Current version:** 1.4.1 — shown under Settings in the app, with a *Check for updates* button.
 
 ### Releasing
 
@@ -31,6 +31,7 @@ The app therefore polls `version.json` (a few dozen bytes, fetched with `cache: 
 - **Contact details wired end-to-end.** Phone, email, hours, service area and a booking link flow into the nav, hero card, contact section, footer and LocalBusiness JSON-LD automatically — no placeholder `hello@example.com` to hunt down.
 - **Pre-flight checks** for colour contrast, heading hierarchy, meta length, missing contact fields, page weight and structured data. Advisory only; export is never blocked.
 - **Stock photo and video search** built in. Photos from Openverse, Wikimedia, Pexels or Unsplash; video from Dailymotion or Pexels. Dailymotion and Openverse need no API key, so search works the moment you open the app. Found video becomes a link, never an upload, so the export stays small.
+- **WordPress export, guarded at build time.** The classic theme is checked before the ZIP is written: a class used but never defined, a stylesheet and header template that disagree about how the menu opens, a missing or duplicated `<main>`, duplicated head meta, a missing required file, an asset nothing references. If any of those fail the download is refused rather than handing the customer a theme that breaks on their server. It is the one output nobody can eyeball before it is installed.
 - **History** of your last 20 generations, stored locally.
 - **White-label mode** for agencies. Exports never carry Instant Site branding either way.
 

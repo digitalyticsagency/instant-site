@@ -1661,7 +1661,7 @@ details.raw pre{margin-top:6px;padding:9px;border-radius:9px;background:var(--fi
    already open never re-checks at all, so someone who left the app open on
    Monday can still be running Monday's build on Friday. The version probe
    below is the only honest way to notice that from inside the page. */
-const APP_VERSION='1.4.0';
+const APP_VERSION='1.4.1';
 const APP_BUILT='2026-07-28';
 const MODEL='claude-sonnet-4-6';
 const API_ENDPOINT='https://api.anthropic.com/v1/messages';
@@ -7622,6 +7622,113 @@ function themeScreenshot(state){
   return new Promise(res=>c.toBlob(b=>b.arrayBuffer().then(a=>res(new Uint8Array(a))),'image/jpeg',.86));
 }
 
+/* ---- WordPress theme pre-flight -----------------------------------------
+   Every check here exists because the thing it checks actually shipped broken.
+   The WordPress export is the one output nobody can eyeball before a customer
+   installs it: the static export renders in the preview, but a theme is only
+   really exercised inside WordPress, on someone else's server, after the sale.
+   So it gets a build-time gate instead.
+
+   These are structural checks on generated text, not a PHP parser. They cannot
+   prove the theme runs; they can prove it is not broken in the specific ways it
+   has been broken before. */
+function verifyWpTheme(files){
+  const faults=[];
+  const raw=n=>{ const f=files.find(x=>x.name===n); return f?String(f.text||''):''; };
+  /* Comments are stripped before any structural count. The first version of
+     this guard reported two main landmarks in header.php because the HTML
+     comment ABOVE the tag mentions the tag by name. A checker that reads its own
+     documentation as code is worse than no checker. */
+  const decomment=t=>String(t||'').replace(/<!--[\s\S]*?-->/g,'')
+                                   .replace(/\/\*[\s\S]*?\*\//g,'')
+                                   .replace(/^\s*\/\/.*$/gm,'');
+  const php=files.filter(f=>/\.php$/.test(f.name)&&typeof f.text==='string')
+                 .map(f=>({name:f.name,text:decomment(f.text)}));
+  const all=php.map(f=>f.text).join('\n');
+
+  /* 1. A class used but never defined. This shipped: the footer walker was
+        appended only on multi-page sites while footer.php referenced it always,
+        so every single-page theme fatalled the moment a menu was assigned. */
+  const used=new Set([...all.matchAll(/new\s+([A-Z][A-Za-z0-9_]*)\s*\(/g)].map(m=>m[1]));
+  const defined=new Set([...all.matchAll(/class\s+([A-Z][A-Za-z0-9_]*)/g)].map(m=>m[1]));
+  const WP_BUILTIN=new Set(['WP_Query','WP_Error','Walker_Nav_Menu','WP_Customize_Control','DateTime','WP_User']);
+  [...used].forEach(c=>{ if(!defined.has(c)&&!WP_BUILTIN.has(c))
+    faults.push(`functions.php never defines class ${c}, but it is constructed in a template`); });
+
+  /* 2. A function called but never defined, for the theme's own prefixed
+        helpers. Anything unprefixed is WordPress core and not ours to check. */
+  /* Only the theme's own prefixed helpers. Matching on a "_mod" suffix alone
+     flagged WordPress core's get_theme_mod(), which is not ours to define. */
+  const prefix=(raw('functions.php').match(/function\s+([a-z0-9_]+)_setup\s*\(/)||[])[1]||'';
+  if(prefix){
+    const helperDef=new Set([...all.matchAll(/function\s+([a-z0-9_]+)\s*\(/g)].map(m=>m[1]));
+    const esc=prefix.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    const helperUse=new Set([...all.matchAll(new RegExp('\\b('+esc+'_[a-z0-9_]+)\\s*\\(','g'))].map(m=>m[1]));
+    [...helperUse].forEach(f=>{ if(!helperDef.has(f))
+      faults.push(`Template calls ${f}() but functions.php never defines it`); });
+  }
+
+  /* 3. The stylesheet and header.php must agree about how the menu opens. The
+        CSS hides .nl until the checkbox is checked; without the checkbox the
+        navigation is invisible and unreachable. That shipped too. */
+  const css=raw('style.css'), header=decomment(raw('header.php'));
+  if(/\.navtoggle:checked\s*~\s*\.nl/.test(css)){
+    if(!/id="navtoggle"/.test(header))
+      faults.push('style.css opens the menu with .navtoggle:checked but header.php has no #navtoggle — the navigation would be permanently hidden');
+    if(!/class="burger"/.test(header))
+      faults.push('style.css expects a .burger control but header.php has none — nothing could open the menu');
+  }
+
+  /* 4. Exactly one main landmark per rendered page: header.php opens it, footer
+        closes it, and no template may add a second. */
+  const opens=(header.match(/<main[\s>]/g)||[]).length;
+  const closes=(decomment(raw('footer.php')).match(/<\/main>/g)||[]).length;
+  if(opens!==1) faults.push(`header.php opens ${opens} main landmarks, expected exactly 1`);
+  if(closes!==1) faults.push(`footer.php closes ${closes} main landmarks, expected exactly 1`);
+  php.filter(f=>!/^(header|footer)\.php$/.test(f.name)).forEach(f=>{
+    if(/<main[\s>]/.test(f.text)) faults.push(`${f.name} opens a second main landmark inside the one from header.php`);
+  });
+
+  /* 5. WordPress emits charset and viewport itself; carrying the carved copies
+        too put two of each in every head. */
+  ['charset','viewport'].forEach(k=>{
+    const re=k==='charset'?/<meta\s+charset=/gi:/<meta\s+name="viewport"/gi;
+    const n=(header.match(re)||[]).length;
+    if(n>1) faults.push(`header.php declares ${n} ${k} meta tags, expected 1`);
+  });
+
+  /* 6. The required files, per the WordPress theme handbook. */
+  ['style.css','index.php','functions.php','header.php','footer.php'].forEach(n=>{
+    if(!files.some(f=>f.name===n)) faults.push(`Missing required file ${n}`);
+  });
+  if(!/^\/\*[\s\S]*?Theme Name:/.test(raw('style.css')))
+    faults.push('style.css has no Theme Name header, so WordPress will not list the theme');
+
+  /* 7. A file shipped but referenced by nothing is either a bug or dead weight. */
+  files.filter(f=>/^assets\//.test(f.name)).forEach(f=>{
+    const base=f.name.split('/').pop();
+    if(!all.includes(base)&&!css.includes(base))
+      faults.push(`${f.name} ships but no template or stylesheet refers to it`);
+  });
+
+  /* 8. Unbalanced PHP blocks. Not a parser, but a mismatched if/endif or a
+        stray brace in generated text is worth catching before it reaches a
+        server that answers with a blank page. */
+  php.forEach(f=>{
+    const t=f.text;
+    const braces=(t.match(/\{/g)||[]).length-(t.match(/\}/g)||[]).length;
+    if(braces!==0) faults.push(`${f.name} has unbalanced braces (${braces>0?'+':''}${braces})`);
+    /* [^)]* stopped at the FIRST closing paren, so a condition containing a
+       function call — if ( has_nav_menu( 'footer' ) || ... ) : — never matched
+       and every file looked unbalanced. Lazy .*? to the colon instead. */
+    [['if','endif'],['foreach','endforeach'],['while','endwhile']].forEach(([o,c])=>{
+      const alt=(t.match(new RegExp('\\b'+o+'\\s*\\(.*?\\)\\s*:','g'))||[]).length;
+      const end=(t.match(new RegExp('\\b'+c+'\\s*;','g'))||[]).length;
+      if(alt!==end) faults.push(`${f.name} has ${alt} alternative-syntax ${o}: openers and ${end} ${c}; closers`);
+    });
+  });
+  return faults;
+}
 async function wpThemeFiles(state){
   const m=state.meta, t=resolveTheme(m.theme);
   const slug=slugify(m.businessName,'instant-site');
@@ -7668,7 +7775,12 @@ async function wpThemeFiles(state){
     return {
       head: html.slice(html.indexOf('<head>')+6, headEnd),
       nav: html.slice(navStart, navEnd),
-      body: html.slice(navEnd, footStart),
+      /* The <main> wrapper is stripped here because header.php opens its own and
+         closes it in footer.php, which is what gives the inner templates a
+         landmark. Leaving it in nested one main inside another, which is
+         invalid and makes the outer one meaningless to a screen reader. */
+      body: html.slice(navEnd, footStart)
+              .replace(/<main[^>]*>/,'').replace(/<\/main>/,''),
       footer: html.slice(footStart, bodyEnd)
     };
   };
@@ -7796,6 +7908,27 @@ ${mods.map(([k,label,def])=>`	$wp_customize->add_setting( ${phpStr(slug+'_'+k)},
 }
 add_action( 'customize_register', '${slug.replace(/-/g,'_')}_customize_register' );
 
+/**
+ * The footer columns are plain <div> rows, not a <ul>, so the menu walker emits
+ * the same markup the generated site uses.
+ *
+ * Defined unconditionally, and it must stay that way. This used to be appended
+ * only when the site had more than one page, because it shared a branch with the
+ * install-pages include. footer.php references it on EVERY site, so a
+ * single-page export shipped a theme that called new on a class that did not
+ * exist. It did not fail on activation either — the call sits behind
+ * has_nav_menu(), so the theme looked fine until the owner assigned a menu,
+ * which is the first thing the readme tells them to do.
+ */
+class ${pascal}_Footer_Walker extends Walker_Nav_Menu {
+	function start_lvl( &$output, $depth = 0, $args = null ) {}
+	function end_lvl( &$output, $depth = 0, $args = null ) {}
+	function start_el( &$output, $item, $depth = 0, $args = null, $id = 0 ) {
+		$output .= '<div><a href="' . esc_url( $item->url ) . '">' . esc_html( $item->title ) . '</a></div>';
+	}
+	function end_el( &$output, $item, $depth = 0, $args = null ) {}
+}
+
 /** Convenience wrapper so templates stay readable. */
 function ${slug.replace(/-/g,'_')}_mod( $key, $fallback = '' ) {
 	return get_theme_mod( '${slug}_' . $key, $fallback );
@@ -7808,11 +7941,16 @@ function ${slug.replace(/-/g,'_')}_tel( $number ) {
 `});
 
   /* ---- header.php ---- */
+  /* WordPress emits charset and viewport itself in the template above, so the
+     carved copies are dropped. Shipping both put two <meta charset> and two
+     <meta viewport> in every head. */
   const headMeta=home.head
     .replace(/<title>[\s\S]*?<\/title>/,'')
     .replace(/<style>[\s\S]*?<\/style>/,'')
     .replace(/<script[\s\S]*?<\/script>/g,'')
     .replace(/<link rel="canonical"[^>]*>/,'')
+    .replace(/<meta charset=[^>]*>/gi,'')
+    .replace(/<meta name="viewport"[^>]*>/gi,'')
     .trim();
   files.push({name:'header.php',text:`<?php
 /**
@@ -7842,7 +7980,17 @@ ${headMeta}
         <a href="<?php echo esc_url( home_url( '/' ) ); ?>" rel="home"><?php bloginfo( 'name' ); ?></a>
       <?php } ?>
     </div>
-    <div class="nl">
+    <!--
+      The checkbox, the scrim and the burger are not optional decoration: the
+      stylesheet hides .nl with visibility:hidden and reveals it only through
+      .navtoggle:checked. Without this input the menu is unreachable — the links
+      render into a permanently hidden container with no control that can open
+      it, which is exactly what shipped for one release. If the CSS changes how
+      the menu opens, this markup has to change with it.
+    -->
+    <input type="checkbox" id="navtoggle" class="navtoggle">
+    <label for="navtoggle" class="navscrim" aria-hidden="true" tabindex="-1"></label>
+    <div class="nl" id="navmenu">
       <?php
       if ( has_nav_menu( 'primary' ) ) {
         wp_nav_menu( array( 'theme_location' => 'primary', 'container' => false, 'items_wrap' => '%3$s', 'depth' => 1 ) );
@@ -7856,11 +8004,19 @@ ${headMeta}
       <?php if ( $phone ) : ?>
         <a class="navtel" href="<?php echo esc_url( ${slug.replace(/-/g,'_')}_tel( $phone ) ); ?>"><?php echo esc_html( $phone ); ?></a>
       <?php endif; ?>
-      <a href="#contact" class="b bs"><?php echo esc_html( ${slug.replace(/-/g,'_')}_mod( 'hero_cta', 'Get in touch' ) ); ?></a>
+      <!-- home_url, not a bare "#contact". The anchor only exists on the front
+           page, so a bare fragment made the primary button dead on every inner
+           page and on the 404. -->
+      <a href="<?php echo esc_url( home_url( '/#contact' ) ); ?>" class="b bs"><?php echo esc_html( ${slug.replace(/-/g,'_')}_mod( 'hero_cta', 'Get in touch' ) ); ?></a>
     </div>
+    <label for="navtoggle" class="burger" aria-label="<?php esc_attr_e( 'Menu', '${slug}' ); ?>" aria-controls="navmenu"><span></span><span></span><span></span></label>
   </div>
 </nav>
-<div id="content">
+<!-- main, not a div. Every template gets its landmark from here, so the skip
+     link lands on a real one and inner pages are not left without it. The
+     carved front-page body has its own <main> stripped for the same reason —
+     nested landmarks are invalid. -->
+<main id="content" tabindex="-1">
 `});
 
   /* ---- footer.php ---- */
@@ -7879,7 +8035,7 @@ $area   = ${slug.replace(/-/g,'_')}_mod( 'area' );
 $tagline = ${slug.replace(/-/g,'_')}_mod( 'footer_tagline' );
 $socials = array_filter( array_map( 'trim', explode( "\\n", ${slug.replace(/-/g,'_')}_mod( 'socials' ) ) ) );
 ?>
-</div><!-- #content -->
+</main><!-- #content -->
 <footer class="foot" id="site-footer">
   <div class="w footgrid">
     <div class="footbrand">
@@ -7978,6 +8134,10 @@ ${fp}
 `});
 
   /* ---- page.php / index.php / single.php / 404.php ---- */
+  /* the_title(), not wp_get_document_title(). The latter appends the separator
+     and the site name, so every inner H1 read "About Us | Trading Name" instead
+     of "About Us". Kept out of the emitted PHP: a note explaining a generator
+     decision is noise in every customer's theme. */
   const genericLoop=(title)=>`<?php
 /**
  * ${title}
@@ -7989,7 +8149,7 @@ get_header();
 <section>
   <div class="w">
     <?php if ( have_posts() ) : ?>
-      <div class="head"><h1><?php echo esc_html( wp_get_document_title() ); ?></h1></div>
+      <div class="head"><h1><?php the_title(); ?></h1></div>
       <?php while ( have_posts() ) : the_post(); ?>
         <article id="post-<?php the_ID(); ?>" <?php post_class( 'entry-content' ); ?>>
           <?php if ( has_post_thumbnail() ) : ?>
@@ -8116,22 +8276,10 @@ ${extra.join('\n')}
 }
 add_action( 'after_switch_theme', '${fn}_install_pages' );
 `});
-    // functions.php must require it
+    /* Only the require is conditional. The walker CLASS is not — see the note
+       where it is defined in functions.php. */
     const fi=files.findIndex(f=>f.name==='functions.php');
-    files[fi].text+=`\n/**
- * The footer columns are plain <div> rows, not a <ul>, so the menu walker
- * emits the same markup the generated site uses.
- */
-class ${pascal}_Footer_Walker extends Walker_Nav_Menu {
-	function start_lvl( &$output, $depth = 0, $args = null ) {}
-	function end_lvl( &$output, $depth = 0, $args = null ) {}
-	function start_el( &$output, $item, $depth = 0, $args = null, $id = 0 ) {
-		$output .= '<div><a href="' . esc_url( $item->url ) . '">' . esc_html( $item->title ) . '</a></div>';
-	}
-	function end_el( &$output, $item, $depth = 0, $args = null ) {}
-}
-
-require_once get_template_directory() . '/inc/install-pages.php';\n`;
+    files[fi].text+=`\nrequire_once get_template_directory() . '/inc/install-pages.php';\n`;
   }
 
   files.push({name:'screenshot.jpg',bytes:await themeScreenshot(state)});
@@ -9267,6 +9415,18 @@ async function downloadWordPress(){
   label.textContent='Building theme…'; btn.disabled=true;
   try{
     const {files,slug}=await wpThemeFiles(siteState);
+    /* Guard before the ZIP is written, not after. A broken theme that reaches
+       the customer costs a support round trip and their trust; a build that
+       refuses costs nobody anything. */
+    const wpFaults=verifyWpTheme(files);
+    if(wpFaults.length){
+      console.error('[Instant Site] WordPress theme build is faulty:',wpFaults);
+      label.textContent='Build blocked';
+      alert('The WordPress theme did not build correctly, so it has not been downloaded:\n\n'
+        +wpFaults.map(f=>'• '+f).join('\n')
+        +'\n\nThis is a fault in the generator rather than anything you did. Please report it.');
+      return;
+    }
     // Everything must sit inside a single top-level folder or WordPress
     // rejects the upload.
     const zip=await makeZip(files.map(f=>({...f,name:`${slug}/${f.name}`})));
